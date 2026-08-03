@@ -67,6 +67,8 @@ public sealed class DeterministicNarrator
             FactShared shared =>
                 $"{context.Name(shared.SpeakerId)} condivide un'informazione " +
                 $"con {context.Name(shared.ListenerId)}.",
+            WorldTimeAdvanced =>
+                "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(
                 $"World event '{worldEvent.GetType().Name}' cannot be narrated.")
         };

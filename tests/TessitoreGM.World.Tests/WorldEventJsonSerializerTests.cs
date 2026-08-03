@@ -75,6 +75,25 @@ public sealed class WorldEventJsonSerializerTests
     }
 
     [Fact]
+    public void SerializeThenDeserialize_WorldTimeAdvanced_PreservesEvent()
+    {
+        var initialTime = At(3, 8, 0);
+        var timeAdvanced = new WorldTimeAdvanced(At(3, 13, 0));
+        var eventLog = new WorldEventLog(
+            new WorldInitialState(initialTime, Array.Empty<EntityBalance>()),
+            new IWorldEvent[] { timeAdvanced });
+        var serializer = new WorldEventJsonSerializer();
+
+        var restored = serializer.Deserialize(serializer.Serialize(eventLog));
+        var restoredWorld = Replay(restored);
+
+        Assert.Equal(
+            timeAdvanced,
+            Assert.IsType<WorldTimeAdvanced>(Assert.Single(restored.Events)));
+        Assert.Equal(timeAdvanced.OccurredAt, restoredWorld.CurrentTime);
+    }
+
+    [Fact]
     public void SaveReloadAndAppend_ProgressesWorldAcrossThreeSessions()
     {
         var customerId = new EntityId("customer");

@@ -46,6 +46,19 @@ public sealed class DeterministicNarratorTests
         Assert.Equal(first, second);
     }
 
+    [Fact]
+    public void Narrate_WorldTimeAdvanced_ProducesFactualLine()
+    {
+        var targetTime = At(13, 0);
+
+        var line = Assert.Single(new DeterministicNarrator().Narrate(
+            new IWorldEvent[] { new WorldTimeAdvanced(targetTime) },
+            CreateContext()));
+
+        Assert.Equal(targetTime, line.OccurredAt);
+        Assert.Equal("Il tempo del mondo avanza.", line.Text);
+    }
+
     private IWorldEvent[] CreateEvents() =>
         new IWorldEvent[]
         {

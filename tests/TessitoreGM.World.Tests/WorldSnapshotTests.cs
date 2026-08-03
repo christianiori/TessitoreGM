@@ -6,6 +6,41 @@ namespace TessitoreGM.World.Tests;
 public sealed class WorldSnapshotTests
 {
     [Fact]
+    public void Apply_WorldTimeAdvanced_UpdatesOnlyCurrentTime()
+    {
+        var entityId = new EntityId("blacksmith");
+        var initialTime = new DateTimeOffset(
+            2026, 8, 3, 8, 0, 0, TimeSpan.Zero);
+        var targetTime = initialTime.AddHours(5);
+        var world = WorldSnapshot.Create(
+            initialTime,
+            new Dictionary<EntityId, int> { [entityId] = 25 });
+
+        var advancedWorld = world.Apply(new WorldTimeAdvanced(targetTime));
+
+        Assert.Equal(initialTime, world.CurrentTime);
+        Assert.Equal(targetTime, advancedWorld.CurrentTime);
+        Assert.Equal(25, advancedWorld.GetBalance(entityId));
+        Assert.Null(advancedWorld.GetLocation(entityId));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Apply_WorldTimeNotAfterCurrentTime_Throws(int minuteOffset)
+    {
+        var currentTime = new DateTimeOffset(
+            2026, 8, 3, 13, 0, 0, TimeSpan.Zero);
+        var world = WorldSnapshot.Create(
+            currentTime,
+            new Dictionary<EntityId, int>());
+        var worldEvent = new WorldTimeAdvanced(
+            currentTime.AddMinutes(minuteOffset));
+
+        Assert.Throws<InvalidOperationException>(() => world.Apply(worldEvent));
+    }
+
+    [Fact]
     public void Apply_EntityEnteredLocation_MovesEntityToLocation()
     {
         var customerId = new EntityId("customer");

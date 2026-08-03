@@ -378,6 +378,25 @@ public sealed class WorldSnapshot
             _items);
     }
 
+    public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+
+        if (worldEvent.OccurredAt <= CurrentTime)
+        {
+            throw new InvalidOperationException(
+                $"New world time '{worldEvent.OccurredAt:O}' must follow " +
+                $"current world time '{CurrentTime:O}'.");
+        }
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items);
+    }
+
     private void EnsureChronological(IWorldEvent worldEvent)
     {
         if (worldEvent.OccurredAt < CurrentTime)

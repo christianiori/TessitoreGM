@@ -95,11 +95,11 @@ entro quell'orario, senza orari dello scenario codificati nella console.
 
 ### 3.1 — Orologio persistente del mondo
 
-- [ ] Introdurre un evento esplicito di avanzamento del tempo
-- [ ] Permettere al mondo di raggiungere un orario anche quando non accade nulla
-- [ ] Impedire avanzamenti verso il passato
-- [ ] Salvare e riprodurre l'avanzamento temporale
-- [ ] Narrare il passaggio del tempo soltanto quando utile
+- [x] Introdurre un evento esplicito di avanzamento del tempo
+- [x] Permettere al mondo di raggiungere un orario anche quando non accade nulla
+- [x] Impedire avanzamenti verso il passato
+- [x] Salvare e riprodurre l'avanzamento temporale
+- [x] Narrare il passaggio del tempo soltanto quando utile
 
 Decisione iniziale: i passaggi interni usati per valutare le regole non devono
 riempire il registro. Il registro conserva gli eventi di dominio realmente
@@ -283,9 +283,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Implementare il primo incremento del Milestone 3:
+Implementare il secondo incremento del Milestone 3:
 
-1. evento persistente per l'avanzamento dell'orologio;
-2. replay del tempo anche in assenza di altri eventi;
-3. relativi test automatici;
-4. integrazione con narratore e serializzazione.
+1. permettere alle regole di proporre il prossimo evento entro un limite;
+2. spostare gli orari dello scenario fuori dalla console;
+3. selezionare la proposta cronologicamente più vicina;
+4. aggiungere i relativi test di determinismo e limite temporale.
