@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TessitoreGM.World\TessitoreGM.World.csproj" />
+    <ProjectReference Include="..\TessitoreGM.Core\TessitoreGM.Core.csproj" />
+    <ProjectReference Include="..\TessitoreGM.Events\TessitoreGM.Events.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
