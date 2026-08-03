@@ -84,6 +84,8 @@ public sealed class WorldSnapshotTests
         Assert.Equal("sword", order.RequestedItem);
         Assert.Equal(worldEvent.OccurredAt, order.RequestedAt);
         Assert.Equal(OrderStatus.Requested, order.Status);
+        Assert.Null(order.TotalPrice);
+        Assert.Equal(0, order.AmountPaid);
         Assert.Null(order.AcceptedAt);
         Assert.Null(order.WorkStartedAt);
         Assert.Null(order.CompletedAt);
@@ -116,12 +118,15 @@ public sealed class WorldSnapshotTests
             new DateTimeOffset(2026, 8, 3, 8, 11, 0, TimeSpan.Zero)));
         var worldEvent = new OrderAccepted(
             orderId,
+            TotalPrice: 10,
             new DateTimeOffset(2026, 8, 3, 8, 12, 0, TimeSpan.Zero));
 
         var acceptedWorld = requestedWorld.Apply(worldEvent);
 
         Assert.Equal(OrderStatus.Requested, requestedWorld.GetOrder(orderId)?.Status);
         Assert.Equal(OrderStatus.Accepted, acceptedWorld.GetOrder(orderId)?.Status);
+        Assert.Equal(10, acceptedWorld.GetOrder(orderId)?.TotalPrice);
+        Assert.Equal(0, acceptedWorld.GetOrder(orderId)?.AmountPaid);
         Assert.Equal(worldEvent.OccurredAt, acceptedWorld.GetOrder(orderId)?.AcceptedAt);
     }
 
@@ -130,6 +135,7 @@ public sealed class WorldSnapshotTests
     {
         var worldEvent = new OrderAccepted(
             new OrderId("missing-order"),
+            TotalPrice: 10,
             new DateTimeOffset(2026, 8, 3, 8, 12, 0, TimeSpan.Zero));
 
         Assert.Throws<InvalidOperationException>(
@@ -148,6 +154,7 @@ public sealed class WorldSnapshotTests
             new DateTimeOffset(2026, 8, 3, 8, 11, 0, TimeSpan.Zero)));
         var worldEvent = new OrderAccepted(
             orderId,
+            TotalPrice: 10,
             new DateTimeOffset(2026, 8, 3, 8, 12, 0, TimeSpan.Zero));
         var acceptedWorld = requestedWorld.Apply(worldEvent);
 
@@ -179,6 +186,8 @@ public sealed class WorldSnapshotTests
         Assert.Equal(25, initialWorld.GetBalance(blacksmithId));
         Assert.Equal(5, updatedWorld.GetBalance(customerId));
         Assert.Equal(30, updatedWorld.GetBalance(blacksmithId));
+        Assert.Equal(0, initialWorld.GetOrder(orderId)?.AmountPaid);
+        Assert.Equal(5, updatedWorld.GetOrder(orderId)?.AmountPaid);
     }
 
     [Fact]
@@ -250,6 +259,7 @@ public sealed class WorldSnapshotTests
 
         return world.Apply(new OrderAccepted(
             orderId,
+            TotalPrice: 10,
             new DateTimeOffset(2026, 8, 3, 8, 12, 0, TimeSpan.Zero)));
     }
 
@@ -324,5 +334,113 @@ public sealed class WorldSnapshotTests
             new DateTimeOffset(2026, 8, 3, 12, 30, 0, TimeSpan.Zero));
 
         Assert.Throws<InvalidOperationException>(() => acceptedWorld.Apply(worldEvent));
+    }
+
+    [Fact]
+    public void Apply_PaymentTransferredAboveTotalPrice_Throws()
+    {
+        var customerId = new EntityId("customer");
+        var blacksmithId = new EntityId("blacksmith");
+        var orderId = new OrderId("order-1");
+        var world = CreateAcceptedOrderWorld(
+            orderId,
+            customerId,
+            blacksmithId,
+            customerBalance: 20,
+            artisanBalance: 25);
+        var worldEvent = new PaymentTransferred(
+            orderId,
+            customerId,
+            blacksmithId,
+            Amount: 11,
+            new DateTimeOffset(2026, 8, 3, 8, 13, 0, TimeSpan.Zero));
+
+        Assert.Throws<InvalidOperationException>(() => world.Apply(worldEvent));
+    }
+
+    [Fact]
+    public void Apply_OrderDelivered_TransfersItemToCustomer()
+    {
+        var customerId = new EntityId("customer");
+        var blacksmithId = new EntityId("blacksmith");
+        var orderId = new OrderId("order-1");
+        var itemId = new ItemId("sword-1");
+        var world = CreateCompletedAndPaidOrderWorld(
+            orderId,
+            itemId,
+            customerId,
+            blacksmithId);
+        var worldEvent = new OrderDelivered(
+            orderId,
+            new DateTimeOffset(2026, 8, 4, 9, 2, 0, TimeSpan.Zero));
+
+        var deliveredWorld = world.Apply(worldEvent);
+
+        Assert.Equal(OrderStatus.Completed, world.GetOrder(orderId)?.Status);
+        Assert.Equal(blacksmithId, world.GetItem(itemId)?.OwnerId);
+        Assert.Equal(OrderStatus.Delivered, deliveredWorld.GetOrder(orderId)?.Status);
+        Assert.Equal(worldEvent.OccurredAt, deliveredWorld.GetOrder(orderId)?.DeliveredAt);
+        Assert.Equal(customerId, deliveredWorld.GetItem(itemId)?.OwnerId);
+    }
+
+    [Fact]
+    public void Apply_OrderDeliveredBeforeFullPayment_Throws()
+    {
+        var customerId = new EntityId("customer");
+        var blacksmithId = new EntityId("blacksmith");
+        var orderId = new OrderId("order-1");
+        var itemId = new ItemId("sword-1");
+        var world = CreateAcceptedOrderWorld(
+            orderId,
+            customerId,
+            blacksmithId,
+            customerBalance: 10,
+            artisanBalance: 25);
+        world = world.Apply(new PaymentTransferred(
+            orderId,
+            customerId,
+            blacksmithId,
+            Amount: 5,
+            new DateTimeOffset(2026, 8, 3, 8, 13, 0, TimeSpan.Zero)));
+        world = world.Apply(new OrderWorkStarted(
+            orderId,
+            new DateTimeOffset(2026, 8, 3, 8, 30, 0, TimeSpan.Zero)));
+        world = world.Apply(new OrderCompleted(
+            orderId,
+            itemId,
+            new DateTimeOffset(2026, 8, 3, 12, 30, 0, TimeSpan.Zero)));
+        var worldEvent = new OrderDelivered(
+            orderId,
+            new DateTimeOffset(2026, 8, 4, 9, 2, 0, TimeSpan.Zero));
+
+        Assert.Throws<InvalidOperationException>(() => world.Apply(worldEvent));
+    }
+
+    private static WorldSnapshot CreateCompletedAndPaidOrderWorld(
+        OrderId orderId,
+        ItemId itemId,
+        EntityId customerId,
+        EntityId blacksmithId)
+    {
+        var world = CreateAcceptedOrderWorld(
+            orderId,
+            customerId,
+            blacksmithId,
+            customerBalance: 10,
+            artisanBalance: 25);
+        world = world.Apply(new PaymentTransferred(
+            orderId,
+            customerId,
+            blacksmithId,
+            Amount: 10,
+            new DateTimeOffset(2026, 8, 3, 8, 13, 0, TimeSpan.Zero)));
+        world = world.Apply(new OrderWorkStarted(
+            orderId,
+            new DateTimeOffset(2026, 8, 3, 8, 30, 0, TimeSpan.Zero)));
+
+        return world.Apply(new OrderCompleted(
+            orderId,
+            itemId,
+            new DateTimeOffset(2026, 8, 3, 12, 30, 0, TimeSpan.Zero)));
     }
 }

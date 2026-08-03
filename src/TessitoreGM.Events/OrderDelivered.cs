@@ -2,7 +2,6 @@ using TessitoreGM.Core;
 
 namespace TessitoreGM.Events;
 
-public sealed record OrderAccepted(
+public sealed record OrderDelivered(
     OrderId OrderId,
-    int TotalPrice,
     DateTimeOffset OccurredAt) : IWorldEvent;

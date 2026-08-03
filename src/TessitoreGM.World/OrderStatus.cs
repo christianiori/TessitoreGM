@@ -5,5 +5,6 @@ public enum OrderStatus
     Requested,
     Accepted,
     InProgress,
-    Completed
+    Completed,
+    Delivered
 }

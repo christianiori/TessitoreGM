@@ -133,10 +133,13 @@ public sealed class WorldSnapshot
                 worldEvent.RequestedItem,
                 worldEvent.OccurredAt,
                 OrderStatus.Requested,
+                TotalPrice: null,
+                AmountPaid: 0,
                 AcceptedAt: null,
                 WorkStartedAt: null,
                 CompletedAt: null,
-                ProducedItemId: null)
+                ProducedItemId: null,
+                DeliveredAt: null)
         };
 
         return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items);
@@ -159,11 +162,19 @@ public sealed class WorldSnapshot
                 $"Order '{worldEvent.OrderId}' is not awaiting acceptance.");
         }
 
+        if (worldEvent.TotalPrice <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "An order price must be greater than zero.");
+        }
+
         var orders = new Dictionary<OrderId, Order>(_orders)
         {
             [worldEvent.OrderId] = order with
             {
                 Status = OrderStatus.Accepted,
+                TotalPrice = worldEvent.TotalPrice,
                 AcceptedAt = worldEvent.OccurredAt
             }
         };
@@ -184,10 +195,10 @@ public sealed class WorldSnapshot
         }
 
         if (!_orders.TryGetValue(worldEvent.OrderId, out var order) ||
-            order.Status != OrderStatus.Accepted)
+            order.Status is OrderStatus.Requested or OrderStatus.Delivered)
         {
             throw new InvalidOperationException(
-                $"Order '{worldEvent.OrderId}' is not accepted.");
+                $"Order '{worldEvent.OrderId}' cannot receive payments.");
         }
 
         if (worldEvent.PayerId != order.CustomerId ||
@@ -204,13 +215,27 @@ public sealed class WorldSnapshot
                 $"Entity '{worldEvent.PayerId}' has insufficient funds.");
         }
 
+        if (order.TotalPrice is null ||
+            order.AmountPaid + worldEvent.Amount > order.TotalPrice.Value)
+        {
+            throw new InvalidOperationException(
+                $"Payment exceeds the amount due for order '{worldEvent.OrderId}'.");
+        }
+
         var balances = new Dictionary<EntityId, int>(_balances)
         {
             [worldEvent.PayerId] = payerBalance - worldEvent.Amount,
             [worldEvent.PayeeId] = GetBalance(worldEvent.PayeeId) + worldEvent.Amount
         };
+        var orders = new Dictionary<OrderId, Order>(_orders)
+        {
+            [worldEvent.OrderId] = order with
+            {
+                AmountPaid = order.AmountPaid + worldEvent.Amount
+            }
+        };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, _orders, balances, _items);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items);
     }
 
     public WorldSnapshot Apply(OrderWorkStarted worldEvent)
@@ -277,6 +302,53 @@ public sealed class WorldSnapshot
                 order.ArtisanId,
                 order.Id,
                 worldEvent.OccurredAt)
+        };
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            orders,
+            _balances,
+            items);
+    }
+
+    public WorldSnapshot Apply(OrderDelivered worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (!_orders.TryGetValue(worldEvent.OrderId, out var order) ||
+            order.Status != OrderStatus.Completed)
+        {
+            throw new InvalidOperationException(
+                $"Order '{worldEvent.OrderId}' is not completed.");
+        }
+
+        if (order.TotalPrice is null || order.AmountPaid < order.TotalPrice.Value)
+        {
+            throw new InvalidOperationException(
+                $"Order '{worldEvent.OrderId}' is not fully paid.");
+        }
+
+        if (order.ProducedItemId is not ItemId itemId ||
+            !_items.TryGetValue(itemId, out var item) ||
+            item.OwnerId != order.ArtisanId)
+        {
+            throw new InvalidOperationException(
+                $"Produced item for order '{worldEvent.OrderId}' is not available for delivery.");
+        }
+
+        var orders = new Dictionary<OrderId, Order>(_orders)
+        {
+            [worldEvent.OrderId] = order with
+            {
+                Status = OrderStatus.Delivered,
+                DeliveredAt = worldEvent.OccurredAt
+            }
+        };
+        var items = new Dictionary<ItemId, WorldItem>(_items)
+        {
+            [itemId] = item with { OwnerId = order.CustomerId }
         };
 
         return new WorldSnapshot(
