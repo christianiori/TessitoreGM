@@ -4,7 +4,7 @@ namespace TessitoreGM.Events;
 
 public sealed class WorldEventJsonSerializer
 {
-    private const int CurrentVersion = 1;
+    private const int CurrentVersion = 2;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -12,11 +12,16 @@ public sealed class WorldEventJsonSerializer
         WriteIndented = true
     };
 
-    public string Serialize(IEnumerable<IWorldEvent> events)
+    public string Serialize(WorldEventLog eventLog)
     {
-        ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(eventLog);
+        ArgumentNullException.ThrowIfNull(eventLog.InitialWorld);
+        ArgumentNullException.ThrowIfNull(eventLog.InitialWorld.Balances);
+        ArgumentNullException.ThrowIfNull(eventLog.Events);
 
-        var persistedEvents = events.Select(worldEvent =>
+        ValidateBalances(eventLog.InitialWorld.Balances);
+
+        var persistedEvents = eventLog.Events.Select(worldEvent =>
         {
             ArgumentNullException.ThrowIfNull(worldEvent);
 
@@ -29,11 +34,14 @@ public sealed class WorldEventJsonSerializer
         }).ToArray();
 
         return JsonSerializer.Serialize(
-            new EventLogDocument(CurrentVersion, persistedEvents),
+            new EventLogDocument(
+                CurrentVersion,
+                eventLog.InitialWorld,
+                persistedEvents),
             JsonOptions);
     }
 
-    public IReadOnlyList<IWorldEvent> Deserialize(string json)
+    public WorldEventLog Deserialize(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -58,12 +66,34 @@ public sealed class WorldEventJsonSerializer
                 $"Event log version '{document.Version}' is not supported.");
         }
 
+        if (document.InitialWorld is null || document.InitialWorld.Balances is null)
+        {
+            throw new InvalidDataException("The event log has no initial world state.");
+        }
+
         if (document.Events is null)
         {
             throw new InvalidDataException("The event log does not contain an events list.");
         }
 
-        return document.Events.Select(DeserializeEvent).ToArray();
+        ValidateBalances(document.InitialWorld.Balances);
+
+        return new WorldEventLog(
+            document.InitialWorld,
+            document.Events.Select(DeserializeEvent).ToArray());
+    }
+
+    private static void ValidateBalances(IReadOnlyList<EntityBalance> balances)
+    {
+        if (balances.Any(balance => balance.Amount < 0))
+        {
+            throw new InvalidDataException("An initial balance cannot be negative.");
+        }
+
+        if (balances.Select(balance => balance.EntityId).Distinct().Count() != balances.Count)
+        {
+            throw new InvalidDataException("Initial balances contain duplicate entities.");
+        }
     }
 
     private static IWorldEvent DeserializeEvent(PersistedEvent persistedEvent)
@@ -114,6 +144,7 @@ public sealed class WorldEventJsonSerializer
 
     private sealed record EventLogDocument(
         int Version,
+        WorldInitialState InitialWorld,
         IReadOnlyList<PersistedEvent> Events);
 
     private sealed record PersistedEvent(
