@@ -1,6 +1,7 @@
 using TessitoreGM.Core;
 using TessitoreGM.Events;
 using TessitoreGM.Memory;
+using TessitoreGM.Narration;
 using TessitoreGM.Npcs;
 using TessitoreGM.World;
 
@@ -35,6 +36,10 @@ try
 
         case "replay":
             ReplayWorld(ReadEventFileArgument(args));
+            break;
+
+        case "narrate":
+            NarrateWorld(ReadEventFileArgument(args));
             break;
 
         default:
@@ -180,6 +185,31 @@ static void ReplayWorld(string path)
 {
     var loadedWorld = LoadWorld(path);
     DisplayWorld(loadedWorld.EventFilePath, loadedWorld.EventLog, loadedWorld.World);
+}
+
+static void NarrateWorld(string path)
+{
+    var loadedWorld = LoadWorld(path);
+    var request = GetOrderRequest(loadedWorld.EventLog);
+    var context = new NarrationContext(
+        new Dictionary<EntityId, string>
+        {
+            [request.CustomerId] = "Cliente",
+            [request.ArtisanId] = "Fabbro"
+        },
+        new Dictionary<LocationId, string>
+        {
+            [new LocationId("forge")] = "Forgia"
+        });
+    var lines = new DeterministicNarrator().Narrate(
+        loadedWorld.EventLog.Events,
+        context);
+
+    Console.WriteLine($"Cronaca: {loadedWorld.EventFilePath}");
+    foreach (var line in lines)
+    {
+        Console.WriteLine($"{line.OccurredAt:yyyy-MM-dd HH:mm} — {line.Text}");
+    }
 }
 
 static LoadedWorld LoadWorld(string path)
@@ -339,6 +369,7 @@ static void PrintUsage()
     Console.Error.WriteLine("Advance: TessitoreGM.Console advance [event-file]");
     Console.Error.WriteLine("Deliver: TessitoreGM.Console deliver [event-file]");
     Console.Error.WriteLine("Replay: TessitoreGM.Console replay [event-file]");
+    Console.Error.WriteLine("Narrate: TessitoreGM.Console narrate [event-file]");
 }
 
 static DateTimeOffset At(int hour, int minute) =>
