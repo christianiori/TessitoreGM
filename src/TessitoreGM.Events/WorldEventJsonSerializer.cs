@@ -110,6 +110,7 @@ public sealed class WorldEventJsonSerializer
                 "order-work-started" => Deserialize<OrderWorkStarted>(persistedEvent.Data),
                 "order-completed" => Deserialize<OrderCompleted>(persistedEvent.Data),
                 "order-delivered" => Deserialize<OrderDelivered>(persistedEvent.Data),
+                "fact-shared" => Deserialize<FactShared>(persistedEvent.Data),
                 _ => throw new InvalidDataException(
                     $"World event type '{persistedEvent.Type}' is not supported.")
             };
@@ -138,6 +139,7 @@ public sealed class WorldEventJsonSerializer
         OrderWorkStarted => "order-work-started",
         OrderCompleted => "order-completed",
         OrderDelivered => "order-delivered",
+        FactShared => "fact-shared",
         _ => throw new NotSupportedException(
             $"World event '{worldEvent.GetType().Name}' is not supported.")
     };

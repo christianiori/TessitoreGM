@@ -359,6 +359,25 @@ public sealed class WorldSnapshot
             items);
     }
 
+    public WorldSnapshot Apply(FactShared worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (worldEvent.SpeakerId == worldEvent.ListenerId)
+        {
+            throw new InvalidOperationException(
+                "An entity cannot share a fact with itself.");
+        }
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items);
+    }
+
     private void EnsureChronological(IWorldEvent worldEvent)
     {
         if (worldEvent.OccurredAt < CurrentTime)

@@ -59,6 +59,9 @@ public sealed class MemoryEngine
                 IsOrderParticipant(observerId, world, completed.OrderId),
             OrderDelivered delivered =>
                 IsOrderParticipant(observerId, world, delivered.OrderId),
+            FactShared shared =>
+                shared.SpeakerId == observerId ||
+                shared.ListenerId == observerId,
             _ => false
         };
 
