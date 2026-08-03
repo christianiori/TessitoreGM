@@ -3,12 +3,41 @@ using TessitoreGM.Events;
 using TessitoreGM.World;
 
 var customerId = new EntityId("customer");
+var blacksmithId = new EntityId("blacksmith");
 var forgeId = new LocationId("forge");
-var world = WorldSnapshot.Empty;
+var orderId = new OrderId("order-1");
+var initialWorld = WorldSnapshot.Create(new Dictionary<EntityId, int>
+{
+    [customerId] = 10,
+    [blacksmithId] = 25
+});
+IWorldEvent[] events =
+{
+    new EntityEnteredLocation(customerId, forgeId, At(8, 10)),
+    new OrderRequested(
+        orderId,
+        customerId,
+        blacksmithId,
+        "sword",
+        At(8, 11)),
+    new OrderAccepted(orderId, At(8, 12)),
+    new PaymentTransferred(
+        orderId,
+        customerId,
+        blacksmithId,
+        Amount: 5,
+        At(8, 13)),
+    new EntityLeftLocation(customerId, forgeId, At(8, 14))
+};
 
-world = world.Apply(new EntityEnteredLocation(
-    customerId,
-    forgeId,
-    DateTimeOffset.UtcNow));
+var finalWorld = new WorldEventProcessor().Replay(initialWorld, events);
+var order = finalWorld.GetOrder(orderId);
 
-Console.WriteLine($"{customerId} entered {world.GetLocation(customerId)}.");
+Console.WriteLine($"Replayed {events.Length} world events.");
+Console.WriteLine($"Customer location: {finalWorld.GetLocation(customerId)?.ToString() ?? "outside"}.");
+Console.WriteLine($"Order status: {order?.Status}.");
+Console.WriteLine($"Customer balance: {finalWorld.GetBalance(customerId)} coins.");
+Console.WriteLine($"Blacksmith balance: {finalWorld.GetBalance(blacksmithId)} coins.");
+
+static DateTimeOffset At(int hour, int minute) =>
+    new(2026, 8, 3, hour, minute, 0, TimeSpan.Zero);
