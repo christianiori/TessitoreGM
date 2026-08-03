@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace TessitoreGM.Core;
 
 public readonly record struct EntityId
 {
+    [JsonConstructor]
     public EntityId(string value)
     {
         if (string.IsNullOrWhiteSpace(value))

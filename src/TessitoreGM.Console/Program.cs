@@ -30,14 +30,26 @@ var events = BuildEvents(
 
 try
 {
-    var finalWorld = new WorldEventProcessor().Replay(initialWorld, events);
+    var serializer = new WorldEventJsonSerializer();
+    var eventFilePath = Path.GetFullPath(options.EventFilePath);
+    var eventDirectory = Path.GetDirectoryName(eventFilePath);
+
+    if (!string.IsNullOrEmpty(eventDirectory))
+    {
+        Directory.CreateDirectory(eventDirectory);
+    }
+
+    File.WriteAllText(eventFilePath, serializer.Serialize(events));
+    var persistedEvents = serializer.Deserialize(File.ReadAllText(eventFilePath));
+    var finalWorld = new WorldEventProcessor().Replay(initialWorld, persistedEvents);
     var order = finalWorld.GetOrder(orderId);
     var item = finalWorld.GetItem(itemId);
 
     Console.WriteLine(
         $"Scenario: {options.ItemName}, price {options.TotalPrice}, " +
         $"deposit {options.Deposit}, starting balance {options.CustomerBalance}.");
-    Console.WriteLine($"Replayed {events.Count} world events.");
+    Console.WriteLine($"Saved and reloaded {persistedEvents.Count} world events.");
+    Console.WriteLine($"Event log: {eventFilePath}.");
     Console.WriteLine($"World time: {finalWorld.CurrentTime:yyyy-MM-dd HH:mm}.");
     Console.WriteLine($"Customer location: {finalWorld.GetLocation(customerId)?.ToString() ?? "outside"}.");
     Console.WriteLine($"Order status: {order?.Status}.");
@@ -46,7 +58,8 @@ try
     Console.WriteLine($"Blacksmith balance: {finalWorld.GetBalance(blacksmithId)} coins.");
     Console.WriteLine($"Produced item: {item?.Name}, owned by {item?.OwnerId}.");
 }
-catch (InvalidOperationException exception)
+catch (Exception exception) when (
+    exception is InvalidOperationException or IOException or InvalidDataException)
 {
     Console.Error.WriteLine($"Scenario failed: {exception.Message}");
     Environment.ExitCode = 1;
@@ -108,24 +121,28 @@ static bool TryReadOptions(string[] args, out ScenarioOptions options)
 {
     if (args.Length == 0)
     {
-        options = new ScenarioOptions("sword", 10, 5, 10);
+        options = new ScenarioOptions("sword", 10, 5, 10, "world-events.json");
         return true;
     }
 
-    if (args.Length is not (3 or 4) ||
+    if (args.Length is not (3 or 4 or 5) ||
         string.IsNullOrWhiteSpace(args[0]) ||
         !int.TryParse(args[1], out var totalPrice) ||
         !int.TryParse(args[2], out var deposit) ||
-        (args.Length == 4 && !int.TryParse(args[3], out _)))
+        (args.Length >= 4 && !int.TryParse(args[3], out _)) ||
+        (args.Length == 5 && string.IsNullOrWhiteSpace(args[4])))
     {
         PrintUsage();
         options = default!;
         return false;
     }
 
-    var customerBalance = args.Length == 4
+    var customerBalance = args.Length >= 4
         ? int.Parse(args[3])
         : totalPrice;
+    var eventFilePath = args.Length == 5
+        ? args[4]
+        : "world-events.json";
 
     if (totalPrice <= 0 ||
         deposit < 0 ||
@@ -139,13 +156,19 @@ static bool TryReadOptions(string[] args, out ScenarioOptions options)
         return false;
     }
 
-    options = new ScenarioOptions(args[0], totalPrice, deposit, customerBalance);
+    options = new ScenarioOptions(
+        args[0],
+        totalPrice,
+        deposit,
+        customerBalance,
+        eventFilePath);
     return true;
 }
 
 static void PrintUsage() =>
     Console.Error.WriteLine(
-        "Usage: TessitoreGM.Console <item> <price> <deposit> [customer-balance]");
+        "Usage: TessitoreGM.Console <item> <price> <deposit> " +
+        "[customer-balance] [event-file]");
 
 static DateTimeOffset At(int hour, int minute) =>
     new(2026, 8, 3, hour, minute, 0, TimeSpan.Zero);
@@ -157,4 +180,5 @@ internal sealed record ScenarioOptions(
     string ItemName,
     int TotalPrice,
     int Deposit,
-    int CustomerBalance);
+    int CustomerBalance,
+    string EventFilePath);

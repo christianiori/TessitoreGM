@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace TessitoreGM.Core;
 
 public readonly record struct LocationId
 {
+    [JsonConstructor]
     public LocationId(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
