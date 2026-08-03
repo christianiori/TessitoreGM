@@ -74,6 +74,102 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Contains("version '1'", exception.Message);
     }
 
+    [Fact]
+    public void SaveReloadAndAppend_ProgressesWorldAcrossThreeSessions()
+    {
+        var customerId = new EntityId("customer");
+        var blacksmithId = new EntityId("blacksmith");
+        var forgeId = new LocationId("forge");
+        var orderId = new OrderId("order-1");
+        var itemId = new ItemId("hammer-1");
+        var eventLog = new WorldEventLog(
+            new WorldInitialState(
+                At(3, 8, 0),
+                new EntityBalance[]
+                {
+                    new(customerId, 14),
+                    new(blacksmithId, 25)
+                }),
+            new IWorldEvent[]
+            {
+                new EntityEnteredLocation(customerId, forgeId, At(3, 8, 10)),
+                new OrderRequested(
+                    orderId,
+                    customerId,
+                    blacksmithId,
+                    "hammer",
+                    At(3, 8, 11)),
+                new OrderAccepted(orderId, 14, At(3, 8, 12)),
+                new PaymentTransferred(
+                    orderId,
+                    customerId,
+                    blacksmithId,
+                    4,
+                    At(3, 8, 13)),
+                new EntityLeftLocation(customerId, forgeId, At(3, 8, 14))
+            });
+
+        eventLog = RoundTrip(eventLog);
+        var acceptedWorld = Replay(eventLog);
+        Assert.Equal(OrderStatus.Accepted, acceptedWorld.GetOrder(orderId)?.Status);
+        Assert.Equal(5, eventLog.Events.Count);
+
+        eventLog = eventLog with
+        {
+            Events = eventLog.Events.Concat(new IWorldEvent[]
+            {
+                new OrderWorkStarted(orderId, At(3, 8, 30)),
+                new OrderCompleted(orderId, itemId, At(3, 12, 30))
+            }).ToArray()
+        };
+        eventLog = RoundTrip(eventLog);
+        var completedWorld = Replay(eventLog);
+        Assert.Equal(OrderStatus.Completed, completedWorld.GetOrder(orderId)?.Status);
+        Assert.Equal(blacksmithId, completedWorld.GetItem(itemId)?.OwnerId);
+        Assert.Equal(7, eventLog.Events.Count);
+
+        eventLog = eventLog with
+        {
+            Events = eventLog.Events.Concat(new IWorldEvent[]
+            {
+                new EntityEnteredLocation(customerId, forgeId, At(4, 9, 0)),
+                new PaymentTransferred(
+                    orderId,
+                    customerId,
+                    blacksmithId,
+                    10,
+                    At(4, 9, 1)),
+                new OrderDelivered(orderId, At(4, 9, 2)),
+                new EntityLeftLocation(customerId, forgeId, At(4, 9, 3))
+            }).ToArray()
+        };
+        eventLog = RoundTrip(eventLog);
+        var deliveredWorld = Replay(eventLog);
+        Assert.Equal(OrderStatus.Delivered, deliveredWorld.GetOrder(orderId)?.Status);
+        Assert.Equal(customerId, deliveredWorld.GetItem(itemId)?.OwnerId);
+        Assert.Equal(0, deliveredWorld.GetBalance(customerId));
+        Assert.Equal(39, deliveredWorld.GetBalance(blacksmithId));
+        Assert.Equal(11, eventLog.Events.Count);
+    }
+
+    private static WorldEventLog RoundTrip(WorldEventLog eventLog)
+    {
+        var serializer = new WorldEventJsonSerializer();
+        return serializer.Deserialize(serializer.Serialize(eventLog));
+    }
+
+    private static WorldSnapshot Replay(WorldEventLog eventLog)
+    {
+        var balances = eventLog.InitialWorld.Balances.ToDictionary(
+            balance => balance.EntityId,
+            balance => balance.Amount);
+        var initialWorld = WorldSnapshot.Create(
+            eventLog.InitialWorld.CurrentTime,
+            balances);
+
+        return new WorldEventProcessor().Replay(initialWorld, eventLog.Events);
+    }
+
     private static WorldEventLog CreateEventLog(
         string itemName = "sword",
         int totalPrice = 10,

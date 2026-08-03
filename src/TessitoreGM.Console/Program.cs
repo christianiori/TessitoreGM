@@ -23,15 +23,16 @@ try
             CreateWorld(options);
             break;
 
-        case "replay":
-            if (args.Length > 2)
-            {
-                PrintUsage();
-                Environment.ExitCode = 1;
-                return;
-            }
+        case "advance":
+            AdvanceWorld(ReadEventFileArgument(args));
+            break;
 
-            ReplayWorld(args.Length == 2 ? args[1] : "world-events.json");
+        case "deliver":
+            DeliverWorld(ReadEventFileArgument(args));
+            break;
+
+        case "replay":
+            ReplayWorld(ReadEventFileArgument(args));
             break;
 
         default:
@@ -53,7 +54,6 @@ static void CreateWorld(ScenarioOptions options)
     var blacksmithId = new EntityId("blacksmith");
     var forgeId = new LocationId("forge");
     var orderId = new OrderId("order-1");
-    var itemId = new ItemId($"{options.ItemName}-1");
     var eventLog = new WorldEventLog(
         new WorldInitialState(
             At(8, 0),
@@ -62,30 +62,99 @@ static void CreateWorld(ScenarioOptions options)
                 new(customerId, options.CustomerBalance),
                 new(blacksmithId, 25)
             }),
-        BuildEvents(
+        BuildCreateEvents(
             options,
             customerId,
             blacksmithId,
             forgeId,
-            orderId,
-            itemId));
+            orderId));
     var eventFilePath = Path.GetFullPath(options.EventFilePath);
-    var eventDirectory = Path.GetDirectoryName(eventFilePath);
 
-    if (!string.IsNullOrEmpty(eventDirectory))
-    {
-        Directory.CreateDirectory(eventDirectory);
-    }
-
-    File.WriteAllText(
-        eventFilePath,
-        new WorldEventJsonSerializer().Serialize(eventLog));
-
+    SaveEventLog(eventFilePath, eventLog);
     Console.WriteLine($"Created persistent world: {eventFilePath}.");
     ReplayWorld(eventFilePath);
 }
 
+static void AdvanceWorld(string path)
+{
+    var loadedWorld = LoadWorld(path);
+    var request = GetOrderRequest(loadedWorld.EventLog);
+    var itemId = new ItemId($"{request.RequestedItem}-1");
+    IWorldEvent[] newEvents =
+    {
+        new OrderWorkStarted(
+            request.OrderId,
+            OnSameDay(loadedWorld.World.CurrentTime, 8, 30)),
+        new OrderCompleted(
+            request.OrderId,
+            itemId,
+            OnSameDay(loadedWorld.World.CurrentTime, 12, 30))
+    };
+
+    AppendEvents(loadedWorld, newEvents);
+    Console.WriteLine($"Advanced persistent world: {loadedWorld.EventFilePath}.");
+    ReplayWorld(loadedWorld.EventFilePath);
+}
+
+static void DeliverWorld(string path)
+{
+    var loadedWorld = LoadWorld(path);
+    var request = GetOrderRequest(loadedWorld.EventLog);
+    var order = loadedWorld.World.GetOrder(request.OrderId)
+        ?? throw new InvalidDataException($"Order '{request.OrderId}' does not exist.");
+    var forgeId = new LocationId("forge");
+    var deliveryDay = loadedWorld.World.CurrentTime.AddDays(1);
+    var newEvents = new List<IWorldEvent>
+    {
+        new EntityEnteredLocation(
+            request.CustomerId,
+            forgeId,
+            OnSameDay(deliveryDay, 9, 0))
+    };
+    var balanceDue = (order.TotalPrice ?? 0) - order.AmountPaid;
+
+    if (balanceDue > 0)
+    {
+        newEvents.Add(new PaymentTransferred(
+            request.OrderId,
+            request.CustomerId,
+            request.ArtisanId,
+            balanceDue,
+            OnSameDay(deliveryDay, 9, 1)));
+    }
+
+    newEvents.Add(new OrderDelivered(
+        request.OrderId,
+        OnSameDay(deliveryDay, 9, 2)));
+    newEvents.Add(new EntityLeftLocation(
+        request.CustomerId,
+        forgeId,
+        OnSameDay(deliveryDay, 9, 3)));
+
+    AppendEvents(loadedWorld, newEvents);
+    Console.WriteLine($"Delivered order in persistent world: {loadedWorld.EventFilePath}.");
+    ReplayWorld(loadedWorld.EventFilePath);
+}
+
+static void AppendEvents(LoadedWorld loadedWorld, IReadOnlyList<IWorldEvent> newEvents)
+{
+    new WorldEventProcessor().Replay(loadedWorld.World, newEvents);
+
+    var updatedEventLog = loadedWorld.EventLog with
+    {
+        Events = loadedWorld.EventLog.Events.Concat(newEvents).ToArray()
+    };
+
+    SaveEventLog(loadedWorld.EventFilePath, updatedEventLog);
+}
+
 static void ReplayWorld(string path)
+{
+    var loadedWorld = LoadWorld(path);
+    DisplayWorld(loadedWorld.EventFilePath, loadedWorld.EventLog, loadedWorld.World);
+}
+
+static LoadedWorld LoadWorld(string path)
 {
     var eventFilePath = Path.GetFullPath(path);
     var eventLog = new WorldEventJsonSerializer().Deserialize(
@@ -96,36 +165,60 @@ static void ReplayWorld(string path)
     var initialWorld = WorldSnapshot.Create(
         eventLog.InitialWorld.CurrentTime,
         balances);
-    var finalWorld = new WorldEventProcessor().Replay(
-        initialWorld,
-        eventLog.Events);
-    var request = eventLog.Events.OfType<OrderRequested>().FirstOrDefault()
-        ?? throw new InvalidDataException("The event log contains no order request.");
-    var completion = eventLog.Events.OfType<OrderCompleted>().FirstOrDefault()
-        ?? throw new InvalidDataException("The event log contains no completed order.");
-    var order = finalWorld.GetOrder(request.OrderId);
-    var item = finalWorld.GetItem(completion.ProducedItemId);
+    var world = new WorldEventProcessor().Replay(initialWorld, eventLog.Events);
+
+    return new LoadedWorld(eventFilePath, eventLog, world);
+}
+
+static void SaveEventLog(string path, WorldEventLog eventLog)
+{
+    var eventDirectory = Path.GetDirectoryName(path);
+
+    if (!string.IsNullOrEmpty(eventDirectory))
+    {
+        Directory.CreateDirectory(eventDirectory);
+    }
+
+    File.WriteAllText(path, new WorldEventJsonSerializer().Serialize(eventLog));
+}
+
+static void DisplayWorld(
+    string eventFilePath,
+    WorldEventLog eventLog,
+    WorldSnapshot world)
+{
+    var request = GetOrderRequest(eventLog);
+    var completion = eventLog.Events.OfType<OrderCompleted>().FirstOrDefault();
+    var order = world.GetOrder(request.OrderId);
+    var item = completion is null
+        ? null
+        : world.GetItem(completion.ProducedItemId);
 
     Console.WriteLine($"Replayed persistent world: {eventFilePath}.");
     Console.WriteLine($"Loaded {eventLog.Events.Count} world events.");
-    Console.WriteLine($"World time: {finalWorld.CurrentTime:yyyy-MM-dd HH:mm}.");
+    Console.WriteLine($"World time: {world.CurrentTime:yyyy-MM-dd HH:mm}.");
     Console.WriteLine(
         $"Customer location: " +
-        $"{finalWorld.GetLocation(request.CustomerId)?.ToString() ?? "outside"}.");
+        $"{world.GetLocation(request.CustomerId)?.ToString() ?? "outside"}.");
     Console.WriteLine($"Order status: {order?.Status}.");
     Console.WriteLine($"Order paid: {order?.AmountPaid}/{order?.TotalPrice} coins.");
-    Console.WriteLine($"Customer balance: {finalWorld.GetBalance(request.CustomerId)} coins.");
-    Console.WriteLine($"Artisan balance: {finalWorld.GetBalance(request.ArtisanId)} coins.");
-    Console.WriteLine($"Produced item: {item?.Name}, owned by {item?.OwnerId}.");
+    Console.WriteLine($"Customer balance: {world.GetBalance(request.CustomerId)} coins.");
+    Console.WriteLine($"Artisan balance: {world.GetBalance(request.ArtisanId)} coins.");
+    Console.WriteLine(item is null
+        ? "Produced item: not created yet."
+        : $"Produced item: {item.Name}, owned by {item.OwnerId}.");
 }
 
-static List<IWorldEvent> BuildEvents(
+static OrderRequested GetOrderRequest(WorldEventLog eventLog) =>
+    eventLog.Events.OfType<OrderRequested>().FirstOrDefault()
+    ?? throw new InvalidDataException("The event log contains no order request.");
+
+static List<IWorldEvent> BuildCreateEvents(
     ScenarioOptions options,
     EntityId customerId,
     EntityId blacksmithId,
     LocationId forgeId,
-    OrderId orderId,
-    ItemId itemId)
+    OrderId orderId)
 {
     var events = new List<IWorldEvent>
     {
@@ -150,25 +243,17 @@ static List<IWorldEvent> BuildEvents(
     }
 
     events.Add(new EntityLeftLocation(customerId, forgeId, At(8, 14)));
-    events.Add(new OrderWorkStarted(orderId, At(8, 30)));
-    events.Add(new OrderCompleted(orderId, itemId, At(12, 30)));
-    events.Add(new EntityEnteredLocation(customerId, forgeId, AtNextDay(9, 0)));
+    return events;
+}
 
-    var balanceDue = options.TotalPrice - options.Deposit;
-    if (balanceDue > 0)
+static string ReadEventFileArgument(string[] args)
+{
+    if (args.Length > 2)
     {
-        events.Add(new PaymentTransferred(
-            orderId,
-            customerId,
-            blacksmithId,
-            balanceDue,
-            AtNextDay(9, 1)));
+        throw new InvalidDataException("Too many command arguments.");
     }
 
-    events.Add(new OrderDelivered(orderId, AtNextDay(9, 2)));
-    events.Add(new EntityLeftLocation(customerId, forgeId, AtNextDay(9, 3)));
-
-    return events;
+    return args.Length == 2 ? args[1] : "world-events.json";
 }
 
 static bool TryReadCreateOptions(string[] args, out ScenarioOptions options)
@@ -218,15 +303,19 @@ static void PrintUsage()
     Console.Error.WriteLine(
         "Create: TessitoreGM.Console create <item> <price> <deposit> " +
         "[customer-balance] [event-file]");
-    Console.Error.WriteLine(
-        "Replay: TessitoreGM.Console replay [event-file]");
+    Console.Error.WriteLine("Advance: TessitoreGM.Console advance [event-file]");
+    Console.Error.WriteLine("Deliver: TessitoreGM.Console deliver [event-file]");
+    Console.Error.WriteLine("Replay: TessitoreGM.Console replay [event-file]");
 }
 
 static DateTimeOffset At(int hour, int minute) =>
     new(2026, 8, 3, hour, minute, 0, TimeSpan.Zero);
 
-static DateTimeOffset AtNextDay(int hour, int minute) =>
-    new(2026, 8, 4, hour, minute, 0, TimeSpan.Zero);
+static DateTimeOffset OnSameDay(
+    DateTimeOffset date,
+    int hour,
+    int minute) =>
+    new(date.Year, date.Month, date.Day, hour, minute, 0, date.Offset);
 
 internal sealed record ScenarioOptions(
     string ItemName,
@@ -234,3 +323,8 @@ internal sealed record ScenarioOptions(
     int Deposit,
     int CustomerBalance,
     string EventFilePath);
+
+internal sealed record LoadedWorld(
+    string EventFilePath,
+    WorldEventLog EventLog,
+    WorldSnapshot World);
