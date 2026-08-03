@@ -127,9 +127,9 @@ dopo l'ora corrente e non oltre l'ora richiesta?
 - [x] Selezionare la proposta cronologicamente più vicina
 - [x] Usare un ordine stabile e documentato in caso di parità
 - [x] Validare e applicare l'evento selezionato
-- [ ] Rivalutare il mondo dopo ogni evento
-- [ ] Fermarsi quando non esistono altre proposte entro il limite
-- [ ] Portare infine l'orologio del mondo all'orario richiesto
+- [x] Rivalutare il mondo dopo ogni evento
+- [x] Fermarsi quando non esistono altre proposte entro il limite
+- [x] Portare infine l'orologio del mondo all'orario richiesto
 
 Algoritmo previsto:
 
@@ -144,10 +144,10 @@ Algoritmo previsto:
 
 ### 3.4 — Sicurezza e determinismo
 
-- [ ] Imporre un numero massimo di eventi per singolo avanzamento
+- [x] Imporre un numero massimo di eventi per singolo avanzamento
 - [ ] Rilevare regole che ripropongono indefinitamente lo stesso evento
-- [ ] Rifiutare proposte precedenti allo stato corrente
-- [ ] Rifiutare proposte successive al limite richiesto
+- [x] Rifiutare proposte precedenti allo stato corrente
+- [x] Rifiutare proposte successive al limite richiesto
 - [ ] Garantire un risultato identico con lo stesso stato e le stesse regole
 - [ ] Garantire che due avanzamenti consecutivi equivalgano a uno complessivo
       quando non cambiano input o regole
@@ -181,12 +181,12 @@ dotnet run --project src/TessitoreGM.Console -- \
 
 ### 3.6 — Test di accettazione
 
-- [ ] Un ordine accettato porta autonomamente il fabbro alla forgia
-- [ ] Il fabbro inizia il lavoro non appena le condizioni lo consentono
-- [ ] Il lavoro termina dopo la durata prevista
+- [x] Un ordine accettato porta autonomamente il fabbro alla forgia
+- [x] Il fabbro inizia il lavoro non appena le condizioni lo consentono
+- [x] Il lavoro termina dopo la durata prevista
 - [ ] Un limite precedente al completamento lascia l'ordine in corso
 - [ ] Un limite successivo comprende il completamento
-- [ ] Un intervallo senza eventi aggiorna comunque l'ora del mondo
+- [x] Un intervallo senza eventi aggiorna comunque l'ora del mondo
 - [ ] Un salvataggio intermedio può essere ricaricato e continuato
 - [ ] Il replay ricostruisce lo stesso stato finale
 - [ ] Il narratore produce la stessa cronaca degli eventi generati
@@ -283,9 +283,10 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Implementare il terzo incremento del Milestone 3:
+Completare sicurezza e determinismo del Milestone 3, quindi introdurre il
+comando `advance-to`:
 
-1. rivalutare automaticamente tutte le regole dopo ogni evento;
-2. continuare finché non restano proposte entro il limite;
-3. aggiungere l'avanzamento finale dell'orologio;
-4. proteggere il ciclo con un limite massimo di eventi.
+1. verificare l'equivalenza tra avanzamenti parziali e complessivi;
+2. verificare che la simulazione sia riproducibile;
+3. rilevare chiaramente una regola che ripropone lo stesso evento;
+4. permettere al GM di scegliere fino a quale data e ora simulare.

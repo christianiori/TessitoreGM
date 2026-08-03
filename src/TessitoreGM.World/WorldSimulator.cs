@@ -6,13 +6,22 @@ public sealed class WorldSimulator
 {
     private readonly IReadOnlyList<IWorldRule> _rules;
     private readonly WorldEventProcessor _processor;
+    private readonly int _maxEvents;
 
-    public WorldSimulator(IEnumerable<IWorldRule> rules)
+    public WorldSimulator(IEnumerable<IWorldRule> rules, int maxEvents = 1000)
     {
         ArgumentNullException.ThrowIfNull(rules);
 
+        if (maxEvents <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxEvents),
+                "Maximum event count must be greater than zero.");
+        }
+
         _rules = rules.ToArray();
         _processor = new WorldEventProcessor();
+        _maxEvents = maxEvents;
     }
 
     public SimulationResult Advance(
@@ -28,41 +37,60 @@ public sealed class WorldSimulator
                 "Simulation time cannot precede world time.");
         }
 
-        var proposals = _rules
-            .Select((rule, index) => new
-            {
-                Event = rule.ProposeNext(world, until),
-                RuleIndex = index
-            })
-            .Where(proposal => proposal.Event is not null)
-            .ToArray();
+        var simulatedWorld = world;
+        var producedEvents = new List<IWorldEvent>();
 
-        foreach (var proposal in proposals)
+        while (true)
         {
-            if (proposal.Event!.OccurredAt < world.CurrentTime ||
-                proposal.Event.OccurredAt > until)
+            var proposals = _rules
+                .Select((rule, index) => new
+                {
+                    Event = rule.ProposeNext(simulatedWorld, until),
+                    RuleIndex = index
+                })
+                .Where(proposal => proposal.Event is not null)
+                .ToArray();
+
+            foreach (var proposal in proposals)
+            {
+                if (proposal.Event!.OccurredAt < simulatedWorld.CurrentTime ||
+                    proposal.Event.OccurredAt > until)
+                {
+                    throw new InvalidOperationException(
+                        $"Rule proposed event at '{proposal.Event.OccurredAt:O}' " +
+                        $"outside simulation interval " +
+                        $"'{simulatedWorld.CurrentTime:O}' to '{until:O}'.");
+                }
+            }
+
+            var selected = proposals
+                .OrderBy(proposal => proposal.Event!.OccurredAt)
+                .ThenBy(proposal => proposal.RuleIndex)
+                .FirstOrDefault();
+
+            if (selected is null)
+            {
+                break;
+            }
+
+            if (producedEvents.Count >= _maxEvents)
             {
                 throw new InvalidOperationException(
-                    $"Rule proposed event at '{proposal.Event.OccurredAt:O}' " +
-                    $"outside simulation interval " +
-                    $"'{world.CurrentTime:O}' to '{until:O}'.");
+                    $"Simulation exceeded the maximum of {_maxEvents} events.");
             }
+
+            var selectedEvent = selected.Event!;
+            simulatedWorld = _processor.Apply(simulatedWorld, selectedEvent);
+            producedEvents.Add(selectedEvent);
         }
 
-        var selected = proposals
-            .OrderBy(proposal => proposal.Event!.OccurredAt)
-            .ThenBy(proposal => proposal.RuleIndex)
-            .FirstOrDefault();
-
-        if (selected is null)
+        if (simulatedWorld.CurrentTime < until)
         {
-            return new SimulationResult(world, Array.Empty<IWorldEvent>());
+            var timeAdvanced = new WorldTimeAdvanced(until);
+            simulatedWorld = _processor.Apply(simulatedWorld, timeAdvanced);
+            producedEvents.Add(timeAdvanced);
         }
 
-        var selectedEvent = selected.Event!;
-        var updatedWorld = _processor.Apply(world, selectedEvent);
-        return new SimulationResult(
-            updatedWorld,
-            new IWorldEvent[] { selectedEvent });
+        return new SimulationResult(simulatedWorld, producedEvents);
     }
 }

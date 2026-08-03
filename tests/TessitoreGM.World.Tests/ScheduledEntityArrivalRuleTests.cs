@@ -15,8 +15,9 @@ public sealed class ScheduledEntityArrivalRuleTests
 
         var result = simulator.Advance(WorldSnapshot.Empty, At(9, 59));
 
-        Assert.Empty(result.ProducedEvents);
+        Assert.IsType<WorldTimeAdvanced>(Assert.Single(result.ProducedEvents));
         Assert.Null(result.World.GetLocation(_travelerId));
+        Assert.Equal(At(9, 59), result.World.CurrentTime);
     }
 
     [Fact]
@@ -41,8 +42,9 @@ public sealed class ScheduledEntityArrivalRuleTests
 
         var secondResult = simulator.Advance(firstResult.World, At(11, 0));
 
-        Assert.Empty(secondResult.ProducedEvents);
-        Assert.Same(firstResult.World, secondResult.World);
+        Assert.IsType<WorldTimeAdvanced>(
+            Assert.Single(secondResult.ProducedEvents));
+        Assert.Equal(At(11, 0), secondResult.World.CurrentTime);
     }
 
     private WorldSimulator CreateSimulator(DateTimeOffset scheduledAt) =>

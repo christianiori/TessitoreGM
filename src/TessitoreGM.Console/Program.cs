@@ -111,23 +111,13 @@ static void AdvanceWorld(string path)
                     TimeSpan.FromHours(4))
             })
     });
-    var newEvents = new List<IWorldEvent>();
-    var world = loadedWorld.World;
+    var result = simulator.Advance(
+        loadedWorld.World,
+        OnSameDay(loadedWorld.World.CurrentTime, 13, 0));
 
-    SimulateAt(OnSameDay(world.CurrentTime, 8, 15));
-    SimulateAt(OnSameDay(world.CurrentTime, 8, 30));
-    SimulateAt(OnSameDay(world.CurrentTime, 12, 30));
-
-    AppendEvents(loadedWorld, newEvents);
+    AppendEvents(loadedWorld, result.ProducedEvents);
     Console.WriteLine($"Advanced persistent world: {loadedWorld.EventFilePath}.");
     ReplayWorld(loadedWorld.EventFilePath);
-
-    void SimulateAt(DateTimeOffset currentTime)
-    {
-        var result = simulator.Advance(world, currentTime);
-        world = result.World;
-        newEvents.AddRange(result.ProducedEvents);
-    }
 }
 
 static void DeliverWorld(string path)

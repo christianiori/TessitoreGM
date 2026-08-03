@@ -64,22 +64,24 @@ public sealed class NpcAgentTests
     }
 
     [Fact]
-    public void Advance_MultipleBehaviors_ProducesOneCoherentActionAtATime()
+    public void Advance_MultipleBehaviors_ProducesAutonomousSequence()
     {
         var world = CreateAcceptedWorld(_blacksmithId);
         var blacksmith = CreateBlacksmithWithArrival();
         var simulator = new WorldSimulator(new IWorldRule[] { blacksmith });
 
-        var arrival = simulator.Advance(world, At(8, 15));
-        var workStarted = simulator.Advance(arrival.World, At(8, 30));
-        var completed = simulator.Advance(workStarted.World, At(12, 30));
+        var result = simulator.Advance(world, At(13, 0));
 
-        Assert.IsType<EntityEnteredLocation>(Assert.Single(arrival.ProducedEvents));
-        Assert.IsType<OrderWorkStarted>(Assert.Single(workStarted.ProducedEvents));
-        Assert.IsType<OrderCompleted>(Assert.Single(completed.ProducedEvents));
-        Assert.Equal(_forgeId, completed.World.GetLocation(_blacksmithId));
-        Assert.Equal(OrderStatus.Completed, completed.World.GetOrder(_orderId)?.Status);
-        Assert.Equal(_blacksmithId, completed.World.GetItem(_itemId)?.OwnerId);
+        Assert.Collection(
+            result.ProducedEvents,
+            worldEvent => Assert.IsType<EntityEnteredLocation>(worldEvent),
+            worldEvent => Assert.IsType<OrderWorkStarted>(worldEvent),
+            worldEvent => Assert.IsType<OrderCompleted>(worldEvent),
+            worldEvent => Assert.IsType<WorldTimeAdvanced>(worldEvent));
+        Assert.Equal(_forgeId, result.World.GetLocation(_blacksmithId));
+        Assert.Equal(OrderStatus.Completed, result.World.GetOrder(_orderId)?.Status);
+        Assert.Equal(_blacksmithId, result.World.GetItem(_itemId)?.OwnerId);
+        Assert.Equal(At(13, 0), result.World.CurrentTime);
     }
 
     private NpcAgent CreateBlacksmith(NpcMemory? memory = null) =>
