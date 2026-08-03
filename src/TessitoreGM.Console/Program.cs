@@ -81,6 +81,7 @@ static void AdvanceWorld(string path)
     var loadedWorld = LoadWorld(path);
     var request = GetOrderRequest(loadedWorld.EventLog);
     var itemId = new ItemId($"{request.RequestedItem}-1");
+    var forgeId = new LocationId("forge");
     var simulator = new WorldSimulator(new IWorldRule[]
     {
         new NpcAgent(
@@ -88,15 +89,20 @@ static void AdvanceWorld(string path)
             "blacksmith",
             new INpcBehavior[]
             {
+                new ScheduledArrivalBehavior(
+                    forgeId,
+                    OnSameDay(loadedWorld.World.CurrentTime, 8, 15)),
                 new OrderProductionBehavior(
                     request.OrderId,
                     itemId,
+                    forgeId,
                     TimeSpan.FromHours(4))
             })
     });
     var newEvents = new List<IWorldEvent>();
     var world = loadedWorld.World;
 
+    SimulateAt(OnSameDay(world.CurrentTime, 8, 15));
     SimulateAt(OnSameDay(world.CurrentTime, 8, 30));
     SimulateAt(OnSameDay(world.CurrentTime, 12, 30));
 

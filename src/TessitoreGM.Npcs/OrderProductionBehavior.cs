@@ -7,14 +7,17 @@ namespace TessitoreGM.Npcs;
 public sealed class OrderProductionBehavior : INpcBehavior
 {
     private readonly OrderId _orderId;
+    private readonly LocationId _workplaceId;
     private readonly OrderProductionRule _productionRule;
 
     public OrderProductionBehavior(
         OrderId orderId,
         ItemId producedItemId,
+        LocationId workplaceId,
         TimeSpan productionDuration)
     {
         _orderId = orderId;
+        _workplaceId = workplaceId;
         _productionRule = new OrderProductionRule(
             orderId,
             producedItemId,
@@ -30,7 +33,8 @@ public sealed class OrderProductionBehavior : INpcBehavior
 
         var order = world.GetOrder(_orderId);
 
-        if (order?.ArtisanId != npcId)
+        if (order?.ArtisanId != npcId ||
+            world.GetLocation(npcId) != _workplaceId)
         {
             return null;
         }
