@@ -15,12 +15,9 @@ public sealed class OrderProductionRuleTests
     {
         var world = CreateAcceptedWorld();
 
-        var proposedEvent = new OrderProductionRule().Evaluate(
+        var proposedEvent = CreateRule().Evaluate(
             world,
-            _orderId,
-            _itemId,
-            At(8, 30),
-            TimeSpan.FromHours(4));
+            At(8, 30));
 
         var workStarted = Assert.IsType<OrderWorkStarted>(proposedEvent);
         Assert.Equal(_orderId, workStarted.OrderId);
@@ -32,12 +29,7 @@ public sealed class OrderProductionRuleTests
     {
         var world = StartWork(CreateAcceptedWorld(), At(8, 30));
 
-        var proposedEvent = new OrderProductionRule().Evaluate(
-            world,
-            _orderId,
-            _itemId,
-            At(12, 29),
-            TimeSpan.FromHours(4));
+        var proposedEvent = CreateRule().Evaluate(world, At(12, 29));
 
         Assert.Null(proposedEvent);
     }
@@ -47,12 +39,7 @@ public sealed class OrderProductionRuleTests
     {
         var world = StartWork(CreateAcceptedWorld(), At(8, 30));
 
-        var proposedEvent = new OrderProductionRule().Evaluate(
-            world,
-            _orderId,
-            _itemId,
-            At(12, 30),
-            TimeSpan.FromHours(4));
+        var proposedEvent = CreateRule().Evaluate(world, At(12, 30));
 
         var completed = Assert.IsType<OrderCompleted>(proposedEvent);
         Assert.Equal(_orderId, completed.OrderId);
@@ -68,12 +55,7 @@ public sealed class OrderProductionRuleTests
             world,
             new OrderCompleted(_orderId, _itemId, At(12, 30)));
 
-        var proposedEvent = new OrderProductionRule().Evaluate(
-            world,
-            _orderId,
-            _itemId,
-            At(13, 0),
-            TimeSpan.FromHours(4));
+        var proposedEvent = CreateRule().Evaluate(world, At(13, 0));
 
         Assert.Null(proposedEvent);
     }
@@ -98,6 +80,9 @@ public sealed class OrderProductionRuleTests
         new WorldEventProcessor().Apply(
             world,
             new OrderWorkStarted(_orderId, at));
+
+    private OrderProductionRule CreateRule() =>
+        new(_orderId, _itemId, TimeSpan.FromHours(4));
 
     private static DateTimeOffset At(int hour, int minute) =>
         new(2026, 8, 3, hour, minute, 0, TimeSpan.Zero);

@@ -80,34 +80,28 @@ static void AdvanceWorld(string path)
     var loadedWorld = LoadWorld(path);
     var request = GetOrderRequest(loadedWorld.EventLog);
     var itemId = new ItemId($"{request.RequestedItem}-1");
-    var rule = new OrderProductionRule();
-    var processor = new WorldEventProcessor();
+    var simulator = new WorldSimulator(new IWorldRule[]
+    {
+        new OrderProductionRule(
+            request.OrderId,
+            itemId,
+            TimeSpan.FromHours(4))
+    });
     var newEvents = new List<IWorldEvent>();
     var world = loadedWorld.World;
 
-    ProposeAndApply(OnSameDay(world.CurrentTime, 8, 30));
-    ProposeAndApply(OnSameDay(world.CurrentTime, 12, 30));
+    SimulateAt(OnSameDay(world.CurrentTime, 8, 30));
+    SimulateAt(OnSameDay(world.CurrentTime, 12, 30));
 
     AppendEvents(loadedWorld, newEvents);
     Console.WriteLine($"Advanced persistent world: {loadedWorld.EventFilePath}.");
     ReplayWorld(loadedWorld.EventFilePath);
 
-    void ProposeAndApply(DateTimeOffset currentTime)
+    void SimulateAt(DateTimeOffset currentTime)
     {
-        var proposedEvent = rule.Evaluate(
-            world,
-            request.OrderId,
-            itemId,
-            currentTime,
-            TimeSpan.FromHours(4));
-
-        if (proposedEvent is null)
-        {
-            return;
-        }
-
-        newEvents.Add(proposedEvent);
-        world = processor.Apply(world, proposedEvent);
+        var result = simulator.Advance(world, currentTime);
+        world = result.World;
+        newEvents.AddRange(result.ProducedEvents);
     }
 }
 
