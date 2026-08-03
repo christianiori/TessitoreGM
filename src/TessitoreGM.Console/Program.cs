@@ -107,6 +107,7 @@ static void AdvanceWorld(string path)
                     request.OrderId,
                     itemId,
                     forgeId,
+                    OnSameDay(loadedWorld.World.CurrentTime, 8, 30),
                     TimeSpan.FromHours(4))
             })
     });

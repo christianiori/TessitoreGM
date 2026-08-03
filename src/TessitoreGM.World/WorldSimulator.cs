@@ -17,32 +17,52 @@ public sealed class WorldSimulator
 
     public SimulationResult Advance(
         WorldSnapshot world,
-        DateTimeOffset currentTime)
+        DateTimeOffset until)
     {
         ArgumentNullException.ThrowIfNull(world);
 
-        if (currentTime < world.CurrentTime)
+        if (until < world.CurrentTime)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(currentTime),
+                nameof(until),
                 "Simulation time cannot precede world time.");
         }
 
-        var producedEvents = new List<IWorldEvent>();
-
-        foreach (var rule in _rules)
-        {
-            var proposedEvent = rule.Evaluate(world, currentTime);
-
-            if (proposedEvent is null)
+        var proposals = _rules
+            .Select((rule, index) => new
             {
-                continue;
-            }
+                Event = rule.ProposeNext(world, until),
+                RuleIndex = index
+            })
+            .Where(proposal => proposal.Event is not null)
+            .ToArray();
 
-            world = _processor.Apply(world, proposedEvent);
-            producedEvents.Add(proposedEvent);
+        foreach (var proposal in proposals)
+        {
+            if (proposal.Event!.OccurredAt < world.CurrentTime ||
+                proposal.Event.OccurredAt > until)
+            {
+                throw new InvalidOperationException(
+                    $"Rule proposed event at '{proposal.Event.OccurredAt:O}' " +
+                    $"outside simulation interval " +
+                    $"'{world.CurrentTime:O}' to '{until:O}'.");
+            }
         }
 
-        return new SimulationResult(world, producedEvents);
+        var selected = proposals
+            .OrderBy(proposal => proposal.Event!.OccurredAt)
+            .ThenBy(proposal => proposal.RuleIndex)
+            .FirstOrDefault();
+
+        if (selected is null)
+        {
+            return new SimulationResult(world, Array.Empty<IWorldEvent>());
+        }
+
+        var selectedEvent = selected.Event!;
+        var updatedWorld = _processor.Apply(world, selectedEvent);
+        return new SimulationResult(
+            updatedWorld,
+            new IWorldEvent[] { selectedEvent });
     }
 }

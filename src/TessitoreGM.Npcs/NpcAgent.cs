@@ -42,26 +42,26 @@ public sealed class NpcAgent : IWorldRule
 
     public NpcMemory Memory { get; }
 
-    public IWorldEvent? Evaluate(
+    public IWorldEvent? ProposeNext(
         WorldSnapshot world,
-        DateTimeOffset currentTime)
+        DateTimeOffset until)
     {
         ArgumentNullException.ThrowIfNull(world);
 
-        foreach (var behavior in _behaviors)
-        {
-            var proposedEvent = behavior.Evaluate(
+        return _behaviors
+            .Select((behavior, index) => new
+            {
+                Event = behavior.ProposeNext(
                 Id,
                 Memory,
                 world,
-                currentTime);
-
-            if (proposedEvent is not null)
-            {
-                return proposedEvent;
-            }
-        }
-
-        return null;
+                    until),
+                BehaviorIndex = index
+            })
+            .Where(proposal => proposal.Event is not null)
+            .OrderBy(proposal => proposal.Event!.OccurredAt)
+            .ThenBy(proposal => proposal.BehaviorIndex)
+            .Select(proposal => proposal.Event)
+            .FirstOrDefault();
     }
 }

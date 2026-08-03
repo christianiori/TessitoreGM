@@ -7,11 +7,13 @@ public sealed class OrderProductionRule : IWorldRule
 {
     private readonly OrderId _orderId;
     private readonly ItemId _producedItemId;
+    private readonly DateTimeOffset _workStartNotBefore;
     private readonly TimeSpan _productionDuration;
 
     public OrderProductionRule(
         OrderId orderId,
         ItemId producedItemId,
+        DateTimeOffset workStartNotBefore,
         TimeSpan productionDuration)
     {
         if (productionDuration < TimeSpan.Zero)
@@ -23,25 +25,38 @@ public sealed class OrderProductionRule : IWorldRule
 
         _orderId = orderId;
         _producedItemId = producedItemId;
+        _workStartNotBefore = workStartNotBefore;
         _productionDuration = productionDuration;
     }
 
-    public IWorldEvent? Evaluate(
+    public IWorldEvent? ProposeNext(
         WorldSnapshot world,
-        DateTimeOffset currentTime)
+        DateTimeOffset until)
     {
         ArgumentNullException.ThrowIfNull(world);
 
         var order = world.GetOrder(_orderId);
 
-        return order?.Status switch
+        IWorldEvent? proposedEvent = order?.Status switch
         {
-            OrderStatus.Accepted => new OrderWorkStarted(_orderId, currentTime),
+            OrderStatus.Accepted => new OrderWorkStarted(
+                _orderId,
+                LaterOf(world.CurrentTime, _workStartNotBefore)),
             OrderStatus.InProgress
-                when order.WorkStartedAt is DateTimeOffset startedAt &&
-                     currentTime >= startedAt + _productionDuration
-                => new OrderCompleted(_orderId, _producedItemId, currentTime),
+                when order.WorkStartedAt is DateTimeOffset startedAt
+                => new OrderCompleted(
+                    _orderId,
+                    _producedItemId,
+                    LaterOf(
+                        world.CurrentTime,
+                        startedAt + _productionDuration)),
             _ => null
         };
+
+        return proposedEvent?.OccurredAt <= until ? proposedEvent : null;
     }
+
+    private static DateTimeOffset LaterOf(
+        DateTimeOffset first,
+        DateTimeOffset second) => first >= second ? first : second;
 }

@@ -19,14 +19,22 @@ public sealed class ScheduledEntityArrivalRule : IWorldRule
         _scheduledAt = scheduledAt;
     }
 
-    public IWorldEvent? Evaluate(
+    public IWorldEvent? ProposeNext(
         WorldSnapshot world,
-        DateTimeOffset currentTime)
+        DateTimeOffset until)
     {
         ArgumentNullException.ThrowIfNull(world);
 
-        if (currentTime < _scheduledAt ||
-            world.GetLocation(_entityId) == _destinationId)
+        if (world.GetLocation(_entityId) == _destinationId)
+        {
+            return null;
+        }
+
+        var eventTime = _scheduledAt < world.CurrentTime
+            ? world.CurrentTime
+            : _scheduledAt;
+
+        if (eventTime > until)
         {
             return null;
         }
@@ -34,6 +42,6 @@ public sealed class ScheduledEntityArrivalRule : IWorldRule
         return new EntityEnteredLocation(
             _entityId,
             _destinationId,
-            currentTime);
+            eventTime);
     }
 }

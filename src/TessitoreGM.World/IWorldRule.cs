@@ -4,5 +4,5 @@ namespace TessitoreGM.World;
 
 public interface IWorldRule
 {
-    IWorldEvent? Evaluate(WorldSnapshot world, DateTimeOffset currentTime);
+    IWorldEvent? ProposeNext(WorldSnapshot world, DateTimeOffset until);
 }

@@ -14,12 +14,12 @@ public sealed class NpcAgentTests
     private readonly LocationId _forgeId = new("forge");
 
     [Fact]
-    public void Evaluate_AcceptedOwnOrder_ProposesStartingWork()
+    public void ProposeNext_AcceptedOwnOrder_ProposesStartingWork()
     {
         var world = PlaceAtForge(CreateAcceptedWorld(_blacksmithId));
         var blacksmith = CreateBlacksmith();
 
-        var proposedEvent = blacksmith.Evaluate(world, At(8, 30));
+        var proposedEvent = blacksmith.ProposeNext(world, At(13, 0));
 
         var workStarted = Assert.IsType<OrderWorkStarted>(proposedEvent);
         Assert.Equal(_orderId, workStarted.OrderId);
@@ -28,23 +28,23 @@ public sealed class NpcAgentTests
     }
 
     [Fact]
-    public void Evaluate_OrderAssignedToAnotherArtisan_DoesNotAct()
+    public void ProposeNext_OrderAssignedToAnotherArtisan_DoesNotAct()
     {
         var world = PlaceAtForge(CreateAcceptedWorld(new EntityId("armorer")));
         var blacksmith = CreateBlacksmith();
 
-        var proposedEvent = blacksmith.Evaluate(world, At(8, 30));
+        var proposedEvent = blacksmith.ProposeNext(world, At(13, 0));
 
         Assert.Null(proposedEvent);
     }
 
     [Fact]
-    public void Evaluate_UnknownOwnOrder_DoesNotAct()
+    public void ProposeNext_UnknownOwnOrder_DoesNotAct()
     {
         var world = PlaceAtForge(CreateAcceptedWorld(_blacksmithId));
         var blacksmith = CreateBlacksmith(NpcMemory.Empty(_blacksmithId));
 
-        var proposedEvent = blacksmith.Evaluate(world, At(8, 30));
+        var proposedEvent = blacksmith.ProposeNext(world, At(13, 0));
 
         Assert.Null(proposedEvent);
     }
@@ -93,6 +93,7 @@ public sealed class NpcAgentTests
                     _orderId,
                     _itemId,
                     _forgeId,
+                    At(8, 30),
                     TimeSpan.FromHours(4))
             });
 
@@ -108,6 +109,7 @@ public sealed class NpcAgentTests
                     _orderId,
                     _itemId,
                     _forgeId,
+                    At(8, 30),
                     TimeSpan.FromHours(4))
             });
 

@@ -7,9 +7,9 @@ namespace TessitoreGM.Npcs;
 
 public interface INpcBehavior
 {
-    IWorldEvent? Evaluate(
+    IWorldEvent? ProposeNext(
         EntityId npcId,
         NpcMemory memory,
         WorldSnapshot world,
-        DateTimeOffset currentTime);
+        DateTimeOffset until);
 }

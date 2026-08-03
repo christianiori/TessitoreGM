@@ -11,13 +11,13 @@ public sealed class OrderProductionRuleTests
     private readonly ItemId _itemId = new("hammer-1");
 
     [Fact]
-    public void Evaluate_AcceptedOrder_ProposesWorkStarted()
+    public void ProposeNext_AcceptedOrderWithinLimit_ProposesScheduledWorkStarted()
     {
         var world = CreateAcceptedWorld();
 
-        var proposedEvent = CreateRule().Evaluate(
+        var proposedEvent = CreateRule().ProposeNext(
             world,
-            At(8, 30));
+            At(13, 0));
 
         var workStarted = Assert.IsType<OrderWorkStarted>(proposedEvent);
         Assert.Equal(_orderId, workStarted.OrderId);
@@ -25,21 +25,21 @@ public sealed class OrderProductionRuleTests
     }
 
     [Fact]
-    public void Evaluate_InProgressBeforeDuration_DoesNotProposeEvent()
+    public void ProposeNext_InProgressCompletionBeyondLimit_DoesNotProposeEvent()
     {
         var world = StartWork(CreateAcceptedWorld(), At(8, 30));
 
-        var proposedEvent = CreateRule().Evaluate(world, At(12, 29));
+        var proposedEvent = CreateRule().ProposeNext(world, At(12, 29));
 
         Assert.Null(proposedEvent);
     }
 
     [Fact]
-    public void Evaluate_InProgressAfterDuration_ProposesCompleted()
+    public void ProposeNext_InProgressCompletionWithinLimit_ProposesCompleted()
     {
         var world = StartWork(CreateAcceptedWorld(), At(8, 30));
 
-        var proposedEvent = CreateRule().Evaluate(world, At(12, 30));
+        var proposedEvent = CreateRule().ProposeNext(world, At(13, 0));
 
         var completed = Assert.IsType<OrderCompleted>(proposedEvent);
         Assert.Equal(_orderId, completed.OrderId);
@@ -48,14 +48,14 @@ public sealed class OrderProductionRuleTests
     }
 
     [Fact]
-    public void Evaluate_CompletedOrder_DoesNotProposeAnotherEvent()
+    public void ProposeNext_CompletedOrder_DoesNotProposeAnotherEvent()
     {
         var world = StartWork(CreateAcceptedWorld(), At(8, 30));
         world = new WorldEventProcessor().Apply(
             world,
             new OrderCompleted(_orderId, _itemId, At(12, 30)));
 
-        var proposedEvent = CreateRule().Evaluate(world, At(13, 0));
+        var proposedEvent = CreateRule().ProposeNext(world, At(13, 0));
 
         Assert.Null(proposedEvent);
     }
@@ -82,7 +82,7 @@ public sealed class OrderProductionRuleTests
             new OrderWorkStarted(_orderId, at));
 
     private OrderProductionRule CreateRule() =>
-        new(_orderId, _itemId, TimeSpan.FromHours(4));
+        new(_orderId, _itemId, At(8, 30), TimeSpan.FromHours(4));
 
     private static DateTimeOffset At(int hour, int minute) =>
         new(2026, 8, 3, hour, minute, 0, TimeSpan.Zero);

@@ -18,20 +18,28 @@ public sealed class ScheduledArrivalBehavior : INpcBehavior
         _scheduledAt = scheduledAt;
     }
 
-    public IWorldEvent? Evaluate(
+    public IWorldEvent? ProposeNext(
         EntityId npcId,
         NpcMemory memory,
         WorldSnapshot world,
-        DateTimeOffset currentTime)
+        DateTimeOffset until)
     {
         ArgumentNullException.ThrowIfNull(world);
 
-        if (currentTime < _scheduledAt ||
-            world.GetLocation(npcId) == _destinationId)
+        if (world.GetLocation(npcId) == _destinationId)
         {
             return null;
         }
 
-        return new EntityEnteredLocation(npcId, _destinationId, currentTime);
+        var eventTime = _scheduledAt < world.CurrentTime
+            ? world.CurrentTime
+            : _scheduledAt;
+
+        if (eventTime > until)
+        {
+            return null;
+        }
+
+        return new EntityEnteredLocation(npcId, _destinationId, eventTime);
     }
 }

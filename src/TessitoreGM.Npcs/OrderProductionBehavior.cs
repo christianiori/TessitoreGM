@@ -15,6 +15,7 @@ public sealed class OrderProductionBehavior : INpcBehavior
         OrderId orderId,
         ItemId producedItemId,
         LocationId workplaceId,
+        DateTimeOffset workStartNotBefore,
         TimeSpan productionDuration)
     {
         _orderId = orderId;
@@ -22,14 +23,15 @@ public sealed class OrderProductionBehavior : INpcBehavior
         _productionRule = new OrderProductionRule(
             orderId,
             producedItemId,
+            workStartNotBefore,
             productionDuration);
     }
 
-    public IWorldEvent? Evaluate(
+    public IWorldEvent? ProposeNext(
         EntityId npcId,
         NpcMemory memory,
         WorldSnapshot world,
-        DateTimeOffset currentTime)
+        DateTimeOffset until)
     {
         ArgumentNullException.ThrowIfNull(world);
 
@@ -42,6 +44,6 @@ public sealed class OrderProductionBehavior : INpcBehavior
             return null;
         }
 
-        return _productionRule.Evaluate(world, currentTime);
+        return _productionRule.ProposeNext(world, until);
     }
 }

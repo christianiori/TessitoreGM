@@ -107,12 +107,12 @@ accaduti e l'orario finale raggiunto dal mondo.
 
 ### 3.2 — Proposte entro un intervallo
 
-- [ ] Sostituire la valutazione a un singolo istante con la ricerca del prossimo
+- [x] Sostituire la valutazione a un singolo istante con la ricerca del prossimo
       evento applicabile entro un orario limite
-- [ ] Spostare orari, durate e condizioni dentro comportamenti e regole
+- [x] Spostare orari, durate e condizioni dentro comportamenti e regole
 - [ ] Eliminare dalla console gli orari `08:15`, `08:30` e `12:30`
-- [ ] Fare in modo che una regola non produca eventi oltre l'orario richiesto
-- [ ] Fare in modo che una regola non riproponga un evento già soddisfatto
+- [x] Fare in modo che una regola non produca eventi oltre l'orario richiesto
+- [x] Fare in modo che una regola non riproponga un evento già soddisfatto
 
 Ogni regola dovrà rispondere alla domanda:
 
@@ -123,10 +123,10 @@ dopo l'ora corrente e non oltre l'ora richiesta?
 
 ### 3.3 — Ciclo autonomo
 
-- [ ] Raccogliere le proposte delle regole attive
-- [ ] Selezionare la proposta cronologicamente più vicina
-- [ ] Usare un ordine stabile e documentato in caso di parità
-- [ ] Validare e applicare l'evento selezionato
+- [x] Raccogliere le proposte delle regole attive
+- [x] Selezionare la proposta cronologicamente più vicina
+- [x] Usare un ordine stabile e documentato in caso di parità
+- [x] Validare e applicare l'evento selezionato
 - [ ] Rivalutare il mondo dopo ogni evento
 - [ ] Fermarsi quando non esistono altre proposte entro il limite
 - [ ] Portare infine l'orologio del mondo all'orario richiesto
@@ -283,9 +283,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Implementare il secondo incremento del Milestone 3:
+Implementare il terzo incremento del Milestone 3:
 
-1. permettere alle regole di proporre il prossimo evento entro un limite;
-2. spostare gli orari dello scenario fuori dalla console;
-3. selezionare la proposta cronologicamente più vicina;
-4. aggiungere i relativi test di determinismo e limite temporale.
+1. rivalutare automaticamente tutte le regole dopo ogni evento;
+2. continuare finché non restano proposte entro il limite;
+3. aggiungere l'avanzamento finale dell'orologio;
+4. proteggere il ciclo con un limite massimo di eventi.
