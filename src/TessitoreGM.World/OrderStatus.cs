@@ -3,5 +3,7 @@ namespace TessitoreGM.World;
 public enum OrderStatus
 {
     Requested,
-    Accepted
+    Accepted,
+    InProgress,
+    Completed
 }

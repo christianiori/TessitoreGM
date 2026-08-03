@@ -9,4 +9,7 @@ public sealed record Order(
     string RequestedItem,
     DateTimeOffset RequestedAt,
     OrderStatus Status,
-    DateTimeOffset? AcceptedAt);
+    DateTimeOffset? AcceptedAt,
+    DateTimeOffset? WorkStartedAt,
+    DateTimeOffset? CompletedAt,
+    ItemId? ProducedItemId);

@@ -85,6 +85,9 @@ public sealed class WorldSnapshotTests
         Assert.Equal(worldEvent.OccurredAt, order.RequestedAt);
         Assert.Equal(OrderStatus.Requested, order.Status);
         Assert.Null(order.AcceptedAt);
+        Assert.Null(order.WorkStartedAt);
+        Assert.Null(order.CompletedAt);
+        Assert.Null(order.ProducedItemId);
     }
 
     [Fact]
@@ -248,5 +251,78 @@ public sealed class WorldSnapshotTests
         return world.Apply(new OrderAccepted(
             orderId,
             new DateTimeOffset(2026, 8, 3, 8, 12, 0, TimeSpan.Zero)));
+    }
+
+    [Fact]
+    public void Apply_OrderWorkStarted_ChangesAcceptedOrderToInProgress()
+    {
+        var orderId = new OrderId("order-1");
+        var acceptedWorld = CreateAcceptedOrderWorld(
+            orderId,
+            new EntityId("customer"),
+            new EntityId("blacksmith"),
+            customerBalance: 10,
+            artisanBalance: 25);
+        var worldEvent = new OrderWorkStarted(
+            orderId,
+            new DateTimeOffset(2026, 8, 3, 8, 30, 0, TimeSpan.Zero));
+
+        var workingWorld = acceptedWorld.Apply(worldEvent);
+
+        Assert.Equal(OrderStatus.Accepted, acceptedWorld.GetOrder(orderId)?.Status);
+        Assert.Equal(OrderStatus.InProgress, workingWorld.GetOrder(orderId)?.Status);
+        Assert.Equal(worldEvent.OccurredAt, workingWorld.GetOrder(orderId)?.WorkStartedAt);
+    }
+
+    [Fact]
+    public void Apply_OrderCompleted_CreatesProducedItem()
+    {
+        var customerId = new EntityId("customer");
+        var blacksmithId = new EntityId("blacksmith");
+        var orderId = new OrderId("order-1");
+        var itemId = new ItemId("sword-1");
+        var acceptedWorld = CreateAcceptedOrderWorld(
+            orderId,
+            customerId,
+            blacksmithId,
+            customerBalance: 10,
+            artisanBalance: 25);
+        var workingWorld = acceptedWorld.Apply(new OrderWorkStarted(
+            orderId,
+            new DateTimeOffset(2026, 8, 3, 8, 30, 0, TimeSpan.Zero)));
+        var worldEvent = new OrderCompleted(
+            orderId,
+            itemId,
+            new DateTimeOffset(2026, 8, 3, 12, 30, 0, TimeSpan.Zero));
+
+        var completedWorld = workingWorld.Apply(worldEvent);
+
+        var order = Assert.IsType<Order>(completedWorld.GetOrder(orderId));
+        Assert.Equal(OrderStatus.Completed, order.Status);
+        Assert.Equal(worldEvent.OccurredAt, order.CompletedAt);
+        Assert.Equal(itemId, order.ProducedItemId);
+        var item = Assert.IsType<WorldItem>(completedWorld.GetItem(itemId));
+        Assert.Equal("sword", item.Name);
+        Assert.Equal(blacksmithId, item.OwnerId);
+        Assert.Equal(orderId, item.SourceOrderId);
+        Assert.Equal(worldEvent.OccurredAt, item.CreatedAt);
+    }
+
+    [Fact]
+    public void Apply_OrderCompletedBeforeWorkStarted_Throws()
+    {
+        var orderId = new OrderId("order-1");
+        var acceptedWorld = CreateAcceptedOrderWorld(
+            orderId,
+            new EntityId("customer"),
+            new EntityId("blacksmith"),
+            customerBalance: 10,
+            artisanBalance: 25);
+        var worldEvent = new OrderCompleted(
+            orderId,
+            new ItemId("sword-1"),
+            new DateTimeOffset(2026, 8, 3, 12, 30, 0, TimeSpan.Zero));
+
+        Assert.Throws<InvalidOperationException>(() => acceptedWorld.Apply(worldEvent));
     }
 }

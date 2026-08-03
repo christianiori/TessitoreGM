@@ -16,6 +16,8 @@ public sealed class WorldEventProcessor
             OrderRequested requested => world.Apply(requested),
             OrderAccepted accepted => world.Apply(accepted),
             PaymentTransferred payment => world.Apply(payment),
+            OrderWorkStarted workStarted => world.Apply(workStarted),
+            OrderCompleted completed => world.Apply(completed),
             _ => throw new NotSupportedException(
                 $"World event '{worldEvent.GetType().Name}' is not supported.")
         };

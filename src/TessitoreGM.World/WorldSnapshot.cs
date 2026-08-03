@@ -8,24 +8,36 @@ public sealed class WorldSnapshot
     private readonly IReadOnlyDictionary<EntityId, LocationId> _entityLocations;
     private readonly IReadOnlyDictionary<OrderId, Order> _orders;
     private readonly IReadOnlyDictionary<EntityId, int> _balances;
+    private readonly IReadOnlyDictionary<ItemId, WorldItem> _items;
 
     private WorldSnapshot(
+        DateTimeOffset currentTime,
         IReadOnlyDictionary<EntityId, LocationId> entityLocations,
         IReadOnlyDictionary<OrderId, Order> orders,
-        IReadOnlyDictionary<EntityId, int> balances)
+        IReadOnlyDictionary<EntityId, int> balances,
+        IReadOnlyDictionary<ItemId, WorldItem> items)
     {
+        CurrentTime = currentTime;
         _entityLocations = entityLocations;
         _orders = orders;
         _balances = balances;
+        _items = items;
     }
 
     public static WorldSnapshot Empty { get; } =
         new(
+            DateTimeOffset.MinValue,
             new Dictionary<EntityId, LocationId>(),
             new Dictionary<OrderId, Order>(),
-            new Dictionary<EntityId, int>());
+            new Dictionary<EntityId, int>(),
+            new Dictionary<ItemId, WorldItem>());
 
     public static WorldSnapshot Create(IReadOnlyDictionary<EntityId, int> balances)
+        => Create(DateTimeOffset.MinValue, balances);
+
+    public static WorldSnapshot Create(
+        DateTimeOffset currentTime,
+        IReadOnlyDictionary<EntityId, int> balances)
     {
         ArgumentNullException.ThrowIfNull(balances);
 
@@ -35,10 +47,14 @@ public sealed class WorldSnapshot
         }
 
         return new WorldSnapshot(
+            currentTime,
             new Dictionary<EntityId, LocationId>(),
             new Dictionary<OrderId, Order>(),
-            new Dictionary<EntityId, int>(balances));
+            new Dictionary<EntityId, int>(balances),
+            new Dictionary<ItemId, WorldItem>());
     }
+
+    public DateTimeOffset CurrentTime { get; }
 
     public LocationId? GetLocation(EntityId entityId) =>
         _entityLocations.TryGetValue(entityId, out var locationId)
@@ -55,21 +71,28 @@ public sealed class WorldSnapshot
             ? balance
             : 0;
 
+    public WorldItem? GetItem(ItemId itemId) =>
+        _items.TryGetValue(itemId, out var item)
+            ? item
+            : null;
+
     public WorldSnapshot Apply(EntityEnteredLocation worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
 
         var entityLocations = new Dictionary<EntityId, LocationId>(_entityLocations)
         {
             [worldEvent.EntityId] = worldEvent.LocationId
         };
 
-        return new WorldSnapshot(entityLocations, _orders, _balances);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items);
     }
 
     public WorldSnapshot Apply(EntityLeftLocation worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
 
         if (GetLocation(worldEvent.EntityId) != worldEvent.LocationId)
         {
@@ -80,12 +103,13 @@ public sealed class WorldSnapshot
         var entityLocations = new Dictionary<EntityId, LocationId>(_entityLocations);
         entityLocations.Remove(worldEvent.EntityId);
 
-        return new WorldSnapshot(entityLocations, _orders, _balances);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items);
     }
 
     public WorldSnapshot Apply(OrderRequested worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
 
         if (string.IsNullOrWhiteSpace(worldEvent.RequestedItem))
         {
@@ -109,15 +133,19 @@ public sealed class WorldSnapshot
                 worldEvent.RequestedItem,
                 worldEvent.OccurredAt,
                 OrderStatus.Requested,
-                AcceptedAt: null)
+                AcceptedAt: null,
+                WorkStartedAt: null,
+                CompletedAt: null,
+                ProducedItemId: null)
         };
 
-        return new WorldSnapshot(_entityLocations, orders, _balances);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items);
     }
 
     public WorldSnapshot Apply(OrderAccepted worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
 
         if (!_orders.TryGetValue(worldEvent.OrderId, out var order))
         {
@@ -140,12 +168,13 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(_entityLocations, orders, _balances);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items);
     }
 
     public WorldSnapshot Apply(PaymentTransferred worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
 
         if (worldEvent.Amount <= 0)
         {
@@ -181,6 +210,89 @@ public sealed class WorldSnapshot
             [worldEvent.PayeeId] = GetBalance(worldEvent.PayeeId) + worldEvent.Amount
         };
 
-        return new WorldSnapshot(_entityLocations, _orders, balances);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, _orders, balances, _items);
+    }
+
+    public WorldSnapshot Apply(OrderWorkStarted worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (!_orders.TryGetValue(worldEvent.OrderId, out var order) ||
+            order.Status != OrderStatus.Accepted)
+        {
+            throw new InvalidOperationException(
+                $"Order '{worldEvent.OrderId}' is not accepted.");
+        }
+
+        var orders = new Dictionary<OrderId, Order>(_orders)
+        {
+            [worldEvent.OrderId] = order with
+            {
+                Status = OrderStatus.InProgress,
+                WorkStartedAt = worldEvent.OccurredAt
+            }
+        };
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            orders,
+            _balances,
+            _items);
+    }
+
+    public WorldSnapshot Apply(OrderCompleted worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (!_orders.TryGetValue(worldEvent.OrderId, out var order) ||
+            order.Status != OrderStatus.InProgress)
+        {
+            throw new InvalidOperationException(
+                $"Order '{worldEvent.OrderId}' is not in progress.");
+        }
+
+        if (_items.ContainsKey(worldEvent.ProducedItemId))
+        {
+            throw new InvalidOperationException(
+                $"Item '{worldEvent.ProducedItemId}' already exists.");
+        }
+
+        var orders = new Dictionary<OrderId, Order>(_orders)
+        {
+            [worldEvent.OrderId] = order with
+            {
+                Status = OrderStatus.Completed,
+                CompletedAt = worldEvent.OccurredAt,
+                ProducedItemId = worldEvent.ProducedItemId
+            }
+        };
+        var items = new Dictionary<ItemId, WorldItem>(_items)
+        {
+            [worldEvent.ProducedItemId] = new WorldItem(
+                worldEvent.ProducedItemId,
+                order.RequestedItem,
+                order.ArtisanId,
+                order.Id,
+                worldEvent.OccurredAt)
+        };
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            orders,
+            _balances,
+            items);
+    }
+
+    private void EnsureChronological(IWorldEvent worldEvent)
+    {
+        if (worldEvent.OccurredAt < CurrentTime)
+        {
+            throw new InvalidOperationException(
+                $"Event time '{worldEvent.OccurredAt:O}' precedes world time '{CurrentTime:O}'.");
+        }
     }
 }
