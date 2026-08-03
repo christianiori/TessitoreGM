@@ -1,5 +1,6 @@
 using TessitoreGM.Core;
 using TessitoreGM.Events;
+using TessitoreGM.Memory;
 using TessitoreGM.Npcs;
 
 namespace TessitoreGM.World.Tests;
@@ -31,6 +32,17 @@ public sealed class NpcAgentTests
     {
         var world = PlaceAtForge(CreateAcceptedWorld(new EntityId("armorer")));
         var blacksmith = CreateBlacksmith();
+
+        var proposedEvent = blacksmith.Evaluate(world, At(8, 30));
+
+        Assert.Null(proposedEvent);
+    }
+
+    [Fact]
+    public void Evaluate_UnknownOwnOrder_DoesNotAct()
+    {
+        var world = PlaceAtForge(CreateAcceptedWorld(_blacksmithId));
+        var blacksmith = CreateBlacksmith(NpcMemory.Empty(_blacksmithId));
 
         var proposedEvent = blacksmith.Evaluate(world, At(8, 30));
 
@@ -70,10 +82,11 @@ public sealed class NpcAgentTests
         Assert.Equal(_blacksmithId, completed.World.GetItem(_itemId)?.OwnerId);
     }
 
-    private NpcAgent CreateBlacksmith() =>
+    private NpcAgent CreateBlacksmith(NpcMemory? memory = null) =>
         new(
             _blacksmithId,
             "blacksmith",
+            memory ?? CreateOrderMemory(),
             new INpcBehavior[]
             {
                 new OrderProductionBehavior(
@@ -87,6 +100,7 @@ public sealed class NpcAgentTests
         new(
             _blacksmithId,
             "blacksmith",
+            CreateOrderMemory(),
             new INpcBehavior[]
             {
                 new ScheduledArrivalBehavior(_forgeId, At(8, 15)),
@@ -96,6 +110,15 @@ public sealed class NpcAgentTests
                     _forgeId,
                     TimeSpan.FromHours(4))
             });
+
+    private NpcMemory CreateOrderMemory() =>
+        NpcMemory.Empty(_blacksmithId).Remember(
+            new OrderRequested(
+                _orderId,
+                _customerId,
+                _blacksmithId,
+                "hammer",
+                At(8, 11)));
 
     private WorldSnapshot PlaceAtForge(WorldSnapshot world) =>
         new WorldEventProcessor().Apply(

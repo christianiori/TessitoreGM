@@ -1,5 +1,6 @@
 using TessitoreGM.Core;
 using TessitoreGM.Events;
+using TessitoreGM.Memory;
 using TessitoreGM.World;
 
 namespace TessitoreGM.Npcs;
@@ -19,6 +20,7 @@ public sealed class ScheduledArrivalBehavior : INpcBehavior
 
     public IWorldEvent? Evaluate(
         EntityId npcId,
+        NpcMemory memory,
         WorldSnapshot world,
         DateTimeOffset currentTime)
     {

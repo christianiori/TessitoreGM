@@ -1,5 +1,6 @@
 using TessitoreGM.Core;
 using TessitoreGM.Events;
+using TessitoreGM.Memory;
 using TessitoreGM.World;
 
 namespace TessitoreGM.Npcs;
@@ -26,6 +27,7 @@ public sealed class OrderProductionBehavior : INpcBehavior
 
     public IWorldEvent? Evaluate(
         EntityId npcId,
+        NpcMemory memory,
         WorldSnapshot world,
         DateTimeOffset currentTime)
     {
@@ -33,7 +35,8 @@ public sealed class OrderProductionBehavior : INpcBehavior
 
         var order = world.GetOrder(_orderId);
 
-        if (order?.ArtisanId != npcId ||
+        if (!memory.KnowsOrder(_orderId) ||
+            order?.ArtisanId != npcId ||
             world.GetLocation(npcId) != _workplaceId)
         {
             return null;

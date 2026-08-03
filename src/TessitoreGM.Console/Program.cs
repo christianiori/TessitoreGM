@@ -1,5 +1,6 @@
 using TessitoreGM.Core;
 using TessitoreGM.Events;
+using TessitoreGM.Memory;
 using TessitoreGM.Npcs;
 using TessitoreGM.World;
 
@@ -82,11 +83,16 @@ static void AdvanceWorld(string path)
     var request = GetOrderRequest(loadedWorld.EventLog);
     var itemId = new ItemId($"{request.RequestedItem}-1");
     var forgeId = new LocationId("forge");
+    var blacksmithMemory = new MemoryEngine().Replay(
+        request.ArtisanId,
+        CreateInitialWorld(loadedWorld.EventLog),
+        loadedWorld.EventLog.Events);
     var simulator = new WorldSimulator(new IWorldRule[]
     {
         new NpcAgent(
             request.ArtisanId,
             "blacksmith",
+            blacksmithMemory,
             new INpcBehavior[]
             {
                 new ScheduledArrivalBehavior(
@@ -181,15 +187,20 @@ static LoadedWorld LoadWorld(string path)
     var eventFilePath = Path.GetFullPath(path);
     var eventLog = new WorldEventJsonSerializer().Deserialize(
         File.ReadAllText(eventFilePath));
-    var balances = eventLog.InitialWorld.Balances.ToDictionary(
-        balance => balance.EntityId,
-        balance => balance.Amount);
-    var initialWorld = WorldSnapshot.Create(
-        eventLog.InitialWorld.CurrentTime,
-        balances);
+    var initialWorld = CreateInitialWorld(eventLog);
     var world = new WorldEventProcessor().Replay(initialWorld, eventLog.Events);
 
     return new LoadedWorld(eventFilePath, eventLog, world);
+}
+
+static WorldSnapshot CreateInitialWorld(WorldEventLog eventLog)
+{
+    var balances = eventLog.InitialWorld.Balances.ToDictionary(
+        balance => balance.EntityId,
+        balance => balance.Amount);
+    return WorldSnapshot.Create(
+        eventLog.InitialWorld.CurrentTime,
+        balances);
 }
 
 static void SaveEventLog(string path, WorldEventLog eventLog)

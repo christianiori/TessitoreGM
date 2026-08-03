@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TessitoreGM.Core\TessitoreGM.Core.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.Events\TessitoreGM.Events.csproj" />
+    <ProjectReference Include="..\..\src\TessitoreGM.Memory\TessitoreGM.Memory.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.Npcs\TessitoreGM.Npcs.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.World\TessitoreGM.World.csproj" />
   </ItemGroup>
