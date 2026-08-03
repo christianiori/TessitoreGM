@@ -1,5 +1,6 @@
 using TessitoreGM.Core;
 using TessitoreGM.Events;
+using TessitoreGM.Npcs;
 using TessitoreGM.World;
 
 try
@@ -82,10 +83,16 @@ static void AdvanceWorld(string path)
     var itemId = new ItemId($"{request.RequestedItem}-1");
     var simulator = new WorldSimulator(new IWorldRule[]
     {
-        new OrderProductionRule(
-            request.OrderId,
-            itemId,
-            TimeSpan.FromHours(4))
+        new NpcAgent(
+            request.ArtisanId,
+            "blacksmith",
+            new INpcBehavior[]
+            {
+                new OrderProductionBehavior(
+                    request.OrderId,
+                    itemId,
+                    TimeSpan.FromHours(4))
+            })
     });
     var newEvents = new List<IWorldEvent>();
     var world = loadedWorld.World;

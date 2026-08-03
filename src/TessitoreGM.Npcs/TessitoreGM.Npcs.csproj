@@ -1,14 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\TessitoreGM.World\TessitoreGM.World.csproj" />
     <ProjectReference Include="..\TessitoreGM.Core\TessitoreGM.Core.csproj" />
     <ProjectReference Include="..\TessitoreGM.Events\TessitoreGM.Events.csproj" />
-    <ProjectReference Include="..\TessitoreGM.Npcs\TessitoreGM.Npcs.csproj" />
+    <ProjectReference Include="..\TessitoreGM.World\TessitoreGM.World.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
