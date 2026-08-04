@@ -86,6 +86,11 @@ public sealed class DeterministicNarrator
                 $"{consumed.Quantity} unità di " +
                 $"{context.Name(consumed.ResourceId)}, riducendo il bisogno " +
                 $"di {context.Name(consumed.NeedId)} di {consumed.Relief}.",
+            ResourceProduced produced =>
+                $"{context.Name(produced.ProducerId)} produce " +
+                $"{produced.Quantity} unità di " +
+                $"{context.Name(produced.ResourceId)} in " +
+                $"{context.Name(produced.LocationId)}.",
             WorldTimeAdvanced =>
                 "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(

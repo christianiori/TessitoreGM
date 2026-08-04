@@ -227,7 +227,7 @@ debba comandare ogni singola azione.
 
 ## Milestone 5 — Consequences and Relationships
 
-**Stato: in corso**
+**Stato: completato**
 
 - [x] Bisogno persistente con intensità limitata tra 0 e 100
 - [x] Crescita giornaliera autonoma del bisogno
@@ -237,17 +237,20 @@ debba comandare ogni singola azione.
 - [x] Scambio atomico di risorse e monete
 - [x] Primo commercio autonomo tra NPC compresenti
 - [x] Persistenza, replay e narrazione degli scambi
-- [ ] Produzione semplice di una risorsa
-- [ ] Ciclo autonomo `bisogno → consumo → acquisto → produzione`
+- [x] Produzione semplice di una risorsa
+- [x] Ciclo autonomo `bisogno → consumo → acquisto → produzione`
 - [x] Fiducia minimale ricostruita dalle interazioni
 - [x] Eventi espliciti di aumento e diminuzione della fiducia
 - [x] Punteggi di fiducia limitati tra -100 e +100
 - [x] Motivazioni persistenti e non ripetibili
-- [ ] Diffusione locale delle informazioni tra più NPC
-- [ ] Una notizia appresa modifica una decisione concreta
+- [x] Diffusione locale delle informazioni tra più NPC
+- [x] Provenienza e momento dell'apprendimento ricostruibili dagli eventi
+- [x] Una notizia appresa modifica una decisione concreta
 - [x] Prima conseguenza che influenza la giornata successiva
 
-Risultato atteso: ciò che accade oggi modifica le decisioni di domani.
+Risultato raggiunto: il villaggio sostiene un ciclo materiale minimo e le
+informazioni passano localmente tra gli NPC, modificando decisioni successive
+senza intervento diretto del Game Master.
 
 ## Milestone 6 — Game Master Interface
 
@@ -294,13 +297,13 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Proseguire il Milestone 5 con una produzione minima:
+Iniziare il Milestone 6 con una prima interfaccia di osservazione per il Game
+Master:
 
-1. permettere a Brina di produrre una quantità giornaliera di grano;
-2. richiedere luogo e orario appropriati per la produzione;
-3. impedire che la stessa produzione venga ripetuta nella stessa giornata;
-4. verificare insieme bisogno, consumo, produzione e commercio su più giorni.
+1. caricare un salvataggio senza usare comandi tecnici;
+2. mostrare ora, luoghi, NPC, bisogni, scorte e conoscenze;
+3. distinguere ciò che il GM osserva da ciò che può modificare;
+4. mantenere il motore di simulazione indipendente dall'interfaccia.
 
-La fase termina dopo il ciclo materiale minimo e la diffusione locale delle
-informazioni. Reputazione, promesse, conflitti, prezzi dinamici e bisogni più
-complessi restano intenzionalmente successivi.
+Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
+restano intenzionalmente fuori dalla fase completata.

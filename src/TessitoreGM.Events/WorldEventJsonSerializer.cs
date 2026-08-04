@@ -167,6 +167,10 @@ public sealed class WorldEventJsonSerializer
                     consumption.MinimumNeed is <= 0 or > 100 ||
                     consumption.Quantity <= 0 ||
                     consumption.Relief <= 0) ?? false) ||
+                (npc.DailyResourceProductions?.Any(production =>
+                    production.TimeOfDay < TimeSpan.Zero ||
+                    production.TimeOfDay >= TimeSpan.FromDays(1) ||
+                    production.TargetStock <= 0) ?? false) ||
                 npc.OrderProductions.Any(production =>
                     production.ProductionDuration <= TimeSpan.Zero)))
         {
@@ -237,6 +241,7 @@ public sealed class WorldEventJsonSerializer
                 "trade-completed" => Deserialize<TradeCompleted>(persistedEvent.Data),
                 "need-increased" => Deserialize<NeedIncreased>(persistedEvent.Data),
                 "resource-consumed" => Deserialize<ResourceConsumed>(persistedEvent.Data),
+                "resource-produced" => Deserialize<ResourceProduced>(persistedEvent.Data),
                 "world-time-advanced" => Deserialize<WorldTimeAdvanced>(persistedEvent.Data),
                 _ => throw new InvalidDataException(
                     $"World event type '{persistedEvent.Type}' is not supported.")
@@ -271,6 +276,7 @@ public sealed class WorldEventJsonSerializer
         TradeCompleted => "trade-completed",
         NeedIncreased => "need-increased",
         ResourceConsumed => "resource-consumed",
+        ResourceProduced => "resource-produced",
         WorldTimeAdvanced => "world-time-advanced",
         _ => throw new NotSupportedException(
             $"World event '{worldEvent.GetType().Name}' is not supported.")

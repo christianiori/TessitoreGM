@@ -43,7 +43,9 @@ public sealed record NpcSimulationDefinition(
         TrustChangesAfterFactSharing = null,
     IReadOnlyList<TradeWhenColocatedDefinition>? TradesWhenColocated = null,
     IReadOnlyList<DailyNeedIncreaseDefinition>? DailyNeedIncreases = null,
-    IReadOnlyList<ResourceConsumptionDefinition>? ResourceConsumptions = null);
+    IReadOnlyList<ResourceConsumptionDefinition>? ResourceConsumptions = null,
+    IReadOnlyList<DailyResourceProductionDefinition>?
+        DailyResourceProductions = null);
 
 public sealed record DailyLocationRoutineDefinition(
     LocationId DestinationId,
@@ -92,6 +94,12 @@ public sealed record ResourceConsumptionDefinition(
     int MinimumNeed,
     int Quantity,
     int Relief);
+
+public sealed record DailyResourceProductionDefinition(
+    ResourceId ResourceId,
+    LocationId LocationId,
+    TimeSpan TimeOfDay,
+    int TargetStock);
 
 public sealed record ScheduledArrivalDefinition(
     LocationId DestinationId,

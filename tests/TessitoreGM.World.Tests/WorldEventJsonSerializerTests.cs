@@ -170,6 +170,14 @@ public sealed class WorldEventJsonSerializerTests
                     new ResourceConsumptionDefinition[]
                     {
                         new(hungerId, ironId, 40, 1, 40)
+                    },
+                    new DailyResourceProductionDefinition[]
+                    {
+                        new(
+                            ironId,
+                            locationId,
+                            TimeSpan.FromHours(7),
+                            10)
                     })
             },
             new EntityPresentationDefinition[]
@@ -238,6 +246,9 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).ResourceConsumptions,
             restoredNpc.ResourceConsumptions);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).DailyResourceProductions,
+            restoredNpc.DailyResourceProductions);
         Assert.Equal(simulation.Entities, restoredSimulation.Entities);
         Assert.Equal(simulation.Locations, restoredSimulation.Locations);
         Assert.Equal(simulation.Resources, restoredSimulation.Resources);

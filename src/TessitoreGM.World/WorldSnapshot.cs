@@ -471,6 +471,10 @@ public sealed class WorldSnapshot
         FactId factId) =>
         _sharedFacts.Contains(new SharedFact(speakerId, listenerId, factId));
 
+    public bool HasLearnedFact(EntityId entityId, FactId factId) =>
+        _sharedFacts.Any(shared =>
+            shared.ListenerId == entityId && shared.FactId == factId);
+
     public WorldSnapshot Apply(TrustChanged worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
@@ -703,6 +707,47 @@ public sealed class WorldSnapshot
             _trustChanges,
             stocks,
             needs,
+            _lastNeedIncreases);
+    }
+
+    public WorldSnapshot Apply(ResourceProduced worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (worldEvent.Quantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "Produced quantity must be greater than zero.");
+        }
+
+        if (GetLocation(worldEvent.ProducerId) != worldEvent.LocationId)
+        {
+            throw new InvalidOperationException(
+                $"Producer '{worldEvent.ProducerId}' is not in production " +
+                $"location '{worldEvent.LocationId}'.");
+        }
+
+        var stocks = new Dictionary<ResourceStockKey, int>(_resourceStocks)
+        {
+            [new ResourceStockKey(
+                worldEvent.ProducerId,
+                worldEvent.ResourceId)] = GetResourceQuantity(
+                    worldEvent.ProducerId,
+                    worldEvent.ResourceId) + worldEvent.Quantity
+        };
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            stocks,
+            _needs,
             _lastNeedIncreases);
     }
 

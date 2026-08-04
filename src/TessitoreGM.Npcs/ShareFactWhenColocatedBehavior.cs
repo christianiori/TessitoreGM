@@ -28,7 +28,8 @@ public sealed class ShareFactWhenColocatedBehavior : INpcBehavior
         ArgumentNullException.ThrowIfNull(world);
 
         var speakerLocation = world.GetLocation(npcId);
-        if (!memory.KnowsFact(_factId) ||
+        if ((!memory.KnowsFact(_factId) &&
+             !world.HasLearnedFact(npcId, _factId)) ||
             speakerLocation is null ||
             speakerLocation != world.GetLocation(_listenerId) ||
             world.HasSharedFact(npcId, _listenerId, _factId) ||

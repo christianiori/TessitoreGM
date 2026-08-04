@@ -37,7 +37,8 @@ public sealed class KnowledgeConditionalLocationBehavior : INpcBehavior
         ArgumentNullException.ThrowIfNull(memory);
         ArgumentNullException.ThrowIfNull(world);
 
-        if (!memory.KnowsFact(_requiredFactId) ||
+        if ((!memory.KnowsFact(_requiredFactId) &&
+             !world.HasLearnedFact(npcId, _requiredFactId)) ||
             world.GetLocation(npcId) == _destinationId)
         {
             return null;

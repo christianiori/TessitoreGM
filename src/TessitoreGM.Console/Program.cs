@@ -148,7 +148,7 @@ static void CreateVillage(string path)
             },
             new EntityResourceStock[]
             {
-                new(farmerId, grainId, 10)
+                new(farmerId, grainId, 7)
             }),
         new IWorldEvent[]
         {
@@ -191,12 +191,23 @@ static void CreateVillage(string path)
                     FactSharings = new FactSharingDefinition[]
                     {
                         new(innkeeperId, marketOpenFactId)
-                    }
+                    },
+                    DailyResourceProductions =
+                        new DailyResourceProductionDefinition[]
+                        {
+                            new(
+                                grainId,
+                                fieldsId,
+                                new TimeSpan(7, 0, 0),
+                                10)
+                        }
                 },
                 CreateRoutineNpc(
                     innkeeperId,
                     "innkeeper",
                     (marketId, 9, 0),
+                    (bakeryId, 10, 0),
+                    (marketId, 11, 30),
                     (innId, 13, 0),
                     (innkeeperHomeId, 23, 0)) with
                 {
@@ -229,6 +240,10 @@ static void CreateVillage(string path)
                     ResourceConsumptions = new ResourceConsumptionDefinition[]
                     {
                         new(hungerId, grainId, 40, 1, 40)
+                    },
+                    FactSharings = new FactSharingDefinition[]
+                    {
+                        new(bakerId, marketOpenFactId)
                     }
                 }
             },
@@ -365,6 +380,14 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                         consumption.MinimumNeed,
                         consumption.Quantity,
                         consumption.Relief)))
+            .Concat((npc.DailyResourceProductions ??
+                Array.Empty<DailyResourceProductionDefinition>())
+                .Select(production =>
+                    (INpcBehavior)new DailyResourceProductionBehavior(
+                        production.ResourceId,
+                        production.LocationId,
+                        production.TimeOfDay,
+                        production.TargetStock)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,
