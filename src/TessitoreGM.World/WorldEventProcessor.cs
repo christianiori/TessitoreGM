@@ -22,6 +22,8 @@ public sealed class WorldEventProcessor
             FactShared shared => world.Apply(shared),
             TrustChanged trustChanged => world.Apply(trustChanged),
             TradeCompleted trade => world.Apply(trade),
+            NeedIncreased increased => world.Apply(increased),
+            ResourceConsumed consumed => world.Apply(consumed),
             WorldTimeAdvanced timeAdvanced => world.Apply(timeAdvanced),
             _ => throw new NotSupportedException(
                 $"World event '{worldEvent.GetType().Name}' is not supported.")

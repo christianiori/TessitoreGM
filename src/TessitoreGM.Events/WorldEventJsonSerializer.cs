@@ -159,6 +159,14 @@ public sealed class WorldEventJsonSerializer
                     string.IsNullOrWhiteSpace(change.Reason)) ?? false) ||
                 (npc.TradesWhenColocated?.Any(trade =>
                     trade.Quantity <= 0 || trade.TotalPrice <= 0) ?? false) ||
+                (npc.DailyNeedIncreases?.Any(increase =>
+                    increase.TimeOfDay < TimeSpan.Zero ||
+                    increase.TimeOfDay >= TimeSpan.FromDays(1) ||
+                    increase.Amount is <= 0 or > 100) ?? false) ||
+                (npc.ResourceConsumptions?.Any(consumption =>
+                    consumption.MinimumNeed is <= 0 or > 100 ||
+                    consumption.Quantity <= 0 ||
+                    consumption.Relief <= 0) ?? false) ||
                 npc.OrderProductions.Any(production =>
                     production.ProductionDuration <= TimeSpan.Zero)))
         {
@@ -199,6 +207,15 @@ public sealed class WorldEventJsonSerializer
             throw new InvalidDataException(
                 "The world simulation contains invalid resource names.");
         }
+
+        if (simulation.Needs?.Any(need =>
+                string.IsNullOrWhiteSpace(need.Name)) == true ||
+            simulation.Needs?.Select(need => need.NeedId)
+                .Distinct().Count() != simulation.Needs?.Count)
+        {
+            throw new InvalidDataException(
+                "The world simulation contains invalid need names.");
+        }
     }
 
     private static IWorldEvent DeserializeEvent(PersistedEvent persistedEvent)
@@ -218,6 +235,8 @@ public sealed class WorldEventJsonSerializer
                 "fact-shared" => Deserialize<FactShared>(persistedEvent.Data),
                 "trust-changed" => Deserialize<TrustChanged>(persistedEvent.Data),
                 "trade-completed" => Deserialize<TradeCompleted>(persistedEvent.Data),
+                "need-increased" => Deserialize<NeedIncreased>(persistedEvent.Data),
+                "resource-consumed" => Deserialize<ResourceConsumed>(persistedEvent.Data),
                 "world-time-advanced" => Deserialize<WorldTimeAdvanced>(persistedEvent.Data),
                 _ => throw new InvalidDataException(
                     $"World event type '{persistedEvent.Type}' is not supported.")
@@ -250,6 +269,8 @@ public sealed class WorldEventJsonSerializer
         FactShared => "fact-shared",
         TrustChanged => "trust-changed",
         TradeCompleted => "trade-completed",
+        NeedIncreased => "need-increased",
+        ResourceConsumed => "resource-consumed",
         WorldTimeAdvanced => "world-time-advanced",
         _ => throw new NotSupportedException(
             $"World event '{worldEvent.GetType().Name}' is not supported.")

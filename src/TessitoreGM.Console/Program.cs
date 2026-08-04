@@ -135,6 +135,7 @@ static void CreateVillage(string path)
     var innId = new LocationId("inn");
     var marketOpenFactId = new FactId("village:market-open");
     var grainId = new ResourceId("grain");
+    var hungerId = new NeedId("hunger");
     var initialTime = At(6, 0);
     var eventLog = new WorldEventLog(
         new WorldInitialState(
@@ -220,6 +221,14 @@ static void CreateVillage(string path)
                     TradesWhenColocated = new TradeWhenColocatedDefinition[]
                     {
                         new(farmerId, grainId, 3, 6)
+                    },
+                    DailyNeedIncreases = new DailyNeedIncreaseDefinition[]
+                    {
+                        new(hungerId, new TimeSpan(8, 0, 0), 40)
+                    },
+                    ResourceConsumptions = new ResourceConsumptionDefinition[]
+                    {
+                        new(hungerId, grainId, 40, 1, 40)
                     }
                 }
             },
@@ -242,6 +251,10 @@ static void CreateVillage(string path)
             new ResourcePresentationDefinition[]
             {
                 new(grainId, "grano")
+            },
+            new NeedPresentationDefinition[]
+            {
+                new(hungerId, "fame")
             }));
     var eventFilePath = Path.GetFullPath(path);
 
@@ -336,6 +349,22 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                         trade.ResourceId,
                         trade.Quantity,
                         trade.TotalPrice)))
+            .Concat((npc.DailyNeedIncreases ??
+                Array.Empty<DailyNeedIncreaseDefinition>())
+                .Select(increase =>
+                    (INpcBehavior)new DailyNeedIncreaseBehavior(
+                        increase.NeedId,
+                        increase.TimeOfDay,
+                        increase.Amount)))
+            .Concat((npc.ResourceConsumptions ??
+                Array.Empty<ResourceConsumptionDefinition>())
+                .Select(consumption =>
+                    (INpcBehavior)new ConsumeResourceForNeedBehavior(
+                        consumption.NeedId,
+                        consumption.ResourceId,
+                        consumption.MinimumNeed,
+                        consumption.Quantity,
+                        consumption.Relief)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,
@@ -443,6 +472,7 @@ static void NarrateWorld(string path)
     var entityNames = GetEntityNames(loadedWorld.EventLog);
     var locationNames = GetLocationNames(loadedWorld.EventLog);
     var resourceNames = GetResourceNames(loadedWorld.EventLog);
+    var needNames = GetNeedNames(loadedWorld.EventLog);
     var request = loadedWorld.EventLog.Events
         .OfType<OrderRequested>()
         .FirstOrDefault();
@@ -457,7 +487,8 @@ static void NarrateWorld(string path)
     var context = new NarrationContext(
         entityNames,
         locationNames,
-        resourceNames);
+        resourceNames,
+        needNames);
     var lines = new DeterministicNarrator().Narrate(
         loadedWorld.EventLog.Events,
         context);
@@ -542,6 +573,19 @@ static void DisplayWorld(
                 }
             }
 
+            foreach (var needId in (npc.DailyNeedIncreases ??
+                Array.Empty<DailyNeedIncreaseDefinition>())
+                .Select(increase => increase.NeedId)
+                .Distinct())
+            {
+                var needName = eventLog.Simulation.Needs?
+                    .FirstOrDefault(need => need.NeedId == needId)?.Name
+                    ?? needId.ToString();
+                Console.WriteLine(
+                    $"  {needName}: " +
+                    $"{world.GetNeedLevel(npc.EntityId, needId)}/100.");
+            }
+
             foreach (var decision in npc.TrustConditionalLocations ??
                 Array.Empty<TrustConditionalLocationDefinition>())
             {
@@ -600,6 +644,12 @@ static Dictionary<ResourceId, string> GetResourceNames(WorldEventLog eventLog) =
         resource => resource.ResourceId,
         resource => resource.Name)
     ?? new Dictionary<ResourceId, string>();
+
+static Dictionary<NeedId, string> GetNeedNames(WorldEventLog eventLog) =>
+    eventLog.Simulation?.Needs?.ToDictionary(
+        need => need.NeedId,
+        need => need.Name)
+    ?? new Dictionary<NeedId, string>();
 
 static OrderRequested GetOrderRequest(WorldEventLog eventLog) =>
     eventLog.Events.OfType<OrderRequested>().FirstOrDefault()

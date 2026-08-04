@@ -103,6 +103,7 @@ public sealed class WorldEventJsonSerializerTests
         var itemId = new ItemId("shield-1");
         var sellerId = new EntityId("supplier");
         var ironId = new ResourceId("iron");
+        var hungerId = new NeedId("hunger");
         var simulation = new WorldSimulationDefinition(
             new NpcSimulationDefinition[]
             {
@@ -161,6 +162,14 @@ public sealed class WorldEventJsonSerializerTests
                     new TradeWhenColocatedDefinition[]
                     {
                         new(sellerId, ironId, 2, 8)
+                    },
+                    new DailyNeedIncreaseDefinition[]
+                    {
+                        new(hungerId, TimeSpan.FromHours(8), 40)
+                    },
+                    new ResourceConsumptionDefinition[]
+                    {
+                        new(hungerId, ironId, 40, 1, 40)
                     })
             },
             new EntityPresentationDefinition[]
@@ -174,6 +183,10 @@ public sealed class WorldEventJsonSerializerTests
             new ResourcePresentationDefinition[]
             {
                 new(ironId, "iron")
+            },
+            new NeedPresentationDefinition[]
+            {
+                new(hungerId, "hunger")
             });
         var eventLog = new WorldEventLog(
             new WorldInitialState(
@@ -219,9 +232,16 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).TradesWhenColocated,
             restoredNpc.TradesWhenColocated);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).DailyNeedIncreases,
+            restoredNpc.DailyNeedIncreases);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).ResourceConsumptions,
+            restoredNpc.ResourceConsumptions);
         Assert.Equal(simulation.Entities, restoredSimulation.Entities);
         Assert.Equal(simulation.Locations, restoredSimulation.Locations);
         Assert.Equal(simulation.Resources, restoredSimulation.Resources);
+        Assert.Equal(simulation.Needs, restoredSimulation.Needs);
     }
 
     [Fact]

@@ -65,6 +65,8 @@ public sealed class MemoryEngine
             TradeCompleted trade =>
                 trade.BuyerId == observerId ||
                 trade.SellerId == observerId,
+            NeedIncreased increased => increased.EntityId == observerId,
+            ResourceConsumed consumed => consumed.EntityId == observerId,
             _ => false
         };
 

@@ -77,6 +77,15 @@ public sealed class DeterministicNarrator
                 $"unità di {context.Name(trade.ResourceId)} da " +
                 $"{context.Name(trade.SellerId)} per " +
                 $"{trade.TotalPrice} monete.",
+            NeedIncreased increased =>
+                $"Il bisogno di {context.Name(increased.NeedId)} di " +
+                $"{context.Name(increased.EntityId)} aumenta di " +
+                $"{increased.Amount}.",
+            ResourceConsumed consumed =>
+                $"{context.Name(consumed.EntityId)} consuma " +
+                $"{consumed.Quantity} unità di " +
+                $"{context.Name(consumed.ResourceId)}, riducendo il bisogno " +
+                $"di {context.Name(consumed.NeedId)} di {consumed.Relief}.",
             WorldTimeAdvanced =>
                 "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(

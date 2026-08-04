@@ -12,6 +12,9 @@ public sealed class WorldSnapshot
     private readonly IReadOnlySet<SharedFact> _sharedFacts;
     private readonly IReadOnlySet<TrustChange> _trustChanges;
     private readonly IReadOnlyDictionary<ResourceStockKey, int> _resourceStocks;
+    private readonly IReadOnlyDictionary<NeedStateKey, int> _needs;
+    private readonly IReadOnlyDictionary<NeedStateKey, DateTimeOffset>
+        _lastNeedIncreases;
 
     private WorldSnapshot(
         DateTimeOffset currentTime,
@@ -21,7 +24,10 @@ public sealed class WorldSnapshot
         IReadOnlyDictionary<ItemId, WorldItem> items,
         IReadOnlySet<SharedFact>? sharedFacts = null,
         IReadOnlySet<TrustChange>? trustChanges = null,
-        IReadOnlyDictionary<ResourceStockKey, int>? resourceStocks = null)
+        IReadOnlyDictionary<ResourceStockKey, int>? resourceStocks = null,
+        IReadOnlyDictionary<NeedStateKey, int>? needs = null,
+        IReadOnlyDictionary<NeedStateKey, DateTimeOffset>?
+            lastNeedIncreases = null)
     {
         CurrentTime = currentTime;
         _entityLocations = entityLocations;
@@ -32,6 +38,9 @@ public sealed class WorldSnapshot
         _trustChanges = trustChanges ?? new HashSet<TrustChange>();
         _resourceStocks = resourceStocks ??
             new Dictionary<ResourceStockKey, int>();
+        _needs = needs ?? new Dictionary<NeedStateKey, int>();
+        _lastNeedIncreases = lastNeedIncreases ??
+            new Dictionary<NeedStateKey, DateTimeOffset>();
     }
 
     public static WorldSnapshot Empty { get; } =
@@ -115,6 +124,20 @@ public sealed class WorldSnapshot
             ? quantity
             : 0;
 
+    public int GetNeedLevel(EntityId entityId, NeedId needId) =>
+        _needs.TryGetValue(new NeedStateKey(entityId, needId), out var level)
+            ? level
+            : 0;
+
+    public DateTimeOffset? GetLastNeedIncreaseAt(
+        EntityId entityId,
+        NeedId needId) =>
+        _lastNeedIncreases.TryGetValue(
+            new NeedStateKey(entityId, needId),
+            out var occurredAt)
+                ? occurredAt
+                : null;
+
     public WorldSnapshot Apply(EntityEnteredLocation worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
@@ -125,7 +148,7 @@ public sealed class WorldSnapshot
             [worldEvent.EntityId] = worldEvent.LocationId
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(EntityLeftLocation worldEvent)
@@ -142,7 +165,7 @@ public sealed class WorldSnapshot
         var entityLocations = new Dictionary<EntityId, LocationId>(_entityLocations);
         entityLocations.Remove(worldEvent.EntityId);
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(OrderRequested worldEvent)
@@ -181,7 +204,7 @@ public sealed class WorldSnapshot
                 DeliveredAt: null)
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(OrderAccepted worldEvent)
@@ -218,7 +241,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(PaymentTransferred worldEvent)
@@ -274,7 +297,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(OrderWorkStarted worldEvent)
@@ -306,7 +329,9 @@ public sealed class WorldSnapshot
             _items,
             _sharedFacts,
             _trustChanges,
-            _resourceStocks);
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(OrderCompleted worldEvent)
@@ -354,7 +379,9 @@ public sealed class WorldSnapshot
             items,
             _sharedFacts,
             _trustChanges,
-            _resourceStocks);
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(OrderDelivered worldEvent)
@@ -404,7 +431,9 @@ public sealed class WorldSnapshot
             items,
             _sharedFacts,
             _trustChanges,
-            _resourceStocks);
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(FactShared worldEvent)
@@ -431,7 +460,9 @@ public sealed class WorldSnapshot
             _items,
             sharedFacts,
             _trustChanges,
-            _resourceStocks);
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
     }
 
     public bool HasSharedFact(
@@ -491,7 +522,9 @@ public sealed class WorldSnapshot
             _items,
             _sharedFacts,
             trustChanges,
-            _resourceStocks);
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
     }
 
     public int GetTrust(EntityId subjectId, EntityId otherEntityId) =>
@@ -575,7 +608,102 @@ public sealed class WorldSnapshot
             _items,
             _sharedFacts,
             _trustChanges,
-            resourceStocks);
+            resourceStocks,
+            _needs,
+            _lastNeedIncreases);
+    }
+
+    public WorldSnapshot Apply(NeedIncreased worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (worldEvent.Amount is <= 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "A need increase must be between 1 and 100.");
+        }
+
+        var key = new NeedStateKey(worldEvent.EntityId, worldEvent.NeedId);
+        var needs = new Dictionary<NeedStateKey, int>(_needs)
+        {
+            [key] = Math.Clamp(
+                GetNeedLevel(worldEvent.EntityId, worldEvent.NeedId) +
+                    worldEvent.Amount,
+                0,
+                100)
+        };
+        var lastNeedIncreases =
+            new Dictionary<NeedStateKey, DateTimeOffset>(_lastNeedIncreases)
+            {
+                [key] = worldEvent.OccurredAt
+            };
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            _resourceStocks,
+            needs,
+            lastNeedIncreases);
+    }
+
+    public WorldSnapshot Apply(ResourceConsumed worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (worldEvent.Quantity <= 0 || worldEvent.Relief <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "Consumed quantity and relief must be greater than zero.");
+        }
+
+        var resourceQuantity = GetResourceQuantity(
+            worldEvent.EntityId,
+            worldEvent.ResourceId);
+        if (resourceQuantity < worldEvent.Quantity)
+        {
+            throw new InvalidOperationException(
+                $"Entity '{worldEvent.EntityId}' has insufficient stock.");
+        }
+
+        var needLevel = GetNeedLevel(worldEvent.EntityId, worldEvent.NeedId);
+        if (needLevel <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Need '{worldEvent.NeedId}' does not require relief.");
+        }
+
+        var stocks = new Dictionary<ResourceStockKey, int>(_resourceStocks)
+        {
+            [new ResourceStockKey(
+                worldEvent.EntityId,
+                worldEvent.ResourceId)] = resourceQuantity - worldEvent.Quantity
+        };
+        var needs = new Dictionary<NeedStateKey, int>(_needs)
+        {
+            [new NeedStateKey(worldEvent.EntityId, worldEvent.NeedId)] =
+                Math.Max(0, needLevel - worldEvent.Relief)
+        };
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            stocks,
+            needs,
+            _lastNeedIncreases);
     }
 
     public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
@@ -597,7 +725,9 @@ public sealed class WorldSnapshot
             _items,
             _sharedFacts,
             _trustChanges,
-            _resourceStocks);
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
     }
 
     private void EnsureChronological(IWorldEvent worldEvent)
@@ -623,4 +753,8 @@ public sealed class WorldSnapshot
     private readonly record struct ResourceStockKey(
         EntityId EntityId,
         ResourceId ResourceId);
+
+    private readonly record struct NeedStateKey(
+        EntityId EntityId,
+        NeedId NeedId);
 }

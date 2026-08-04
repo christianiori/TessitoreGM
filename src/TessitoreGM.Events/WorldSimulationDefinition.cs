@@ -6,7 +6,8 @@ public sealed record WorldSimulationDefinition(
     IReadOnlyList<NpcSimulationDefinition> Npcs,
     IReadOnlyList<EntityPresentationDefinition>? Entities = null,
     IReadOnlyList<LocationPresentationDefinition>? Locations = null,
-    IReadOnlyList<ResourcePresentationDefinition>? Resources = null);
+    IReadOnlyList<ResourcePresentationDefinition>? Resources = null,
+    IReadOnlyList<NeedPresentationDefinition>? Needs = null);
 
 public sealed record EntityPresentationDefinition(
     EntityId EntityId,
@@ -18,6 +19,10 @@ public sealed record LocationPresentationDefinition(
 
 public sealed record ResourcePresentationDefinition(
     ResourceId ResourceId,
+    string Name);
+
+public sealed record NeedPresentationDefinition(
+    NeedId NeedId,
     string Name);
 
 public sealed record NpcSimulationDefinition(
@@ -36,7 +41,9 @@ public sealed record NpcSimulationDefinition(
         TrustConditionalLocations = null,
     IReadOnlyList<TrustChangeAfterFactSharedDefinition>?
         TrustChangesAfterFactSharing = null,
-    IReadOnlyList<TradeWhenColocatedDefinition>? TradesWhenColocated = null);
+    IReadOnlyList<TradeWhenColocatedDefinition>? TradesWhenColocated = null,
+    IReadOnlyList<DailyNeedIncreaseDefinition>? DailyNeedIncreases = null,
+    IReadOnlyList<ResourceConsumptionDefinition>? ResourceConsumptions = null);
 
 public sealed record DailyLocationRoutineDefinition(
     LocationId DestinationId,
@@ -73,6 +80,18 @@ public sealed record TradeWhenColocatedDefinition(
     ResourceId ResourceId,
     int Quantity,
     int TotalPrice);
+
+public sealed record DailyNeedIncreaseDefinition(
+    NeedId NeedId,
+    TimeSpan TimeOfDay,
+    int Amount);
+
+public sealed record ResourceConsumptionDefinition(
+    NeedId NeedId,
+    ResourceId ResourceId,
+    int MinimumNeed,
+    int Quantity,
+    int Relief);
 
 public sealed record ScheduledArrivalDefinition(
     LocationId DestinationId,

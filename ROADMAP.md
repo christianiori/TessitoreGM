@@ -229,21 +229,22 @@ debba comandare ogni singola azione.
 
 **Stato: in corso**
 
-- [ ] Bisogni e consumo delle risorse
+- [x] Bisogno persistente con intensità limitata tra 0 e 100
+- [x] Crescita giornaliera autonoma del bisogno
+- [x] Consumo di una risorsa per soddisfare il bisogno
+- [x] Il bisogno e le scorte influenzano un'azione concreta
 - [x] Scorte persistenti di risorse fungibili
 - [x] Scambio atomico di risorse e monete
 - [x] Primo commercio autonomo tra NPC compresenti
 - [x] Persistenza, replay e narrazione degli scambi
-- [ ] Produzione e trasformazione delle risorse
-- [ ] Prezzi e decisioni economiche più generali
+- [ ] Produzione semplice di una risorsa
+- [ ] Ciclo autonomo `bisogno → consumo → acquisto → produzione`
 - [x] Fiducia minimale ricostruita dalle interazioni
 - [x] Eventi espliciti di aumento e diminuzione della fiducia
 - [x] Punteggi di fiducia limitati tra -100 e +100
 - [x] Motivazioni persistenti e non ripetibili
-- [ ] Reputazione
-- [ ] Promesse e obblighi
-- [ ] Conflitti personali
-- [ ] Diffusione locale delle informazioni
+- [ ] Diffusione locale delle informazioni tra più NPC
+- [ ] Una notizia appresa modifica una decisione concreta
 - [x] Prima conseguenza che influenza la giornata successiva
 
 Risultato atteso: ciò che accade oggi modifica le decisioni di domani.
@@ -293,12 +294,13 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Proseguire il Milestone 5 completando il primo ciclo economico:
+Proseguire il Milestone 5 con una produzione minima:
 
-1. introdurre il consumo delle risorse possedute;
-2. introdurre una produzione semplice e verificabile;
-3. fare in modo che consumo, disponibilità e denaro guidino nuovi scambi;
-4. verificare che il ciclo possa continuare per più giornate senza intervento.
+1. permettere a Brina di produrre una quantità giornaliera di grano;
+2. richiedere luogo e orario appropriati per la produzione;
+3. impedire che la stessa produzione venga ripetuta nella stessa giornata;
+4. verificare insieme bisogno, consumo, produzione e commercio su più giorni.
 
-Reputazione, promesse e conflitti restano intenzionalmente successivi: prima
-rendiamo osservabile e autonomo il ciclo materiale del piccolo villaggio.
+La fase termina dopo il ciclo materiale minimo e la diffusione locale delle
+informazioni. Reputazione, promesse, conflitti, prezzi dinamici e bisogni più
+complessi restano intenzionalmente successivi.
