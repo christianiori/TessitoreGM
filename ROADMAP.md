@@ -229,8 +229,13 @@ debba comandare ogni singola azione.
 
 **Stato: in corso**
 
-- [ ] Bisogni e risorse
-- [ ] Economia basilare
+- [ ] Bisogni e consumo delle risorse
+- [x] Scorte persistenti di risorse fungibili
+- [x] Scambio atomico di risorse e monete
+- [x] Primo commercio autonomo tra NPC compresenti
+- [x] Persistenza, replay e narrazione degli scambi
+- [ ] Produzione e trasformazione delle risorse
+- [ ] Prezzi e decisioni economiche più generali
 - [x] Fiducia minimale ricostruita dalle interazioni
 - [x] Eventi espliciti di aumento e diminuzione della fiducia
 - [x] Punteggi di fiducia limitati tra -100 e +100
@@ -288,9 +293,12 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Proseguire il Milestone 5 con promesse e obblighi:
+Proseguire il Milestone 5 completando il primo ciclo economico:
 
-1. rappresentare una promessa come stato persistente;
-2. distinguere promessa mantenuta, infranta e ancora aperta;
-3. collegare l'esito a una variazione motivata della fiducia;
-4. verificare le conseguenze nelle giornate successive.
+1. introdurre il consumo delle risorse possedute;
+2. introdurre una produzione semplice e verificabile;
+3. fare in modo che consumo, disponibilità e denaro guidino nuovi scambi;
+4. verificare che il ciclo possa continuare per più giornate senza intervento.
+
+Reputazione, promesse e conflitti restano intenzionalmente successivi: prima
+rendiamo osservabile e autonomo il ciclo materiale del piccolo villaggio.

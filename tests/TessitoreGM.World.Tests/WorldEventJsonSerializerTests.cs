@@ -101,6 +101,8 @@ public sealed class WorldEventJsonSerializerTests
         var locationId = new LocationId("workshop");
         var orderId = new OrderId("order-1");
         var itemId = new ItemId("shield-1");
+        var sellerId = new EntityId("supplier");
+        var ironId = new ResourceId("iron");
         var simulation = new WorldSimulationDefinition(
             new NpcSimulationDefinition[]
             {
@@ -155,6 +157,10 @@ public sealed class WorldEventJsonSerializerTests
                             new FactId("market-open"),
                             2,
                             "useful information")
+                    },
+                    new TradeWhenColocatedDefinition[]
+                    {
+                        new(sellerId, ironId, 2, 8)
                     })
             },
             new EntityPresentationDefinition[]
@@ -164,6 +170,10 @@ public sealed class WorldEventJsonSerializerTests
             new LocationPresentationDefinition[]
             {
                 new(locationId, "Doran's workshop")
+            },
+            new ResourcePresentationDefinition[]
+            {
+                new(ironId, "iron")
             });
         var eventLog = new WorldEventLog(
             new WorldInitialState(
@@ -206,8 +216,12 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).TrustChangesAfterFactSharing,
             restoredNpc.TrustChangesAfterFactSharing);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).TradesWhenColocated,
+            restoredNpc.TradesWhenColocated);
         Assert.Equal(simulation.Entities, restoredSimulation.Entities);
         Assert.Equal(simulation.Locations, restoredSimulation.Locations);
+        Assert.Equal(simulation.Resources, restoredSimulation.Resources);
     }
 
     [Fact]

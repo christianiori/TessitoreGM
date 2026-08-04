@@ -20,6 +20,7 @@ public sealed class WorldEventJsonSerializer
         ArgumentNullException.ThrowIfNull(eventLog.Events);
 
         ValidateBalances(eventLog.InitialWorld.Balances);
+        ValidateResourceStocks(eventLog.InitialWorld.ResourceStocks);
         ValidateSimulation(eventLog.Simulation);
 
         var persistedEvents = eventLog.Events.Select(worldEvent =>
@@ -79,6 +80,7 @@ public sealed class WorldEventJsonSerializer
         }
 
         ValidateBalances(document.InitialWorld.Balances);
+        ValidateResourceStocks(document.InitialWorld.ResourceStocks);
         ValidateSimulation(document.Simulation);
 
         return new WorldEventLog(
@@ -97,6 +99,29 @@ public sealed class WorldEventJsonSerializer
         if (balances.Select(balance => balance.EntityId).Distinct().Count() != balances.Count)
         {
             throw new InvalidDataException("Initial balances contain duplicate entities.");
+        }
+    }
+
+    private static void ValidateResourceStocks(
+        IReadOnlyList<EntityResourceStock>? resourceStocks)
+    {
+        if (resourceStocks is null)
+        {
+            return;
+        }
+
+        if (resourceStocks.Any(stock => stock.Quantity < 0))
+        {
+            throw new InvalidDataException(
+                "An initial resource quantity cannot be negative.");
+        }
+
+        if (resourceStocks
+            .Select(stock => (stock.EntityId, stock.ResourceId))
+            .Distinct().Count() != resourceStocks.Count)
+        {
+            throw new InvalidDataException(
+                "Initial resource stocks contain duplicate entries.");
         }
     }
 
@@ -132,6 +157,8 @@ public sealed class WorldEventJsonSerializer
                 (npc.TrustChangesAfterFactSharing?.Any(change =>
                     change.Amount is 0 or < -100 or > 100 ||
                     string.IsNullOrWhiteSpace(change.Reason)) ?? false) ||
+                (npc.TradesWhenColocated?.Any(trade =>
+                    trade.Quantity <= 0 || trade.TotalPrice <= 0) ?? false) ||
                 npc.OrderProductions.Any(production =>
                     production.ProductionDuration <= TimeSpan.Zero)))
         {
@@ -163,6 +190,15 @@ public sealed class WorldEventJsonSerializer
             throw new InvalidDataException(
                 "The world simulation contains invalid location names.");
         }
+
+        if (simulation.Resources?.Any(resource =>
+                string.IsNullOrWhiteSpace(resource.Name)) == true ||
+            simulation.Resources?.Select(resource => resource.ResourceId)
+                .Distinct().Count() != simulation.Resources?.Count)
+        {
+            throw new InvalidDataException(
+                "The world simulation contains invalid resource names.");
+        }
     }
 
     private static IWorldEvent DeserializeEvent(PersistedEvent persistedEvent)
@@ -181,6 +217,7 @@ public sealed class WorldEventJsonSerializer
                 "order-delivered" => Deserialize<OrderDelivered>(persistedEvent.Data),
                 "fact-shared" => Deserialize<FactShared>(persistedEvent.Data),
                 "trust-changed" => Deserialize<TrustChanged>(persistedEvent.Data),
+                "trade-completed" => Deserialize<TradeCompleted>(persistedEvent.Data),
                 "world-time-advanced" => Deserialize<WorldTimeAdvanced>(persistedEvent.Data),
                 _ => throw new InvalidDataException(
                     $"World event type '{persistedEvent.Type}' is not supported.")
@@ -212,6 +249,7 @@ public sealed class WorldEventJsonSerializer
         OrderDelivered => "order-delivered",
         FactShared => "fact-shared",
         TrustChanged => "trust-changed",
+        TradeCompleted => "trade-completed",
         WorldTimeAdvanced => "world-time-advanced",
         _ => throw new NotSupportedException(
             $"World event '{worldEvent.GetType().Name}' is not supported.")

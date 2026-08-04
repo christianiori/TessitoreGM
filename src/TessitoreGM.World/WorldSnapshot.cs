@@ -11,6 +11,7 @@ public sealed class WorldSnapshot
     private readonly IReadOnlyDictionary<ItemId, WorldItem> _items;
     private readonly IReadOnlySet<SharedFact> _sharedFacts;
     private readonly IReadOnlySet<TrustChange> _trustChanges;
+    private readonly IReadOnlyDictionary<ResourceStockKey, int> _resourceStocks;
 
     private WorldSnapshot(
         DateTimeOffset currentTime,
@@ -19,7 +20,8 @@ public sealed class WorldSnapshot
         IReadOnlyDictionary<EntityId, int> balances,
         IReadOnlyDictionary<ItemId, WorldItem> items,
         IReadOnlySet<SharedFact>? sharedFacts = null,
-        IReadOnlySet<TrustChange>? trustChanges = null)
+        IReadOnlySet<TrustChange>? trustChanges = null,
+        IReadOnlyDictionary<ResourceStockKey, int>? resourceStocks = null)
     {
         CurrentTime = currentTime;
         _entityLocations = entityLocations;
@@ -28,6 +30,8 @@ public sealed class WorldSnapshot
         _items = items;
         _sharedFacts = sharedFacts ?? new HashSet<SharedFact>();
         _trustChanges = trustChanges ?? new HashSet<TrustChange>();
+        _resourceStocks = resourceStocks ??
+            new Dictionary<ResourceStockKey, int>();
     }
 
     public static WorldSnapshot Empty { get; } =
@@ -44,20 +48,42 @@ public sealed class WorldSnapshot
     public static WorldSnapshot Create(
         DateTimeOffset currentTime,
         IReadOnlyDictionary<EntityId, int> balances)
+        => Create(
+            currentTime,
+            balances,
+            Array.Empty<EntityResourceStock>());
+
+    public static WorldSnapshot Create(
+        DateTimeOffset currentTime,
+        IReadOnlyDictionary<EntityId, int> balances,
+        IReadOnlyList<EntityResourceStock> resourceStocks)
     {
         ArgumentNullException.ThrowIfNull(balances);
+        ArgumentNullException.ThrowIfNull(resourceStocks);
 
         if (balances.Values.Any(balance => balance < 0))
         {
             throw new ArgumentException("An initial balance cannot be negative.", nameof(balances));
         }
 
+        if (resourceStocks.Any(stock => stock.Quantity < 0))
+        {
+            throw new ArgumentException(
+                "An initial resource quantity cannot be negative.",
+                nameof(resourceStocks));
+        }
+
+        var stocks = resourceStocks.ToDictionary(
+            stock => new ResourceStockKey(stock.EntityId, stock.ResourceId),
+            stock => stock.Quantity);
+
         return new WorldSnapshot(
             currentTime,
             new Dictionary<EntityId, LocationId>(),
             new Dictionary<OrderId, Order>(),
             new Dictionary<EntityId, int>(balances),
-            new Dictionary<ItemId, WorldItem>());
+            new Dictionary<ItemId, WorldItem>(),
+            resourceStocks: stocks);
     }
 
     public DateTimeOffset CurrentTime { get; }
@@ -82,6 +108,13 @@ public sealed class WorldSnapshot
             ? item
             : null;
 
+    public int GetResourceQuantity(EntityId entityId, ResourceId resourceId) =>
+        _resourceStocks.TryGetValue(
+            new ResourceStockKey(entityId, resourceId),
+            out var quantity)
+            ? quantity
+            : 0;
+
     public WorldSnapshot Apply(EntityEnteredLocation worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
@@ -92,7 +125,7 @@ public sealed class WorldSnapshot
             [worldEvent.EntityId] = worldEvent.LocationId
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
     }
 
     public WorldSnapshot Apply(EntityLeftLocation worldEvent)
@@ -109,7 +142,7 @@ public sealed class WorldSnapshot
         var entityLocations = new Dictionary<EntityId, LocationId>(_entityLocations);
         entityLocations.Remove(worldEvent.EntityId);
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
     }
 
     public WorldSnapshot Apply(OrderRequested worldEvent)
@@ -148,7 +181,7 @@ public sealed class WorldSnapshot
                 DeliveredAt: null)
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
     }
 
     public WorldSnapshot Apply(OrderAccepted worldEvent)
@@ -185,7 +218,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
     }
 
     public WorldSnapshot Apply(PaymentTransferred worldEvent)
@@ -241,7 +274,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges, _resourceStocks);
     }
 
     public WorldSnapshot Apply(OrderWorkStarted worldEvent)
@@ -272,7 +305,8 @@ public sealed class WorldSnapshot
             _balances,
             _items,
             _sharedFacts,
-            _trustChanges);
+            _trustChanges,
+            _resourceStocks);
     }
 
     public WorldSnapshot Apply(OrderCompleted worldEvent)
@@ -319,7 +353,8 @@ public sealed class WorldSnapshot
             _balances,
             items,
             _sharedFacts,
-            _trustChanges);
+            _trustChanges,
+            _resourceStocks);
     }
 
     public WorldSnapshot Apply(OrderDelivered worldEvent)
@@ -368,7 +403,8 @@ public sealed class WorldSnapshot
             _balances,
             items,
             _sharedFacts,
-            _trustChanges);
+            _trustChanges,
+            _resourceStocks);
     }
 
     public WorldSnapshot Apply(FactShared worldEvent)
@@ -394,7 +430,8 @@ public sealed class WorldSnapshot
             _balances,
             _items,
             sharedFacts,
-            _trustChanges);
+            _trustChanges,
+            _resourceStocks);
     }
 
     public bool HasSharedFact(
@@ -453,7 +490,8 @@ public sealed class WorldSnapshot
             _balances,
             _items,
             _sharedFacts,
-            trustChanges);
+            trustChanges,
+            _resourceStocks);
     }
 
     public int GetTrust(EntityId subjectId, EntityId otherEntityId) =>
@@ -475,6 +513,71 @@ public sealed class WorldSnapshot
             change.OtherEntityId == otherEntityId &&
             change.Reason == reason);
 
+    public WorldSnapshot Apply(TradeCompleted worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (worldEvent.BuyerId == worldEvent.SellerId)
+        {
+            throw new InvalidOperationException(
+                "An entity cannot trade with itself.");
+        }
+
+        if (worldEvent.Quantity <= 0 || worldEvent.TotalPrice <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "Trade quantity and price must be greater than zero.");
+        }
+
+        var buyerBalance = GetBalance(worldEvent.BuyerId);
+        if (buyerBalance < worldEvent.TotalPrice)
+        {
+            throw new InvalidOperationException(
+                $"Buyer '{worldEvent.BuyerId}' has insufficient funds.");
+        }
+
+        var sellerQuantity = GetResourceQuantity(
+            worldEvent.SellerId,
+            worldEvent.ResourceId);
+        if (sellerQuantity < worldEvent.Quantity)
+        {
+            throw new InvalidOperationException(
+                $"Seller '{worldEvent.SellerId}' has insufficient stock.");
+        }
+
+        var balances = new Dictionary<EntityId, int>(_balances)
+        {
+            [worldEvent.BuyerId] = buyerBalance - worldEvent.TotalPrice,
+            [worldEvent.SellerId] =
+                GetBalance(worldEvent.SellerId) + worldEvent.TotalPrice
+        };
+        var buyerStockKey = new ResourceStockKey(
+            worldEvent.BuyerId,
+            worldEvent.ResourceId);
+        var sellerStockKey = new ResourceStockKey(
+            worldEvent.SellerId,
+            worldEvent.ResourceId);
+        var resourceStocks = new Dictionary<ResourceStockKey, int>(_resourceStocks)
+        {
+            [buyerStockKey] = GetResourceQuantity(
+                worldEvent.BuyerId,
+                worldEvent.ResourceId) + worldEvent.Quantity,
+            [sellerStockKey] = sellerQuantity - worldEvent.Quantity
+        };
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            resourceStocks);
+    }
+
     public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
@@ -493,7 +596,8 @@ public sealed class WorldSnapshot
             _balances,
             _items,
             _sharedFacts,
-            _trustChanges);
+            _trustChanges,
+            _resourceStocks);
     }
 
     private void EnsureChronological(IWorldEvent worldEvent)
@@ -515,4 +619,8 @@ public sealed class WorldSnapshot
         EntityId OtherEntityId,
         int Amount,
         string Reason);
+
+    private readonly record struct ResourceStockKey(
+        EntityId EntityId,
+        ResourceId ResourceId);
 }

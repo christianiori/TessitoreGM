@@ -134,6 +134,7 @@ static void CreateVillage(string path)
     var innkeeperHomeId = new LocationId("innkeeper-home");
     var innId = new LocationId("inn");
     var marketOpenFactId = new FactId("village:market-open");
+    var grainId = new ResourceId("grain");
     var initialTime = At(6, 0);
     var eventLog = new WorldEventLog(
         new WorldInitialState(
@@ -143,6 +144,10 @@ static void CreateVillage(string path)
                 new(bakerId, 10),
                 new(farmerId, 10),
                 new(innkeeperId, 10)
+            },
+            new EntityResourceStock[]
+            {
+                new(farmerId, grainId, 10)
             }),
         new IWorldEvent[]
         {
@@ -211,7 +216,11 @@ static void CreateVillage(string path)
                                 marketOpenFactId,
                                 1,
                                 "informazione utile sul mercato")
-                        }
+                        },
+                    TradesWhenColocated = new TradeWhenColocatedDefinition[]
+                    {
+                        new(farmerId, grainId, 3, 6)
+                    }
                 }
             },
             new EntityPresentationDefinition[]
@@ -229,6 +238,10 @@ static void CreateVillage(string path)
                 new(marketId, "Mercato"),
                 new(innkeeperHomeId, "Casa di Mira"),
                 new(innId, "Locanda")
+            },
+            new ResourcePresentationDefinition[]
+            {
+                new(grainId, "grano")
             }));
     var eventFilePath = Path.GetFullPath(path);
 
@@ -315,6 +328,14 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                         change.FactId,
                         change.Amount,
                         change.Reason)))
+            .Concat((npc.TradesWhenColocated ??
+                Array.Empty<TradeWhenColocatedDefinition>())
+                .Select(trade =>
+                    (INpcBehavior)new TradeWhenColocatedBehavior(
+                        trade.SellerId,
+                        trade.ResourceId,
+                        trade.Quantity,
+                        trade.TotalPrice)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,
@@ -421,6 +442,7 @@ static void NarrateWorld(string path)
     var loadedWorld = LoadWorld(path);
     var entityNames = GetEntityNames(loadedWorld.EventLog);
     var locationNames = GetLocationNames(loadedWorld.EventLog);
+    var resourceNames = GetResourceNames(loadedWorld.EventLog);
     var request = loadedWorld.EventLog.Events
         .OfType<OrderRequested>()
         .FirstOrDefault();
@@ -434,7 +456,8 @@ static void NarrateWorld(string path)
 
     var context = new NarrationContext(
         entityNames,
-        locationNames);
+        locationNames,
+        resourceNames);
     var lines = new DeterministicNarrator().Narrate(
         loadedWorld.EventLog.Events,
         context);
@@ -464,7 +487,9 @@ static WorldSnapshot CreateInitialWorld(WorldEventLog eventLog)
         balance => balance.Amount);
     return WorldSnapshot.Create(
         eventLog.InitialWorld.CurrentTime,
-        balances);
+        balances,
+        eventLog.InitialWorld.ResourceStocks ??
+            Array.Empty<EntityResourceStock>());
 }
 
 static void SaveEventLog(string path, WorldEventLog eventLog)
@@ -502,6 +527,20 @@ static void DisplayWorld(
             Console.WriteLine(
                 $"- {entityNames.GetValueOrDefault(npc.EntityId, npc.EntityId.ToString())} " +
                 $"({npc.Role}): {locationName}.");
+            Console.WriteLine(
+                $"  Monete: {world.GetBalance(npc.EntityId)}.");
+
+            foreach (var resource in eventLog.Simulation.Resources ??
+                Array.Empty<ResourcePresentationDefinition>())
+            {
+                var quantity = world.GetResourceQuantity(
+                    npc.EntityId,
+                    resource.ResourceId);
+                if (quantity > 0)
+                {
+                    Console.WriteLine($"  {resource.Name}: {quantity}.");
+                }
+            }
 
             foreach (var decision in npc.TrustConditionalLocations ??
                 Array.Empty<TrustConditionalLocationDefinition>())
@@ -555,6 +594,12 @@ static Dictionary<LocationId, string> GetLocationNames(WorldEventLog eventLog) =
         location => location.LocationId,
         location => location.Name)
     ?? new Dictionary<LocationId, string>();
+
+static Dictionary<ResourceId, string> GetResourceNames(WorldEventLog eventLog) =>
+    eventLog.Simulation?.Resources?.ToDictionary(
+        resource => resource.ResourceId,
+        resource => resource.Name)
+    ?? new Dictionary<ResourceId, string>();
 
 static OrderRequested GetOrderRequest(WorldEventLog eventLog) =>
     eventLog.Events.OfType<OrderRequested>().FirstOrDefault()

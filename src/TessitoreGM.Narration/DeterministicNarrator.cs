@@ -72,6 +72,11 @@ public sealed class DeterministicNarrator
                 $"{context.Name(changed.OtherEntityId)} " +
                 $"{(changed.Amount > 0 ? "aumenta" : "diminuisce")} " +
                 $"di {Math.Abs(changed.Amount)}: {changed.Reason}.",
+            TradeCompleted trade =>
+                $"{context.Name(trade.BuyerId)} compra {trade.Quantity} " +
+                $"unità di {context.Name(trade.ResourceId)} da " +
+                $"{context.Name(trade.SellerId)} per " +
+                $"{trade.TotalPrice} monete.",
             WorldTimeAdvanced =>
                 "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(
