@@ -135,7 +135,11 @@ public sealed class WorldEventJsonSerializerTests
                             TimeSpan.FromHours(13),
                             new FactId("market-open"))
                     },
-                    new FactId[] { new("market-open") })
+                    new FactId[] { new("market-open") },
+                    new FactSharingDefinition[]
+                    {
+                        new(new EntityId("listener"), new FactId("market-open"))
+                    })
             },
             new EntityPresentationDefinition[]
             {
@@ -177,6 +181,9 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).InitialKnownFacts,
             restoredNpc.InitialKnownFacts);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).FactSharings,
+            restoredNpc.FactSharings);
         Assert.Equal(simulation.Entities, restoredSimulation.Entities);
         Assert.Equal(simulation.Locations, restoredSimulation.Locations);
     }

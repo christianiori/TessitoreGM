@@ -9,19 +9,22 @@ public sealed class WorldSnapshot
     private readonly IReadOnlyDictionary<OrderId, Order> _orders;
     private readonly IReadOnlyDictionary<EntityId, int> _balances;
     private readonly IReadOnlyDictionary<ItemId, WorldItem> _items;
+    private readonly IReadOnlySet<SharedFact> _sharedFacts;
 
     private WorldSnapshot(
         DateTimeOffset currentTime,
         IReadOnlyDictionary<EntityId, LocationId> entityLocations,
         IReadOnlyDictionary<OrderId, Order> orders,
         IReadOnlyDictionary<EntityId, int> balances,
-        IReadOnlyDictionary<ItemId, WorldItem> items)
+        IReadOnlyDictionary<ItemId, WorldItem> items,
+        IReadOnlySet<SharedFact>? sharedFacts = null)
     {
         CurrentTime = currentTime;
         _entityLocations = entityLocations;
         _orders = orders;
         _balances = balances;
         _items = items;
+        _sharedFacts = sharedFacts ?? new HashSet<SharedFact>();
     }
 
     public static WorldSnapshot Empty { get; } =
@@ -86,7 +89,7 @@ public sealed class WorldSnapshot
             [worldEvent.EntityId] = worldEvent.LocationId
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts);
     }
 
     public WorldSnapshot Apply(EntityLeftLocation worldEvent)
@@ -103,7 +106,7 @@ public sealed class WorldSnapshot
         var entityLocations = new Dictionary<EntityId, LocationId>(_entityLocations);
         entityLocations.Remove(worldEvent.EntityId);
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts);
     }
 
     public WorldSnapshot Apply(OrderRequested worldEvent)
@@ -142,7 +145,7 @@ public sealed class WorldSnapshot
                 DeliveredAt: null)
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts);
     }
 
     public WorldSnapshot Apply(OrderAccepted worldEvent)
@@ -179,7 +182,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts);
     }
 
     public WorldSnapshot Apply(PaymentTransferred worldEvent)
@@ -235,7 +238,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts);
     }
 
     public WorldSnapshot Apply(OrderWorkStarted worldEvent)
@@ -264,7 +267,8 @@ public sealed class WorldSnapshot
             _entityLocations,
             orders,
             _balances,
-            _items);
+            _items,
+            _sharedFacts);
     }
 
     public WorldSnapshot Apply(OrderCompleted worldEvent)
@@ -309,7 +313,8 @@ public sealed class WorldSnapshot
             _entityLocations,
             orders,
             _balances,
-            items);
+            items,
+            _sharedFacts);
     }
 
     public WorldSnapshot Apply(OrderDelivered worldEvent)
@@ -356,7 +361,8 @@ public sealed class WorldSnapshot
             _entityLocations,
             orders,
             _balances,
-            items);
+            items,
+            _sharedFacts);
     }
 
     public WorldSnapshot Apply(FactShared worldEvent)
@@ -370,13 +376,25 @@ public sealed class WorldSnapshot
                 "An entity cannot share a fact with itself.");
         }
 
+        var sharedFacts = new HashSet<SharedFact>(_sharedFacts)
+        {
+            new(worldEvent.SpeakerId, worldEvent.ListenerId, worldEvent.FactId)
+        };
+
         return new WorldSnapshot(
             worldEvent.OccurredAt,
             _entityLocations,
             _orders,
             _balances,
-            _items);
+            _items,
+            sharedFacts);
     }
+
+    public bool HasSharedFact(
+        EntityId speakerId,
+        EntityId listenerId,
+        FactId factId) =>
+        _sharedFacts.Contains(new SharedFact(speakerId, listenerId, factId));
 
     public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
     {
@@ -394,7 +412,8 @@ public sealed class WorldSnapshot
             _entityLocations,
             _orders,
             _balances,
-            _items);
+            _items,
+            _sharedFacts);
     }
 
     private void EnsureChronological(IWorldEvent worldEvent)
@@ -405,4 +424,9 @@ public sealed class WorldSnapshot
                 $"Event time '{worldEvent.OccurredAt:O}' precedes world time '{CurrentTime:O}'.");
         }
     }
+
+    private readonly record struct SharedFact(
+        EntityId SpeakerId,
+        EntityId ListenerId,
+        FactId FactId);
 }

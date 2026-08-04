@@ -181,13 +181,17 @@ static void CreateVillage(string path)
                         {
                             new(marketId, new TimeSpan(12, 0, 0), marketOpenFactId)
                         },
-                    InitialKnownFacts = new FactId[] { marketOpenFactId }
+                    InitialKnownFacts = new FactId[] { marketOpenFactId },
+                    FactSharings = new FactSharingDefinition[]
+                    {
+                        new(innkeeperId, marketOpenFactId)
+                    }
                 },
                 CreateRoutineNpc(
                     innkeeperId,
                     "innkeeper",
                     (marketId, 9, 0),
-                    (innId, 10, 0),
+                    (innId, 13, 0),
                     (innkeeperHomeId, 23, 0))
             },
             new EntityPresentationDefinition[]
@@ -270,6 +274,11 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                         decision.DestinationId,
                         decision.TimeOfDay,
                         decision.RequiredFactId)))
+            .Concat((npc.FactSharings ?? Array.Empty<FactSharingDefinition>())
+                .Select(sharing =>
+                    (INpcBehavior)new ShareFactWhenColocatedBehavior(
+                        sharing.ListenerId,
+                        sharing.FactId)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,

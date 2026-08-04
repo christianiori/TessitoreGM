@@ -206,7 +206,7 @@ mondo esattamente alle 13:00.
 
 ## Milestone 4 — Small Living World
 
-**Stato: in corso**
+**Stato: completato**
 
 Obiettivo: applicare il runtime autonomo a una giornata di villaggio.
 
@@ -216,7 +216,7 @@ Obiettivo: applicare il runtime autonomo a una giornata di villaggio.
 - [x] Più attività simultanee e deterministiche
 - [x] Spostamenti determinati dalle routine
 - [x] Prima decisione basata su una risorsa accessibile all'NPC
-- [ ] Decisioni basate sul luogo corrente
+- [x] Decisioni e interazioni basate sul luogo corrente
 - [x] Decisioni basate sulle conoscenze personali
 - [x] Eventi che continuano fuori dalla scena osservata
 - [x] Salvataggio e continuazione della giornata
@@ -285,9 +285,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Completare il Milestone 4 con una decisione basata sul luogo:
+Iniziare il Milestone 5 con una conseguenza persistente minima:
 
-1. scegliere un'interazione minima tra due NPC presenti nello stesso luogo;
-2. impedire l'interazione quando gli NPC sono separati;
-3. produrre un evento persistente osservabile e narrabile;
-4. verificare il comportamento dentro e fuori dalla scena osservata.
+1. scegliere una relazione modificata da un evento già osservabile;
+2. rappresentare la relazione nello stato del mondo;
+3. far influenzare alla relazione una decisione successiva;
+4. verificare che la conseguenza sopravviva a salvataggio e replay.
