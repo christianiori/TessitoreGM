@@ -254,11 +254,14 @@ senza intervento diretto del Game Master.
 
 ## Milestone 6 — Game Master Interface
 
-**Stato: futuro**
+**Stato: in corso**
 
 - [ ] Creare e caricare un mondo
-- [ ] Osservare luoghi, NPC, attività e ordini
-- [ ] Consultare ciò che un NPC sa
+- [x] Prima dashboard web locale in sola lettura
+- [x] Osservare luoghi, NPC, attività, scorte e bisogni
+- [x] Consultare ciò che un NPC sa
+- [ ] Selezionare un salvataggio dall'interfaccia
+- [ ] Accesso protetto dalla rete locale per smartphone
 - [ ] Introdurre azioni dei personaggi giocanti ed eventi esterni
 - [ ] Avanzare il tempo
 - [ ] Anteprima delle conseguenze proposte

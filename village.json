@@ -1,0 +1,387 @@
+{
+  "version": 2,
+  "initialWorld": {
+    "currentTime": "2026-08-03T06:00:00+00:00",
+    "balances": [
+      {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "amount": 10
+      },
+      {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "amount": 10
+      },
+      {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "amount": 10
+      }
+    ],
+    "resourceStocks": [
+      {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "resourceId": {
+          "value": "grain"
+        },
+        "quantity": 7
+      }
+    ]
+  },
+  "events": [
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "baker-home"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    }
+  ],
+  "simulation": {
+    "npcs": [
+      {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "role": "baker",
+        "scheduledArrivals": [],
+        "orderProductions": [],
+        "dailyLocationRoutines": [
+          {
+            "destinationId": {
+              "value": "bakery"
+            },
+            "timeOfDay": "06:00:00"
+          },
+          {
+            "destinationId": {
+              "value": "baker-home"
+            },
+            "timeOfDay": "18:00:00"
+          }
+        ],
+        "balanceConditionalLocations": null,
+        "knowledgeConditionalLocations": [
+          {
+            "destinationId": {
+              "value": "market"
+            },
+            "timeOfDay": "12:00:00",
+            "requiredFactId": {
+              "value": "village:market-open"
+            }
+          }
+        ],
+        "initialKnownFacts": null,
+        "factSharings": null,
+        "trustConditionalLocations": null,
+        "trustChangesAfterFactSharing": null,
+        "tradesWhenColocated": null,
+        "dailyNeedIncreases": null,
+        "resourceConsumptions": null,
+        "dailyResourceProductions": null
+      },
+      {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "role": "farmer",
+        "scheduledArrivals": [],
+        "orderProductions": [],
+        "dailyLocationRoutines": [
+          {
+            "destinationId": {
+              "value": "fields"
+            },
+            "timeOfDay": "06:30:00"
+          },
+          {
+            "destinationId": {
+              "value": "farmstead"
+            },
+            "timeOfDay": "19:00:00"
+          }
+        ],
+        "balanceConditionalLocations": [
+          {
+            "destinationId": {
+              "value": "market"
+            },
+            "timeOfDay": "12:00:00",
+            "maximumBalance": 5
+          }
+        ],
+        "knowledgeConditionalLocations": [
+          {
+            "destinationId": {
+              "value": "market"
+            },
+            "timeOfDay": "12:00:00",
+            "requiredFactId": {
+              "value": "village:market-open"
+            }
+          }
+        ],
+        "initialKnownFacts": [
+          {
+            "value": "village:market-open"
+          }
+        ],
+        "factSharings": [
+          {
+            "listenerId": {
+              "value": "mira-innkeeper"
+            },
+            "factId": {
+              "value": "village:market-open"
+            }
+          }
+        ],
+        "trustConditionalLocations": null,
+        "trustChangesAfterFactSharing": null,
+        "tradesWhenColocated": null,
+        "dailyNeedIncreases": null,
+        "resourceConsumptions": null,
+        "dailyResourceProductions": [
+          {
+            "resourceId": {
+              "value": "grain"
+            },
+            "locationId": {
+              "value": "fields"
+            },
+            "timeOfDay": "07:00:00",
+            "targetStock": 10
+          }
+        ]
+      },
+      {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "role": "innkeeper",
+        "scheduledArrivals": [],
+        "orderProductions": [],
+        "dailyLocationRoutines": [
+          {
+            "destinationId": {
+              "value": "market"
+            },
+            "timeOfDay": "09:00:00"
+          },
+          {
+            "destinationId": {
+              "value": "bakery"
+            },
+            "timeOfDay": "10:00:00"
+          },
+          {
+            "destinationId": {
+              "value": "market"
+            },
+            "timeOfDay": "11:30:00"
+          },
+          {
+            "destinationId": {
+              "value": "inn"
+            },
+            "timeOfDay": "13:00:00"
+          },
+          {
+            "destinationId": {
+              "value": "innkeeper-home"
+            },
+            "timeOfDay": "23:00:00"
+          }
+        ],
+        "balanceConditionalLocations": null,
+        "knowledgeConditionalLocations": null,
+        "initialKnownFacts": null,
+        "factSharings": [
+          {
+            "listenerId": {
+              "value": "elia-baker"
+            },
+            "factId": {
+              "value": "village:market-open"
+            }
+          }
+        ],
+        "trustConditionalLocations": [
+          {
+            "trustedEntityId": {
+              "value": "brina-farmer"
+            },
+            "destinationId": {
+              "value": "fields"
+            },
+            "timeOfDay": "11:00:00",
+            "minimumTrust": 1
+          }
+        ],
+        "trustChangesAfterFactSharing": [
+          {
+            "speakerId": {
+              "value": "brina-farmer"
+            },
+            "factId": {
+              "value": "village:market-open"
+            },
+            "amount": 1,
+            "reason": "informazione utile sul mercato"
+          }
+        ],
+        "tradesWhenColocated": [
+          {
+            "sellerId": {
+              "value": "brina-farmer"
+            },
+            "resourceId": {
+              "value": "grain"
+            },
+            "quantity": 3,
+            "totalPrice": 6
+          }
+        ],
+        "dailyNeedIncreases": [
+          {
+            "needId": {
+              "value": "hunger"
+            },
+            "timeOfDay": "08:00:00",
+            "amount": 40
+          }
+        ],
+        "resourceConsumptions": [
+          {
+            "needId": {
+              "value": "hunger"
+            },
+            "resourceId": {
+              "value": "grain"
+            },
+            "minimumNeed": 40,
+            "quantity": 1,
+            "relief": 40
+          }
+        ],
+        "dailyResourceProductions": null
+      }
+    ],
+    "entities": [
+      {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "name": "Elia il panettiere"
+      },
+      {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "name": "Brina la contadina"
+      },
+      {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "name": "Mira la locandiera"
+      }
+    ],
+    "locations": [
+      {
+        "locationId": {
+          "value": "baker-home"
+        },
+        "name": "Casa di Elia"
+      },
+      {
+        "locationId": {
+          "value": "bakery"
+        },
+        "name": "Forno"
+      },
+      {
+        "locationId": {
+          "value": "farmstead"
+        },
+        "name": "Cascina di Brina"
+      },
+      {
+        "locationId": {
+          "value": "fields"
+        },
+        "name": "Campi"
+      },
+      {
+        "locationId": {
+          "value": "market"
+        },
+        "name": "Mercato"
+      },
+      {
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "name": "Casa di Mira"
+      },
+      {
+        "locationId": {
+          "value": "inn"
+        },
+        "name": "Locanda"
+      }
+    ],
+    "resources": [
+      {
+        "resourceId": {
+          "value": "grain"
+        },
+        "name": "grano"
+      }
+    ],
+    "needs": [
+      {
+        "needId": {
+          "value": "hunger"
+        },
+        "name": "fame"
+      }
+    ]
+  }
+}
