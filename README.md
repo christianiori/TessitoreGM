@@ -17,14 +17,15 @@ dotnet run --project src/TessitoreGM.Gm -- village.json
 ```
 
 Aprire quindi [http://localhost:5074](http://localhost:5074) nel browser del
-PC. La prima versione è intenzionalmente in sola lettura e accessibile soltanto
-dal computer che la esegue.
+PC. La prima versione è accessibile soltanto dal computer che la esegue.
 
 La dashboard mostra:
 
 - ora ed eventi del mondo;
 - posizione, denaro, scorte e bisogni degli NPC;
 - conoscenze personali;
+- controllo per avanzare il mondo di 1, 6 o 24 ore, applicando le regole
+  autonome e salvando il risultato;
 - ultimi avvenimenti narrati.
 
 Per arrestarla, premere `Ctrl+C` nel terminale che la sta eseguendo.

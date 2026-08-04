@@ -3,6 +3,7 @@
     <ProjectReference Include="..\TessitoreGM.Core\TessitoreGM.Core.csproj" />
     <ProjectReference Include="..\TessitoreGM.Events\TessitoreGM.Events.csproj" />
     <ProjectReference Include="..\TessitoreGM.Narration\TessitoreGM.Narration.csproj" />
+    <ProjectReference Include="..\TessitoreGM.Npcs\TessitoreGM.Npcs.csproj" />
     <ProjectReference Include="..\TessitoreGM.World\TessitoreGM.World.csproj" />
   </ItemGroup>
   <PropertyGroup>

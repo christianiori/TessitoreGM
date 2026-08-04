@@ -70,6 +70,766 @@
         },
         "occurredAt": "2026-08-03T06:00:00\u002B00:00"
       }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-03T06:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "resource-produced",
+      "data": {
+        "producerId": {
+          "value": "brina-farmer"
+        },
+        "resourceId": {
+          "value": "grain"
+        },
+        "quantity": 3,
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-03T07:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "need-increased",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "needId": {
+          "value": "hunger"
+        },
+        "amount": 40,
+        "occurredAt": "2026-08-03T08:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-03T09:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-03T10:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-03T11:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-03T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "fact-shared",
+      "data": {
+        "speakerId": {
+          "value": "brina-farmer"
+        },
+        "listenerId": {
+          "value": "mira-innkeeper"
+        },
+        "factId": {
+          "value": "village:market-open"
+        },
+        "occurredAt": "2026-08-03T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "trust-changed",
+      "data": {
+        "subjectId": {
+          "value": "mira-innkeeper"
+        },
+        "otherEntityId": {
+          "value": "brina-farmer"
+        },
+        "amount": 1,
+        "reason": "informazione utile sul mercato",
+        "occurredAt": "2026-08-03T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "trade-completed",
+      "data": {
+        "buyerId": {
+          "value": "mira-innkeeper"
+        },
+        "sellerId": {
+          "value": "brina-farmer"
+        },
+        "resourceId": {
+          "value": "grain"
+        },
+        "quantity": 3,
+        "totalPrice": 6,
+        "occurredAt": "2026-08-03T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "resource-consumed",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "resourceId": {
+          "value": "grain"
+        },
+        "quantity": 1,
+        "needId": {
+          "value": "hunger"
+        },
+        "relief": 40,
+        "occurredAt": "2026-08-03T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "inn"
+        },
+        "occurredAt": "2026-08-03T13:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "baker-home"
+        },
+        "occurredAt": "2026-08-03T18:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-03T19:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "occurredAt": "2026-08-03T23:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-04T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-04T06:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "resource-produced",
+      "data": {
+        "producerId": {
+          "value": "brina-farmer"
+        },
+        "resourceId": {
+          "value": "grain"
+        },
+        "quantity": 3,
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-04T07:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "need-increased",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "needId": {
+          "value": "hunger"
+        },
+        "amount": 40,
+        "occurredAt": "2026-08-04T08:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "resource-consumed",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "resourceId": {
+          "value": "grain"
+        },
+        "quantity": 1,
+        "needId": {
+          "value": "hunger"
+        },
+        "relief": 40,
+        "occurredAt": "2026-08-04T08:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-04T09:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-04T10:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "fact-shared",
+      "data": {
+        "speakerId": {
+          "value": "mira-innkeeper"
+        },
+        "listenerId": {
+          "value": "elia-baker"
+        },
+        "factId": {
+          "value": "village:market-open"
+        },
+        "occurredAt": "2026-08-04T10:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-04T11:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-04T11:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-04T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-04T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "inn"
+        },
+        "occurredAt": "2026-08-04T13:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "baker-home"
+        },
+        "occurredAt": "2026-08-04T18:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-04T19:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "occurredAt": "2026-08-04T23:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-05T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-05T06:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "need-increased",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "needId": {
+          "value": "hunger"
+        },
+        "amount": 40,
+        "occurredAt": "2026-08-05T08:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "resource-consumed",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "resourceId": {
+          "value": "grain"
+        },
+        "quantity": 1,
+        "needId": {
+          "value": "hunger"
+        },
+        "relief": 40,
+        "occurredAt": "2026-08-05T08:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-05T09:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-05T10:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-05T11:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-05T11:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-05T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-05T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "inn"
+        },
+        "occurredAt": "2026-08-05T13:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "baker-home"
+        },
+        "occurredAt": "2026-08-05T18:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-05T19:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "occurredAt": "2026-08-05T23:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "world-time-advanced",
+      "data": {
+        "occurredAt": "2026-08-06T01:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-06T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-06T06:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "need-increased",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "needId": {
+          "value": "hunger"
+        },
+        "amount": 40,
+        "occurredAt": "2026-08-06T08:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-06T09:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-06T10:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-06T11:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-06T11:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-06T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-06T12:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "inn"
+        },
+        "occurredAt": "2026-08-06T13:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "baker-home"
+        },
+        "occurredAt": "2026-08-06T18:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-06T19:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "occurredAt": "2026-08-06T23:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "world-time-advanced",
+      "data": {
+        "occurredAt": "2026-08-07T01:00:00\u002B00:00"
+      }
     }
   ],
   "simulation": {

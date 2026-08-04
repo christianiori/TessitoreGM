@@ -263,7 +263,7 @@ senza intervento diretto del Game Master.
 - [ ] Selezionare un salvataggio dall'interfaccia
 - [ ] Accesso protetto dalla rete locale per smartphone
 - [ ] Introdurre azioni dei personaggi giocanti ed eventi esterni
-- [ ] Avanzare il tempo
+- [x] Avanzare il tempo dal Tavolo del GM e salvare le conseguenze
 - [ ] Anteprima delle conseguenze proposte
 - [ ] Approvare o rifiutare conseguenze importanti
 - [ ] Generare cronache e riepiloghi di sessione

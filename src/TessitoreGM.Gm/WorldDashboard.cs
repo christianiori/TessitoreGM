@@ -3,25 +3,53 @@ using System.Text;
 using TessitoreGM.Core;
 using TessitoreGM.Events;
 using TessitoreGM.Narration;
+using TessitoreGM.Npcs;
 using TessitoreGM.World;
 
 namespace TessitoreGM.Gm;
 
 internal static class WorldDashboard
 {
-    public static string ResolveWorldFile(string[] args)
+    public static string ResolveWorldFile(
+        string[] args,
+        string launchDirectory)
     {
+        if (string.IsNullOrWhiteSpace(launchDirectory))
+        {
+            throw new ArgumentException(
+                "The launch directory cannot be empty.",
+                nameof(launchDirectory));
+        }
+
         var suppliedPath = args.FirstOrDefault(argument =>
-            !argument.StartsWith("--", StringComparison.Ordinal));
-        return Path.GetFullPath(suppliedPath ?? "village.json");
+            !argument.StartsWith("--", StringComparison.Ordinal))
+            ?? "village.json";
+
+        if (Path.IsPathFullyQualified(suppliedPath))
+        {
+            return Path.GetFullPath(suppliedPath);
+        }
+
+        for (var directory = new DirectoryInfo(launchDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            var candidate = Path.GetFullPath(suppliedPath, directory.FullName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return Path.GetFullPath(suppliedPath, launchDirectory);
     }
 
-    public static string Render(string worldFile)
+    public static string Render(string worldFile, string actionToken)
     {
         try
         {
             return File.Exists(worldFile)
-                ? RenderWorld(worldFile)
+                ? RenderWorld(worldFile, actionToken)
                 : RenderMissingWorld(worldFile);
         }
         catch (Exception exception) when (
@@ -37,19 +65,35 @@ internal static class WorldDashboard
         }
     }
 
-    private static string RenderWorld(string worldFile)
+    public static void Advance(string worldFile, TimeSpan duration)
+    {
+        if (duration <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(duration));
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var world = Replay(eventLog);
+        var result = new ConfiguredWorldSimulator().Advance(
+            eventLog,
+            world,
+            world.CurrentTime.Add(duration));
+        var updatedLog = eventLog with
+        {
+            Events = eventLog.Events.Concat(result.ProducedEvents).ToArray()
+        };
+        var temporaryFile = worldFile + ".tmp";
+
+        File.WriteAllText(temporaryFile, serializer.Serialize(updatedLog));
+        File.Move(temporaryFile, worldFile, overwrite: true);
+    }
+
+    private static string RenderWorld(string worldFile, string actionToken)
     {
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             File.ReadAllText(worldFile));
-        var balances = eventLog.InitialWorld.Balances.ToDictionary(
-            balance => balance.EntityId,
-            balance => balance.Amount);
-        var initialWorld = WorldSnapshot.Create(
-            eventLog.InitialWorld.CurrentTime,
-            balances,
-            eventLog.InitialWorld.ResourceStocks ??
-                Array.Empty<EntityResourceStock>());
-        var world = new WorldEventProcessor().Replay(initialWorld, eventLog.Events);
+        var world = Replay(eventLog);
         var simulation = eventLog.Simulation;
         var entityNames = simulation?.Entities?.ToDictionary(
             entity => entity.EntityId,
@@ -68,7 +112,10 @@ internal static class WorldDashboard
             new NarrationContext(entityNames, locationNames, resourceNames, needNames));
         var content = new StringBuilder();
 
-        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><button type=\"button\" onclick=\"location.reload()\">Aggiorna</button></header>");
+        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></header>");
+        content.Append("<section class=\"time-control\"><div><p class=\"eyebrow\">Simulazione</p><h2>Avanza il tempo</h2><p>Lascia che il villaggio agisca autonomamente fino al nuovo orario.</p></div><form method=\"post\" action=\"/advance\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"hours\">Intervallo</label><select id=\"hours\" name=\"hours\"><option value=\"1\">1 ora</option><option value=\"6\">6 ore</option><option value=\"24\">1 giorno</option></select><button type=\"submit\">Avanza</button></form></section>");
         content.Append("<main><section class=\"world-strip\">");
         content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
         content.Append(Metric("Eventi registrati", eventLog.Events.Count.ToString()));
@@ -133,6 +180,19 @@ internal static class WorldDashboard
             facts.Add(shared.FactId);
         }
         return facts;
+    }
+
+    private static WorldSnapshot Replay(WorldEventLog eventLog)
+    {
+        var balances = eventLog.InitialWorld.Balances.ToDictionary(
+            balance => balance.EntityId,
+            balance => balance.Amount);
+        var initialWorld = WorldSnapshot.Create(
+            eventLog.InitialWorld.CurrentTime,
+            balances,
+            eventLog.InitialWorld.ResourceStocks ??
+                Array.Empty<EntityResourceStock>());
+        return new WorldEventProcessor().Replay(initialWorld, eventLog.Events);
     }
 
     private static string RenderMissingWorld(string worldFile) => Page(
