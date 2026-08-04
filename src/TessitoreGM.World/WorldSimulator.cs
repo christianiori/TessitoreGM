@@ -39,6 +39,7 @@ public sealed class WorldSimulator
 
         var simulatedWorld = world;
         var producedEvents = new List<IWorldEvent>();
+        IWorldEvent? previousEvent = null;
 
         while (true)
         {
@@ -80,8 +81,18 @@ public sealed class WorldSimulator
             }
 
             var selectedEvent = selected.Event!;
+
+            if (Equals(selectedEvent, previousEvent))
+            {
+                throw new InvalidOperationException(
+                    $"Rule repeatedly proposed the same event " +
+                    $"'{selectedEvent.GetType().Name}' at " +
+                    $"'{selectedEvent.OccurredAt:O}'.");
+            }
+
             simulatedWorld = _processor.Apply(simulatedWorld, selectedEvent);
             producedEvents.Add(selectedEvent);
+            previousEvent = selectedEvent;
         }
 
         if (simulatedWorld.CurrentTime < until)

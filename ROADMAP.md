@@ -145,11 +145,11 @@ Algoritmo previsto:
 ### 3.4 — Sicurezza e determinismo
 
 - [x] Imporre un numero massimo di eventi per singolo avanzamento
-- [ ] Rilevare regole che ripropongono indefinitamente lo stesso evento
+- [x] Rilevare regole che ripropongono indefinitamente lo stesso evento
 - [x] Rifiutare proposte precedenti allo stato corrente
 - [x] Rifiutare proposte successive al limite richiesto
-- [ ] Garantire un risultato identico con lo stesso stato e le stesse regole
-- [ ] Garantire che due avanzamenti consecutivi equivalgano a uno complessivo
+- [x] Garantire un risultato identico con lo stesso stato e le stesse regole
+- [x] Garantire che due avanzamenti consecutivi equivalgano a uno complessivo
       quando non cambiano input o regole
 
 Esempio di equivalenza richiesta:
@@ -164,13 +164,13 @@ Avanza 08:00 → 13:00
 
 ### 3.5 — Comando `advance-to`
 
-- [ ] Aggiungere `advance-to <data-ora> [file-eventi]`
-- [ ] Accettare una data e ora non ambigua
-- [ ] Mostrare l'intervallo simulato
-- [ ] Mostrare gli eventi prodotti
-- [ ] Salvare il registro aggiornato soltanto dopo una simulazione valida
-- [ ] Lasciare intatto il salvataggio se la simulazione fallisce
-- [ ] Permettere `replay` e `narrate` sul risultato
+- [x] Aggiungere `advance-to <data-ora> [file-eventi]`
+- [x] Accettare una data e ora non ambigua
+- [x] Mostrare l'intervallo simulato
+- [x] Mostrare gli eventi prodotti
+- [x] Salvare il registro aggiornato soltanto dopo una simulazione valida
+- [x] Lasciare intatto il salvataggio se la simulazione fallisce
+- [x] Permettere `replay` e `narrate` sul risultato
 
 Esempio atteso:
 
@@ -184,12 +184,12 @@ dotnet run --project src/TessitoreGM.Console -- \
 - [x] Un ordine accettato porta autonomamente il fabbro alla forgia
 - [x] Il fabbro inizia il lavoro non appena le condizioni lo consentono
 - [x] Il lavoro termina dopo la durata prevista
-- [ ] Un limite precedente al completamento lascia l'ordine in corso
-- [ ] Un limite successivo comprende il completamento
+- [x] Un limite precedente al completamento lascia l'ordine in corso
+- [x] Un limite successivo comprende il completamento
 - [x] Un intervallo senza eventi aggiorna comunque l'ora del mondo
-- [ ] Un salvataggio intermedio può essere ricaricato e continuato
-- [ ] Il replay ricostruisce lo stesso stato finale
-- [ ] Il narratore produce la stessa cronaca degli eventi generati
+- [x] Un salvataggio intermedio può essere ricaricato e continuato
+- [x] Il replay ricostruisce lo stesso stato finale
+- [x] Il narratore produce la stessa cronaca degli eventi generati
 - [ ] Nessun orario della commissione rimane codificato nel comando console
 
 ### Definition of Done
@@ -283,10 +283,10 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Completare sicurezza e determinismo del Milestone 3, quindi introdurre il
-comando `advance-to`:
+Completare il Milestone 3 eliminando dalla console gli orari specifici della
+commissione:
 
-1. verificare l'equivalenza tra avanzamenti parziali e complessivi;
-2. verificare che la simulazione sia riproducibile;
-3. rilevare chiaramente una regola che ripropone lo stesso evento;
-4. permettere al GM di scegliere fino a quale data e ora simulare.
+1. rappresentare pianificazione e durata come dati dello scenario;
+2. salvarli nel mondo persistente;
+3. costruire regole e comportamenti a partire dai dati caricati;
+4. ripetere tutti i test di accettazione senza orari codificati nel comando.

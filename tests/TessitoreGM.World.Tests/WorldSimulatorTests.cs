@@ -105,6 +105,83 @@ public sealed class WorldSimulatorTests
         Assert.Equal(currentTime, world.CurrentTime);
     }
 
+    [Fact]
+    public void Advance_RuleRepeatingSameEvent_ThrowsClearError()
+    {
+        var entityId = new EntityId("traveler");
+        var locationId = new LocationId("village");
+        var at = new DateTimeOffset(2026, 8, 3, 10, 0, 0, TimeSpan.Zero);
+        var repeatedEvent = new EntityEnteredLocation(entityId, locationId, at);
+        var simulator = new WorldSimulator(
+            new IWorldRule[] { new AlwaysProposingRule(repeatedEvent) });
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            simulator.Advance(WorldSnapshot.Empty, at));
+
+        Assert.Contains("same event", exception.Message);
+    }
+
+    [Fact]
+    public void Advance_SameStateAndRules_ProducesIdenticalResult()
+    {
+        var entityId = new EntityId("traveler");
+        var locationId = new LocationId("village");
+        var initialTime = new DateTimeOffset(
+            2026, 8, 3, 8, 0, 0, TimeSpan.Zero);
+        var arrivalTime = initialTime.AddHours(1);
+        var until = initialTime.AddHours(2);
+        var world = WorldSnapshot.Create(
+            initialTime,
+            new Dictionary<EntityId, int>());
+        IWorldRule[] rules =
+        {
+            new ScheduledEntityArrivalRule(entityId, locationId, arrivalTime)
+        };
+        var simulator = new WorldSimulator(rules);
+
+        var first = simulator.Advance(world, until);
+        var second = simulator.Advance(world, until);
+
+        Assert.Equal(first.ProducedEvents.ToArray(), second.ProducedEvents.ToArray());
+        Assert.Equal(first.World.CurrentTime, second.World.CurrentTime);
+        Assert.Equal(
+            first.World.GetLocation(entityId),
+            second.World.GetLocation(entityId));
+    }
+
+    [Fact]
+    public void Advance_InTwoIntervals_ReachesSameWorldAsSingleInterval()
+    {
+        var entityId = new EntityId("traveler");
+        var locationId = new LocationId("village");
+        var initialTime = new DateTimeOffset(
+            2026, 8, 3, 8, 0, 0, TimeSpan.Zero);
+        var arrivalTime = initialTime.AddHours(1);
+        var departureTime = initialTime.AddHours(3);
+        var splitTime = initialTime.AddHours(2);
+        var until = initialTime.AddHours(4);
+        var initialWorld = WorldSnapshot.Create(
+            initialTime,
+            new Dictionary<EntityId, int>());
+        IWorldRule[] rules =
+        {
+            new FutureEventRule(
+                new EntityEnteredLocation(entityId, locationId, arrivalTime)),
+            new FutureEventRule(
+                new EntityLeftLocation(entityId, locationId, departureTime))
+        };
+        var simulator = new WorldSimulator(rules);
+
+        var firstInterval = simulator.Advance(initialWorld, splitTime);
+        var secondInterval = simulator.Advance(firstInterval.World, until);
+        var singleInterval = simulator.Advance(initialWorld, until);
+
+        Assert.Equal(singleInterval.World.CurrentTime, secondInterval.World.CurrentTime);
+        Assert.Equal(
+            singleInterval.World.GetLocation(entityId),
+            secondInterval.World.GetLocation(entityId));
+    }
+
     private sealed class FutureEventRule : IWorldRule
     {
         private readonly IWorldEvent _worldEvent;
@@ -117,7 +194,10 @@ public sealed class WorldSimulatorTests
         public IWorldEvent? ProposeNext(
             WorldSnapshot world,
             DateTimeOffset until) =>
-            _worldEvent.OccurredAt > world.CurrentTime ? _worldEvent : null;
+            _worldEvent.OccurredAt > world.CurrentTime &&
+            _worldEvent.OccurredAt <= until
+                ? _worldEvent
+                : null;
     }
 
     private sealed class AlwaysProposingRule : IWorldRule

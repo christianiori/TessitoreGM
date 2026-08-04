@@ -1,3 +1,4 @@
+using System.Globalization;
 using TessitoreGM.Core;
 using TessitoreGM.Events;
 using TessitoreGM.Memory;
@@ -27,7 +28,12 @@ try
             break;
 
         case "advance":
-            AdvanceWorld(ReadEventFileArgument(args));
+            AdvanceWorld(ReadEventFileArgument(args), until: null);
+            break;
+
+        case "advance-to":
+            var advanceOptions = ReadAdvanceToOptions(args);
+            AdvanceWorld(advanceOptions.EventFilePath, advanceOptions.Until);
             break;
 
         case "deliver":
@@ -82,9 +88,19 @@ static void CreateWorld(ScenarioOptions options)
     ReplayWorld(eventFilePath);
 }
 
-static void AdvanceWorld(string path)
+static void AdvanceWorld(string path, DateTimeOffset? until)
 {
     var loadedWorld = LoadWorld(path);
+    var simulationStart = loadedWorld.World.CurrentTime;
+    var simulationEnd = until ?? OnSameDay(simulationStart, 13, 0);
+
+    if (simulationEnd < simulationStart)
+    {
+        throw new InvalidDataException(
+            $"Cannot advance from '{simulationStart:O}' back to " +
+            $"'{simulationEnd:O}'.");
+    }
+
     var request = GetOrderRequest(loadedWorld.EventLog);
     var itemId = new ItemId($"{request.RequestedItem}-1");
     var forgeId = new LocationId("forge");
@@ -113,9 +129,18 @@ static void AdvanceWorld(string path)
     });
     var result = simulator.Advance(
         loadedWorld.World,
-        OnSameDay(loadedWorld.World.CurrentTime, 13, 0));
+        simulationEnd);
 
     AppendEvents(loadedWorld, result.ProducedEvents);
+    Console.WriteLine(
+        $"Simulated interval: {simulationStart:O} -> {simulationEnd:O}.");
+    Console.WriteLine($"Produced {result.ProducedEvents.Count} world events:");
+    foreach (var worldEvent in result.ProducedEvents)
+    {
+        Console.WriteLine(
+            $"- {worldEvent.OccurredAt:O} {worldEvent.GetType().Name}");
+    }
+
     Console.WriteLine($"Advanced persistent world: {loadedWorld.EventFilePath}.");
     ReplayWorld(loadedWorld.EventFilePath);
 }
@@ -310,6 +335,38 @@ static string ReadEventFileArgument(string[] args)
     return args.Length == 2 ? args[1] : "world-events.json";
 }
 
+static AdvanceToOptions ReadAdvanceToOptions(string[] args)
+{
+    if (args.Length is not (2 or 3))
+    {
+        throw new InvalidDataException(
+            "advance-to requires a date-time and an optional event file.");
+    }
+
+    var dateTimeText = args[1];
+    var hasExplicitOffset =
+        dateTimeText.EndsWith("Z", StringComparison.OrdinalIgnoreCase) ||
+        (dateTimeText.Length >= 6 &&
+         dateTimeText[^3] == ':' &&
+         dateTimeText[^6] is '+' or '-');
+
+    if (!hasExplicitOffset ||
+        !DateTimeOffset.TryParse(
+            dateTimeText,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out var until))
+    {
+        throw new InvalidDataException(
+            "The date-time must be ISO 8601 and include an offset, " +
+            "for example 2026-08-03T13:00:00+00:00.");
+    }
+
+    return new AdvanceToOptions(
+        until,
+        args.Length == 3 ? args[2] : "world-events.json");
+}
+
 static bool TryReadCreateOptions(string[] args, out ScenarioOptions options)
 {
     if (args.Length is not (3 or 4 or 5) ||
@@ -358,6 +415,9 @@ static void PrintUsage()
         "Create: TessitoreGM.Console create <item> <price> <deposit> " +
         "[customer-balance] [event-file]");
     Console.Error.WriteLine("Advance: TessitoreGM.Console advance [event-file]");
+    Console.Error.WriteLine(
+        "Advance to: TessitoreGM.Console advance-to " +
+        "<ISO-date-time-with-offset> [event-file]");
     Console.Error.WriteLine("Deliver: TessitoreGM.Console deliver [event-file]");
     Console.Error.WriteLine("Replay: TessitoreGM.Console replay [event-file]");
     Console.Error.WriteLine("Narrate: TessitoreGM.Console narrate [event-file]");
@@ -383,3 +443,7 @@ internal sealed record LoadedWorld(
     string EventFilePath,
     WorldEventLog EventLog,
     WorldSnapshot World);
+
+internal sealed record AdvanceToOptions(
+    DateTimeOffset Until,
+    string EventFilePath);
