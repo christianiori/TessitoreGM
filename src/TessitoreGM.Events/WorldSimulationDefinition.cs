@@ -3,7 +3,17 @@ using TessitoreGM.Core;
 namespace TessitoreGM.Events;
 
 public sealed record WorldSimulationDefinition(
-    IReadOnlyList<NpcSimulationDefinition> Npcs);
+    IReadOnlyList<NpcSimulationDefinition> Npcs,
+    IReadOnlyList<EntityPresentationDefinition>? Entities = null,
+    IReadOnlyList<LocationPresentationDefinition>? Locations = null);
+
+public sealed record EntityPresentationDefinition(
+    EntityId EntityId,
+    string Name);
+
+public sealed record LocationPresentationDefinition(
+    LocationId LocationId,
+    string Name);
 
 public sealed record NpcSimulationDefinition(
     EntityId EntityId,

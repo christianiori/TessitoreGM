@@ -206,7 +206,7 @@ mondo esattamente alle 13:00.
 
 ## Milestone 4 — Small Living World
 
-**Stato: futuro**
+**Stato: in corso**
 
 Obiettivo: applicare il runtime autonomo a una giornata di villaggio.
 
@@ -216,9 +216,9 @@ Obiettivo: applicare il runtime autonomo a una giornata di villaggio.
 - [x] Più attività simultanee e deterministiche
 - [x] Spostamenti determinati dalle routine
 - [ ] Decisioni basate su luogo, stato e conoscenze
-- [ ] Eventi che continuano fuori dalla scena osservata
-- [ ] Salvataggio e continuazione della giornata
-- [ ] Cronaca dell'intera giornata
+- [x] Eventi che continuano fuori dalla scena osservata
+- [x] Salvataggio e continuazione della giornata
+- [x] Cronaca dell'intera giornata
 
 Risultato atteso: il villaggio continua a vivere senza che il Game Master
 debba comandare ogni singola azione.
@@ -283,10 +283,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Proseguire il Milestone 4 trasformando il primo scenario automatico in un
-salvataggio di villaggio utilizzabile dalla console:
+Proseguire il Milestone 4 introducendo la prima decisione condizionale:
 
-1. creare un comando che generi il piccolo villaggio;
-2. assegnare a ogni NPC almeno due tappe giornaliere;
-3. mostrare luoghi e NPC senza dipendere da un ordine del fabbro;
-4. salvare, ricaricare e continuare la giornata successiva.
+1. scegliere un caso minimo basato su luogo e stato del mondo;
+2. distinguere una routine da una decisione;
+3. usare soltanto informazioni accessibili all'NPC;
+4. verificare che la decisione cambi quando cambiano le condizioni.

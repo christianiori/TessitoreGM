@@ -27,6 +27,10 @@ try
             CreateWorld(options);
             break;
 
+        case "create-village":
+            CreateVillage(ReadEventFileArgument(args, "village.json"));
+            break;
+
         case "advance":
             AdvanceWorld(ReadEventFileArgument(args), until: null);
             break;
@@ -100,6 +104,15 @@ static void CreateWorld(ScenarioOptions options)
                             At(8, 30),
                             TimeSpan.FromHours(4))
                     })
+            },
+            new EntityPresentationDefinition[]
+            {
+                new(customerId, "Cliente"),
+                new(blacksmithId, "Fabbro")
+            },
+            new LocationPresentationDefinition[]
+            {
+                new(forgeId, "Forgia")
             }));
     var eventFilePath = Path.GetFullPath(options.EventFilePath);
 
@@ -107,6 +120,84 @@ static void CreateWorld(ScenarioOptions options)
     Console.WriteLine($"Created persistent world: {eventFilePath}.");
     ReplayWorld(eventFilePath);
 }
+
+static void CreateVillage(string path)
+{
+    var bakerId = new EntityId("elia-baker");
+    var farmerId = new EntityId("brina-farmer");
+    var innkeeperId = new EntityId("mira-innkeeper");
+    var bakerHomeId = new LocationId("baker-home");
+    var bakeryId = new LocationId("bakery");
+    var farmsteadId = new LocationId("farmstead");
+    var fieldsId = new LocationId("fields");
+    var marketId = new LocationId("market");
+    var innkeeperHomeId = new LocationId("innkeeper-home");
+    var innId = new LocationId("inn");
+    var initialTime = At(6, 0);
+    var eventLog = new WorldEventLog(
+        new WorldInitialState(initialTime, Array.Empty<EntityBalance>()),
+        new IWorldEvent[]
+        {
+            new EntityEnteredLocation(bakerId, bakerHomeId, initialTime),
+            new EntityEnteredLocation(farmerId, farmsteadId, initialTime),
+            new EntityEnteredLocation(innkeeperId, innkeeperHomeId, initialTime)
+        },
+        new WorldSimulationDefinition(
+            new NpcSimulationDefinition[]
+            {
+                CreateRoutineNpc(
+                    bakerId,
+                    "baker",
+                    (bakeryId, 6, 0),
+                    (bakerHomeId, 18, 0)),
+                CreateRoutineNpc(
+                    farmerId,
+                    "farmer",
+                    (fieldsId, 6, 30),
+                    (marketId, 12, 30),
+                    (farmsteadId, 19, 0)),
+                CreateRoutineNpc(
+                    innkeeperId,
+                    "innkeeper",
+                    (marketId, 9, 0),
+                    (innId, 10, 0),
+                    (innkeeperHomeId, 23, 0))
+            },
+            new EntityPresentationDefinition[]
+            {
+                new(bakerId, "Elia il panettiere"),
+                new(farmerId, "Brina la contadina"),
+                new(innkeeperId, "Mira la locandiera")
+            },
+            new LocationPresentationDefinition[]
+            {
+                new(bakerHomeId, "Casa di Elia"),
+                new(bakeryId, "Forno"),
+                new(farmsteadId, "Cascina di Brina"),
+                new(fieldsId, "Campi"),
+                new(marketId, "Mercato"),
+                new(innkeeperHomeId, "Casa di Mira"),
+                new(innId, "Locanda")
+            }));
+    var eventFilePath = Path.GetFullPath(path);
+
+    SaveEventLog(eventFilePath, eventLog);
+    Console.WriteLine($"Created persistent village: {eventFilePath}.");
+    ReplayWorld(eventFilePath);
+}
+
+static NpcSimulationDefinition CreateRoutineNpc(
+    EntityId entityId,
+    string role,
+    params (LocationId DestinationId, int Hour, int Minute)[] stops) =>
+    new(
+        entityId,
+        role,
+        Array.Empty<ScheduledArrivalDefinition>(),
+        Array.Empty<OrderProductionDefinition>(),
+        stops.Select(stop => new DailyLocationRoutineDefinition(
+            stop.DestinationId,
+            new TimeSpan(stop.Hour, stop.Minute, 0))).ToArray());
 
 static void AdvanceWorld(string path, DateTimeOffset? until)
 {
@@ -236,17 +327,22 @@ static void ReplayWorld(string path)
 static void NarrateWorld(string path)
 {
     var loadedWorld = LoadWorld(path);
-    var request = GetOrderRequest(loadedWorld.EventLog);
+    var entityNames = GetEntityNames(loadedWorld.EventLog);
+    var locationNames = GetLocationNames(loadedWorld.EventLog);
+    var request = loadedWorld.EventLog.Events
+        .OfType<OrderRequested>()
+        .FirstOrDefault();
+
+    if (request is not null)
+    {
+        entityNames.TryAdd(request.CustomerId, "Cliente");
+        entityNames.TryAdd(request.ArtisanId, "Fabbro");
+        locationNames.TryAdd(new LocationId("forge"), "Forgia");
+    }
+
     var context = new NarrationContext(
-        new Dictionary<EntityId, string>
-        {
-            [request.CustomerId] = "Cliente",
-            [request.ArtisanId] = "Fabbro"
-        },
-        new Dictionary<LocationId, string>
-        {
-            [new LocationId("forge")] = "Forgia"
-        });
+        entityNames,
+        locationNames);
     var lines = new DeterministicNarrator().Narrate(
         loadedWorld.EventLog.Events,
         context);
@@ -296,19 +392,46 @@ static void DisplayWorld(
     WorldEventLog eventLog,
     WorldSnapshot world)
 {
-    var request = GetOrderRequest(eventLog);
+    Console.WriteLine($"Replayed persistent world: {eventFilePath}.");
+    Console.WriteLine($"Loaded {eventLog.Events.Count} world events.");
+    Console.WriteLine($"World time: {world.CurrentTime:yyyy-MM-dd HH:mm}.");
+    var entityNames = GetEntityNames(eventLog);
+    var locationNames = GetLocationNames(eventLog);
+
+    if (eventLog.Simulation is not null)
+    {
+        Console.WriteLine("NPCs:");
+        foreach (var npc in eventLog.Simulation.Npcs)
+        {
+            var location = world.GetLocation(npc.EntityId);
+            var locationName = location is LocationId locationId
+                ? locationNames.GetValueOrDefault(locationId, locationId.ToString())
+                : "outside";
+            Console.WriteLine(
+                $"- {entityNames.GetValueOrDefault(npc.EntityId, npc.EntityId.ToString())} " +
+                $"({npc.Role}): {locationName}.");
+        }
+    }
+
+    var request = eventLog.Events.OfType<OrderRequested>().FirstOrDefault();
+    if (request is null)
+    {
+        return;
+    }
+
+    var customerLocation = world.GetLocation(request.CustomerId);
+    var customerLocationName = customerLocation is LocationId customerLocationId
+        ? locationNames.GetValueOrDefault(
+            customerLocationId,
+            customerLocationId.ToString())
+        : "outside";
     var completion = eventLog.Events.OfType<OrderCompleted>().FirstOrDefault();
     var order = world.GetOrder(request.OrderId);
     var item = completion is null
         ? null
         : world.GetItem(completion.ProducedItemId);
-
-    Console.WriteLine($"Replayed persistent world: {eventFilePath}.");
-    Console.WriteLine($"Loaded {eventLog.Events.Count} world events.");
-    Console.WriteLine($"World time: {world.CurrentTime:yyyy-MM-dd HH:mm}.");
     Console.WriteLine(
-        $"Customer location: " +
-        $"{world.GetLocation(request.CustomerId)?.ToString() ?? "outside"}.");
+        $"Customer location: {customerLocationName}.");
     Console.WriteLine($"Order status: {order?.Status}.");
     Console.WriteLine($"Order paid: {order?.AmountPaid}/{order?.TotalPrice} coins.");
     Console.WriteLine($"Customer balance: {world.GetBalance(request.CustomerId)} coins.");
@@ -317,6 +440,18 @@ static void DisplayWorld(
         ? "Produced item: not created yet."
         : $"Produced item: {item.Name}, owned by {item.OwnerId}.");
 }
+
+static Dictionary<EntityId, string> GetEntityNames(WorldEventLog eventLog) =>
+    eventLog.Simulation?.Entities?.ToDictionary(
+        entity => entity.EntityId,
+        entity => entity.Name)
+    ?? new Dictionary<EntityId, string>();
+
+static Dictionary<LocationId, string> GetLocationNames(WorldEventLog eventLog) =>
+    eventLog.Simulation?.Locations?.ToDictionary(
+        location => location.LocationId,
+        location => location.Name)
+    ?? new Dictionary<LocationId, string>();
 
 static OrderRequested GetOrderRequest(WorldEventLog eventLog) =>
     eventLog.Events.OfType<OrderRequested>().FirstOrDefault()
@@ -355,14 +490,16 @@ static List<IWorldEvent> BuildCreateEvents(
     return events;
 }
 
-static string ReadEventFileArgument(string[] args)
+static string ReadEventFileArgument(
+    string[] args,
+    string defaultPath = "world-events.json")
 {
     if (args.Length > 2)
     {
         throw new InvalidDataException("Too many command arguments.");
     }
 
-    return args.Length == 2 ? args[1] : "world-events.json";
+    return args.Length == 2 ? args[1] : defaultPath;
 }
 
 static AdvanceToOptions ReadAdvanceToOptions(string[] args)
@@ -444,6 +581,8 @@ static void PrintUsage()
     Console.Error.WriteLine(
         "Create: TessitoreGM.Console create <item> <price> <deposit> " +
         "[customer-balance] [event-file]");
+    Console.Error.WriteLine(
+        "Create village: TessitoreGM.Console create-village [event-file]");
     Console.Error.WriteLine("Advance: TessitoreGM.Console advance [event-file]");
     Console.Error.WriteLine(
         "Advance to: TessitoreGM.Console advance-to " +

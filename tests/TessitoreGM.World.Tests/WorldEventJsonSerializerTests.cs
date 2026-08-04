@@ -124,6 +124,14 @@ public sealed class WorldEventJsonSerializerTests
                     {
                         new(locationId, TimeSpan.FromHours(9))
                     })
+            },
+            new EntityPresentationDefinition[]
+            {
+                new(npcId, "Doran the armorer")
+            },
+            new LocationPresentationDefinition[]
+            {
+                new(locationId, "Doran's workshop")
             });
         var eventLog = new WorldEventLog(
             new WorldInitialState(
@@ -148,6 +156,8 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).DailyLocationRoutines,
             restoredNpc.DailyLocationRoutines);
+        Assert.Equal(simulation.Entities, restoredSimulation.Entities);
+        Assert.Equal(simulation.Locations, restoredSimulation.Locations);
     }
 
     [Fact]

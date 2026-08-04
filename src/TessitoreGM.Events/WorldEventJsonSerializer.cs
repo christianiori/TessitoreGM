@@ -129,6 +129,24 @@ public sealed class WorldEventJsonSerializer
             throw new InvalidDataException(
                 "The world simulation contains duplicate NPC definitions.");
         }
+
+        if (simulation.Entities?.Any(entity =>
+                string.IsNullOrWhiteSpace(entity.Name)) == true ||
+            simulation.Entities?.Select(entity => entity.EntityId)
+                .Distinct().Count() != simulation.Entities?.Count)
+        {
+            throw new InvalidDataException(
+                "The world simulation contains invalid entity names.");
+        }
+
+        if (simulation.Locations?.Any(location =>
+                string.IsNullOrWhiteSpace(location.Name)) == true ||
+            simulation.Locations?.Select(location => location.LocationId)
+                .Distinct().Count() != simulation.Locations?.Count)
+        {
+            throw new InvalidDataException(
+                "The world simulation contains invalid location names.");
+        }
     }
 
     private static IWorldEvent DeserializeEvent(PersistedEvent persistedEvent)

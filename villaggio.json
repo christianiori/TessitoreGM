@@ -1,0 +1,341 @@
+{
+  "version": 2,
+  "initialWorld": {
+    "currentTime": "2026-08-03T06:00:00+00:00",
+    "balances": []
+  },
+  "events": [
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "baker-home"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-03T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-03T06:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-03T09:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "inn"
+        },
+        "occurredAt": "2026-08-03T10:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-03T12:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "baker-home"
+        },
+        "occurredAt": "2026-08-03T18:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-03T19:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "world-time-advanced",
+      "data": {
+        "occurredAt": "2026-08-03T20:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "occurredAt": "2026-08-03T23:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "locationId": {
+          "value": "bakery"
+        },
+        "occurredAt": "2026-08-04T06:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "locationId": {
+          "value": "fields"
+        },
+        "occurredAt": "2026-08-04T06:30:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-04T09:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "locationId": {
+          "value": "inn"
+        },
+        "occurredAt": "2026-08-04T10:00:00\u002B00:00"
+      }
+    }
+  ],
+  "simulation": {
+    "npcs": [
+      {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "role": "baker",
+        "scheduledArrivals": [],
+        "orderProductions": [],
+        "dailyLocationRoutines": [
+          {
+            "destinationId": {
+              "value": "bakery"
+            },
+            "timeOfDay": "06:00:00"
+          },
+          {
+            "destinationId": {
+              "value": "baker-home"
+            },
+            "timeOfDay": "18:00:00"
+          }
+        ]
+      },
+      {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "role": "farmer",
+        "scheduledArrivals": [],
+        "orderProductions": [],
+        "dailyLocationRoutines": [
+          {
+            "destinationId": {
+              "value": "fields"
+            },
+            "timeOfDay": "06:30:00"
+          },
+          {
+            "destinationId": {
+              "value": "market"
+            },
+            "timeOfDay": "12:30:00"
+          },
+          {
+            "destinationId": {
+              "value": "farmstead"
+            },
+            "timeOfDay": "19:00:00"
+          }
+        ]
+      },
+      {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "role": "innkeeper",
+        "scheduledArrivals": [],
+        "orderProductions": [],
+        "dailyLocationRoutines": [
+          {
+            "destinationId": {
+              "value": "market"
+            },
+            "timeOfDay": "09:00:00"
+          },
+          {
+            "destinationId": {
+              "value": "inn"
+            },
+            "timeOfDay": "10:00:00"
+          },
+          {
+            "destinationId": {
+              "value": "innkeeper-home"
+            },
+            "timeOfDay": "23:00:00"
+          }
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "entityId": {
+          "value": "elia-baker"
+        },
+        "name": "Elia il panettiere"
+      },
+      {
+        "entityId": {
+          "value": "brina-farmer"
+        },
+        "name": "Brina la contadina"
+      },
+      {
+        "entityId": {
+          "value": "mira-innkeeper"
+        },
+        "name": "Mira la locandiera"
+      }
+    ],
+    "locations": [
+      {
+        "locationId": {
+          "value": "baker-home"
+        },
+        "name": "Casa di Elia"
+      },
+      {
+        "locationId": {
+          "value": "bakery"
+        },
+        "name": "Forno"
+      },
+      {
+        "locationId": {
+          "value": "farmstead"
+        },
+        "name": "Cascina di Brina"
+      },
+      {
+        "locationId": {
+          "value": "fields"
+        },
+        "name": "Campi"
+      },
+      {
+        "locationId": {
+          "value": "market"
+        },
+        "name": "Mercato"
+      },
+      {
+        "locationId": {
+          "value": "innkeeper-home"
+        },
+        "name": "Casa di Mira"
+      },
+      {
+        "locationId": {
+          "value": "inn"
+        },
+        "name": "Locanda"
+      }
+    ]
+  }
+}
