@@ -17,7 +17,12 @@ public sealed class TrustConditionalLocationBehaviorTests
     {
         var world = new WorldEventProcessor().Apply(
             CreateWorld(),
-            new FactShared(_trustedId, _visitorId, _factId, At(10, 0)));
+            new TrustChanged(
+                _visitorId,
+                _trustedId,
+                1,
+                "helpful information",
+                At(10, 0)));
 
         var result = CreateSimulator().Advance(world, At(12, 0));
 

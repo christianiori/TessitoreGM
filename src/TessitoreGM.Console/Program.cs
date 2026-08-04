@@ -202,6 +202,15 @@ static void CreateVillage(string path)
                                 fieldsId,
                                 new TimeSpan(11, 0, 0),
                                 1)
+                        },
+                    TrustChangesAfterFactSharing =
+                        new TrustChangeAfterFactSharedDefinition[]
+                        {
+                            new(
+                                farmerId,
+                                marketOpenFactId,
+                                1,
+                                "informazione utile sul mercato")
                         }
                 }
             },
@@ -298,6 +307,14 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                         decision.DestinationId,
                         decision.TimeOfDay,
                         decision.MinimumTrust)))
+            .Concat((npc.TrustChangesAfterFactSharing ??
+                Array.Empty<TrustChangeAfterFactSharedDefinition>())
+                .Select(change =>
+                    (INpcBehavior)new ChangeTrustAfterFactSharedBehavior(
+                        change.SpeakerId,
+                        change.FactId,
+                        change.Amount,
+                        change.Reason)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,

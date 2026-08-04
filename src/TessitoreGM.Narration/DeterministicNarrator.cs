@@ -67,6 +67,11 @@ public sealed class DeterministicNarrator
             FactShared shared =>
                 $"{context.Name(shared.SpeakerId)} condivide un'informazione " +
                 $"con {context.Name(shared.ListenerId)}.",
+            TrustChanged changed =>
+                $"La fiducia di {context.Name(changed.SubjectId)} verso " +
+                $"{context.Name(changed.OtherEntityId)} " +
+                $"{(changed.Amount > 0 ? "aumenta" : "diminuisce")} " +
+                $"di {Math.Abs(changed.Amount)}: {changed.Reason}.",
             WorldTimeAdvanced =>
                 "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(

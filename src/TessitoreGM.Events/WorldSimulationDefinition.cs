@@ -28,7 +28,9 @@ public sealed record NpcSimulationDefinition(
     IReadOnlyList<FactId>? InitialKnownFacts = null,
     IReadOnlyList<FactSharingDefinition>? FactSharings = null,
     IReadOnlyList<TrustConditionalLocationDefinition>?
-        TrustConditionalLocations = null);
+        TrustConditionalLocations = null,
+    IReadOnlyList<TrustChangeAfterFactSharedDefinition>?
+        TrustChangesAfterFactSharing = null);
 
 public sealed record DailyLocationRoutineDefinition(
     LocationId DestinationId,
@@ -53,6 +55,12 @@ public sealed record TrustConditionalLocationDefinition(
     LocationId DestinationId,
     TimeSpan TimeOfDay,
     int MinimumTrust);
+
+public sealed record TrustChangeAfterFactSharedDefinition(
+    EntityId SpeakerId,
+    FactId FactId,
+    int Amount,
+    string Reason);
 
 public sealed record ScheduledArrivalDefinition(
     LocationId DestinationId,

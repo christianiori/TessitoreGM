@@ -10,6 +10,7 @@ public sealed class WorldSnapshot
     private readonly IReadOnlyDictionary<EntityId, int> _balances;
     private readonly IReadOnlyDictionary<ItemId, WorldItem> _items;
     private readonly IReadOnlySet<SharedFact> _sharedFacts;
+    private readonly IReadOnlySet<TrustChange> _trustChanges;
 
     private WorldSnapshot(
         DateTimeOffset currentTime,
@@ -17,7 +18,8 @@ public sealed class WorldSnapshot
         IReadOnlyDictionary<OrderId, Order> orders,
         IReadOnlyDictionary<EntityId, int> balances,
         IReadOnlyDictionary<ItemId, WorldItem> items,
-        IReadOnlySet<SharedFact>? sharedFacts = null)
+        IReadOnlySet<SharedFact>? sharedFacts = null,
+        IReadOnlySet<TrustChange>? trustChanges = null)
     {
         CurrentTime = currentTime;
         _entityLocations = entityLocations;
@@ -25,6 +27,7 @@ public sealed class WorldSnapshot
         _balances = balances;
         _items = items;
         _sharedFacts = sharedFacts ?? new HashSet<SharedFact>();
+        _trustChanges = trustChanges ?? new HashSet<TrustChange>();
     }
 
     public static WorldSnapshot Empty { get; } =
@@ -89,7 +92,7 @@ public sealed class WorldSnapshot
             [worldEvent.EntityId] = worldEvent.LocationId
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges);
     }
 
     public WorldSnapshot Apply(EntityLeftLocation worldEvent)
@@ -106,7 +109,7 @@ public sealed class WorldSnapshot
         var entityLocations = new Dictionary<EntityId, LocationId>(_entityLocations);
         entityLocations.Remove(worldEvent.EntityId);
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges);
     }
 
     public WorldSnapshot Apply(OrderRequested worldEvent)
@@ -145,7 +148,7 @@ public sealed class WorldSnapshot
                 DeliveredAt: null)
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges);
     }
 
     public WorldSnapshot Apply(OrderAccepted worldEvent)
@@ -182,7 +185,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges);
     }
 
     public WorldSnapshot Apply(PaymentTransferred worldEvent)
@@ -238,7 +241,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges);
     }
 
     public WorldSnapshot Apply(OrderWorkStarted worldEvent)
@@ -268,7 +271,8 @@ public sealed class WorldSnapshot
             orders,
             _balances,
             _items,
-            _sharedFacts);
+            _sharedFacts,
+            _trustChanges);
     }
 
     public WorldSnapshot Apply(OrderCompleted worldEvent)
@@ -314,7 +318,8 @@ public sealed class WorldSnapshot
             orders,
             _balances,
             items,
-            _sharedFacts);
+            _sharedFacts,
+            _trustChanges);
     }
 
     public WorldSnapshot Apply(OrderDelivered worldEvent)
@@ -362,7 +367,8 @@ public sealed class WorldSnapshot
             orders,
             _balances,
             items,
-            _sharedFacts);
+            _sharedFacts,
+            _trustChanges);
     }
 
     public WorldSnapshot Apply(FactShared worldEvent)
@@ -387,7 +393,8 @@ public sealed class WorldSnapshot
             _orders,
             _balances,
             _items,
-            sharedFacts);
+            sharedFacts,
+            _trustChanges);
     }
 
     public bool HasSharedFact(
@@ -396,10 +403,77 @@ public sealed class WorldSnapshot
         FactId factId) =>
         _sharedFacts.Contains(new SharedFact(speakerId, listenerId, factId));
 
-    public int GetTrust(EntityId subjectId, EntityId trustedEntityId) =>
-        _sharedFacts.Count(sharedFact =>
-            sharedFact.ListenerId == subjectId &&
-            sharedFact.SpeakerId == trustedEntityId);
+    public WorldSnapshot Apply(TrustChanged worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (worldEvent.SubjectId == worldEvent.OtherEntityId)
+        {
+            throw new InvalidOperationException(
+                "An entity cannot change trust toward itself.");
+        }
+
+        if (worldEvent.Amount is 0 or < -100 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "A trust change must be between -100 and 100 and cannot be zero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(worldEvent.Reason))
+        {
+            throw new ArgumentException(
+                "A trust change requires a reason.",
+                nameof(worldEvent));
+        }
+
+        var trustChange = new TrustChange(
+            worldEvent.SubjectId,
+            worldEvent.OtherEntityId,
+            worldEvent.Amount,
+            worldEvent.Reason);
+        if (_trustChanges.Any(change =>
+            change.SubjectId == worldEvent.SubjectId &&
+            change.OtherEntityId == worldEvent.OtherEntityId &&
+            change.Reason == worldEvent.Reason))
+        {
+            throw new InvalidOperationException(
+                $"Trust reason '{worldEvent.Reason}' was already applied.");
+        }
+
+        var trustChanges = new HashSet<TrustChange>(_trustChanges)
+        {
+            trustChange
+        };
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            trustChanges);
+    }
+
+    public int GetTrust(EntityId subjectId, EntityId otherEntityId) =>
+        Math.Clamp(
+            _trustChanges
+                .Where(change =>
+                    change.SubjectId == subjectId &&
+                    change.OtherEntityId == otherEntityId)
+                .Sum(change => change.Amount),
+            -100,
+            100);
+
+    public bool HasTrustReason(
+        EntityId subjectId,
+        EntityId otherEntityId,
+        string reason) =>
+        _trustChanges.Any(change =>
+            change.SubjectId == subjectId &&
+            change.OtherEntityId == otherEntityId &&
+            change.Reason == reason);
 
     public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
     {
@@ -418,7 +492,8 @@ public sealed class WorldSnapshot
             _orders,
             _balances,
             _items,
-            _sharedFacts);
+            _sharedFacts,
+            _trustChanges);
     }
 
     private void EnsureChronological(IWorldEvent worldEvent)
@@ -434,4 +509,10 @@ public sealed class WorldSnapshot
         EntityId SpeakerId,
         EntityId ListenerId,
         FactId FactId);
+
+    private readonly record struct TrustChange(
+        EntityId SubjectId,
+        EntityId OtherEntityId,
+        int Amount,
+        string Reason);
 }

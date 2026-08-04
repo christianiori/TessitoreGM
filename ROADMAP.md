@@ -232,6 +232,9 @@ debba comandare ogni singola azione.
 - [ ] Bisogni e risorse
 - [ ] Economia basilare
 - [x] Fiducia minimale ricostruita dalle interazioni
+- [x] Eventi espliciti di aumento e diminuzione della fiducia
+- [x] Punteggi di fiducia limitati tra -100 e +100
+- [x] Motivazioni persistenti e non ripetibili
 - [ ] Reputazione
 - [ ] Promesse e obblighi
 - [ ] Conflitti personali
@@ -285,9 +288,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Proseguire il Milestone 5 rendendo esplicite le variazioni delle relazioni:
+Proseguire il Milestone 5 con promesse e obblighi:
 
-1. introdurre eventi positivi e negativi per la fiducia;
-2. evitare che ogni informazione condivisa valga automaticamente allo stesso modo;
-3. definire limiti e significato dei punteggi;
-4. mostrare le relazioni in modo utile al Game Master.
+1. rappresentare una promessa come stato persistente;
+2. distinguere promessa mantenuta, infranta e ancora aperta;
+3. collegare l'esito a una variazione motivata della fiducia;
+4. verificare le conseguenze nelle giornate successive.

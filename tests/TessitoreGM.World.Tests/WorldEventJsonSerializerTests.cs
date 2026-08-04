@@ -147,6 +147,14 @@ public sealed class WorldEventJsonSerializerTests
                             locationId,
                             TimeSpan.FromHours(14),
                             1)
+                    },
+                    new TrustChangeAfterFactSharedDefinition[]
+                    {
+                        new(
+                            new EntityId("speaker"),
+                            new FactId("market-open"),
+                            2,
+                            "useful information")
                     })
             },
             new EntityPresentationDefinition[]
@@ -195,6 +203,9 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).TrustConditionalLocations,
             restoredNpc.TrustConditionalLocations);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).TrustChangesAfterFactSharing,
+            restoredNpc.TrustChangesAfterFactSharing);
         Assert.Equal(simulation.Entities, restoredSimulation.Entities);
         Assert.Equal(simulation.Locations, restoredSimulation.Locations);
     }
