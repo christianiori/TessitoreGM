@@ -396,6 +396,11 @@ public sealed class WorldSnapshot
         FactId factId) =>
         _sharedFacts.Contains(new SharedFact(speakerId, listenerId, factId));
 
+    public int GetTrust(EntityId subjectId, EntityId trustedEntityId) =>
+        _sharedFacts.Count(sharedFact =>
+            sharedFact.ListenerId == subjectId &&
+            sharedFact.SpeakerId == trustedEntityId);
+
     public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);

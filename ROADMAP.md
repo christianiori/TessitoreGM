@@ -227,16 +227,16 @@ debba comandare ogni singola azione.
 
 ## Milestone 5 — Consequences and Relationships
 
-**Stato: futuro**
+**Stato: in corso**
 
 - [ ] Bisogni e risorse
 - [ ] Economia basilare
-- [ ] Relazioni
+- [x] Fiducia minimale ricostruita dalle interazioni
 - [ ] Reputazione
 - [ ] Promesse e obblighi
 - [ ] Conflitti personali
 - [ ] Diffusione locale delle informazioni
-- [ ] Conseguenze che attraversano più giornate
+- [x] Prima conseguenza che influenza la giornata successiva
 
 Risultato atteso: ciò che accade oggi modifica le decisioni di domani.
 
@@ -285,9 +285,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Iniziare il Milestone 5 con una conseguenza persistente minima:
+Proseguire il Milestone 5 rendendo esplicite le variazioni delle relazioni:
 
-1. scegliere una relazione modificata da un evento già osservabile;
-2. rappresentare la relazione nello stato del mondo;
-3. far influenzare alla relazione una decisione successiva;
-4. verificare che la conseguenza sopravviva a salvataggio e replay.
+1. introdurre eventi positivi e negativi per la fiducia;
+2. evitare che ogni informazione condivisa valga automaticamente allo stesso modo;
+3. definire limiti e significato dei punteggi;
+4. mostrare le relazioni in modo utile al Game Master.

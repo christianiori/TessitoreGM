@@ -125,6 +125,10 @@ public sealed class WorldEventJsonSerializer
                     decision.TimeOfDay >= TimeSpan.FromDays(1)) ?? false) ||
                 npc.InitialKnownFacts?.Distinct().Count() !=
                     npc.InitialKnownFacts?.Count ||
+                (npc.TrustConditionalLocations?.Any(decision =>
+                    decision.TimeOfDay < TimeSpan.Zero ||
+                    decision.TimeOfDay >= TimeSpan.FromDays(1) ||
+                    decision.MinimumTrust <= 0) ?? false) ||
                 npc.OrderProductions.Any(production =>
                     production.ProductionDuration <= TimeSpan.Zero)))
         {

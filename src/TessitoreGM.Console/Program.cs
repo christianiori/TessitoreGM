@@ -192,7 +192,18 @@ static void CreateVillage(string path)
                     "innkeeper",
                     (marketId, 9, 0),
                     (innId, 13, 0),
-                    (innkeeperHomeId, 23, 0))
+                    (innkeeperHomeId, 23, 0)) with
+                {
+                    TrustConditionalLocations =
+                        new TrustConditionalLocationDefinition[]
+                        {
+                            new(
+                                farmerId,
+                                fieldsId,
+                                new TimeSpan(11, 0, 0),
+                                1)
+                        }
+                }
             },
             new EntityPresentationDefinition[]
             {
@@ -279,6 +290,14 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                     (INpcBehavior)new ShareFactWhenColocatedBehavior(
                         sharing.ListenerId,
                         sharing.FactId)))
+            .Concat((npc.TrustConditionalLocations ??
+                Array.Empty<TrustConditionalLocationDefinition>())
+                .Select(decision =>
+                    (INpcBehavior)new TrustConditionalLocationBehavior(
+                        decision.TrustedEntityId,
+                        decision.DestinationId,
+                        decision.TimeOfDay,
+                        decision.MinimumTrust)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,
@@ -466,6 +485,17 @@ static void DisplayWorld(
             Console.WriteLine(
                 $"- {entityNames.GetValueOrDefault(npc.EntityId, npc.EntityId.ToString())} " +
                 $"({npc.Role}): {locationName}.");
+
+            foreach (var decision in npc.TrustConditionalLocations ??
+                Array.Empty<TrustConditionalLocationDefinition>())
+            {
+                var trustedName = entityNames.GetValueOrDefault(
+                    decision.TrustedEntityId,
+                    decision.TrustedEntityId.ToString());
+                Console.WriteLine(
+                    $"  Fiducia verso {trustedName}: " +
+                    $"{world.GetTrust(npc.EntityId, decision.TrustedEntityId)}.");
+            }
         }
     }
 
