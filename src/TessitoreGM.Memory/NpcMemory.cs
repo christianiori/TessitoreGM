@@ -66,6 +66,8 @@ public sealed class NpcMemory
             OrderDelivered delivered => FactId.ForOrder(delivered.OrderId),
             FactShared shared when shared.ListenerId == OwnerId => shared.FactId,
             FactShared shared when shared.SpeakerId == OwnerId => shared.FactId,
+            FactRevealed revealed when revealed.EntityId == OwnerId =>
+                revealed.FactId,
             _ => null
         };
 }

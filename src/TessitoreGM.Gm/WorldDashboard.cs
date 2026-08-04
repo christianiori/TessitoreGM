@@ -83,9 +83,105 @@ internal static class WorldDashboard
         {
             Events = eventLog.Events.Concat(result.ProducedEvents).ToArray()
         };
+
+        Save(worldFile, serializer, updatedLog);
+    }
+
+    public static void MoveEntity(
+        string worldFile,
+        string entityValue,
+        string locationValue)
+    {
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var simulation = eventLog.Simulation
+            ?? throw new ArgumentException(
+                "Il salvataggio non contiene una simulazione configurata.");
+        var npc = simulation.Npcs.FirstOrDefault(candidate =>
+            candidate.EntityId.ToString() == entityValue)
+            ?? throw new ArgumentException("Personaggio non valido.");
+        var location = (simulation.Locations ??
+            Array.Empty<LocationPresentationDefinition>())
+            .FirstOrDefault(candidate =>
+                candidate.LocationId.ToString() == locationValue)
+            ?? throw new ArgumentException("Luogo non valido.");
+        var world = Replay(eventLog);
+
+        if (world.GetLocation(npc.EntityId) == location.LocationId)
+        {
+            throw new ArgumentException(
+                "Il personaggio si trova già nel luogo scelto.");
+        }
+
+        var movement = new EntityEnteredLocation(
+            npc.EntityId,
+            location.LocationId,
+            world.CurrentTime);
+        var updatedLog = new WorldEventLogEditor().Append(
+            eventLog,
+            world,
+            movement);
+
+        Save(worldFile, serializer, updatedLog);
+    }
+
+    public static void RevealFact(
+        string worldFile,
+        string entityValue,
+        string factValue,
+        string newFactValue)
+    {
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var simulation = eventLog.Simulation
+            ?? throw new ArgumentException(
+                "Il salvataggio non contiene una simulazione configurata.");
+        var npc = simulation.Npcs.FirstOrDefault(candidate =>
+            candidate.EntityId.ToString() == entityValue)
+            ?? throw new ArgumentException("Personaggio non valido.");
+        var suppliedNewFact = newFactValue.Trim();
+        if (suppliedNewFact.Length > 100)
+        {
+            throw new ArgumentException(
+                "L'identificatore dell'informazione è troppo lungo.");
+        }
+        var factId = suppliedNewFact.Length > 0
+            ? new FactId(suppliedNewFact)
+            : AvailableFacts(simulation, eventLog.Events)
+                .FirstOrDefault(candidate => candidate.ToString() == factValue);
+
+        if (factId == default)
+        {
+            throw new ArgumentException("Informazione non valida.");
+        }
+
+        if (KnownFacts(npc, eventLog.Events).Contains(factId))
+        {
+            throw new ArgumentException(
+                "Il personaggio conosce già questa informazione.");
+        }
+
+        var world = Replay(eventLog);
+        var revealed = new FactRevealed(
+            npc.EntityId,
+            factId,
+            world.CurrentTime);
+        var updatedLog = new WorldEventLogEditor().Append(
+            eventLog,
+            world,
+            revealed);
+
+        Save(worldFile, serializer, updatedLog);
+    }
+
+    private static void Save(
+        string worldFile,
+        WorldEventJsonSerializer serializer,
+        WorldEventLog eventLog)
+    {
         var temporaryFile = worldFile + ".tmp";
 
-        File.WriteAllText(temporaryFile, serializer.Serialize(updatedLog));
+        File.WriteAllText(temporaryFile, serializer.Serialize(eventLog));
         File.Move(temporaryFile, worldFile, overwrite: true);
     }
 
@@ -116,6 +212,48 @@ internal static class WorldDashboard
         content.Append("<section class=\"time-control\"><div><p class=\"eyebrow\">Simulazione</p><h2>Avanza il tempo</h2><p>Lascia che il villaggio agisca autonomamente fino al nuovo orario.</p></div><form method=\"post\" action=\"/advance\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"hours\">Intervallo</label><select id=\"hours\" name=\"hours\"><option value=\"1\">1 ora</option><option value=\"6\">6 ore</option><option value=\"24\">1 giorno</option></select><button type=\"submit\">Avanza</button></form></section>");
+        content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Intervento del GM</p><h2>Sposta un personaggio</h2><p>Registra uno spostamento esterno all'ora attuale del mondo.</p></div><form method=\"post\" action=\"/move\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"entity\">Personaggio</label><select id=\"entity\" name=\"entity\">");
+        foreach (var npc in simulation?.Npcs ??
+            Array.Empty<NpcSimulationDefinition>())
+        {
+            var name = entityNames.GetValueOrDefault(
+                npc.EntityId,
+                npc.EntityId.ToString());
+            content.Append($"<option value=\"{Encode(npc.EntityId.ToString())}\">{Encode(name)}</option>");
+        }
+
+        content.Append("</select><label for=\"location\">Destinazione</label><select id=\"location\" name=\"location\">");
+        foreach (var location in simulation?.Locations ??
+            Array.Empty<LocationPresentationDefinition>())
+        {
+            content.Append($"<option value=\"{Encode(location.LocationId.ToString())}\">{Encode(location.Name)}</option>");
+        }
+
+        content.Append("</select><button type=\"submit\">Registra spostamento</button></form></section>");
+        var availableFacts = simulation is null
+            ? Array.Empty<FactId>()
+            : AvailableFacts(simulation, eventLog.Events);
+        content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Informazioni</p><h2>Rivela una conoscenza</h2><p>Fai apprendere a un personaggio un fatto già definito nel mondo.</p></div><form method=\"post\" action=\"/reveal\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"knowledge-entity\">Personaggio</label><select id=\"knowledge-entity\" name=\"entity\">");
+        foreach (var npc in simulation?.Npcs ??
+            Array.Empty<NpcSimulationDefinition>())
+        {
+            var name = entityNames.GetValueOrDefault(
+                npc.EntityId,
+                npc.EntityId.ToString());
+            content.Append($"<option value=\"{Encode(npc.EntityId.ToString())}\">{Encode(name)}</option>");
+        }
+
+        content.Append("</select><label for=\"fact\">Informazione</label><select id=\"fact\" name=\"fact\">");
+        foreach (var factId in availableFacts)
+        {
+            content.Append($"<option value=\"{Encode(factId.ToString())}\">{Encode(factId.ToString())}</option>");
+        }
+
+        content.Append("</select><label for=\"new-fact\">Oppure nuovo ID</label><input id=\"new-fact\" name=\"newFact\" maxlength=\"100\" placeholder=\"village:bandits-seen\"><button type=\"submit\">Rivela informazione</button></form></section>");
         content.Append("<main><section class=\"world-strip\">");
         content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
         content.Append(Metric("Eventi registrati", eventLog.Events.Count.ToString()));
@@ -179,8 +317,34 @@ internal static class WorldDashboard
         {
             facts.Add(shared.FactId);
         }
+        foreach (var revealed in events.OfType<FactRevealed>().Where(
+            revealed => revealed.EntityId == npc.EntityId))
+        {
+            facts.Add(revealed.FactId);
+        }
         return facts;
     }
+
+    private static FactId[] AvailableFacts(
+        WorldSimulationDefinition simulation,
+        IReadOnlyList<IWorldEvent> events) =>
+        simulation.Npcs
+            .SelectMany(npc =>
+                (npc.InitialKnownFacts ?? Array.Empty<FactId>())
+                .Concat((npc.KnowledgeConditionalLocations ??
+                    Array.Empty<KnowledgeConditionalLocationDefinition>())
+                    .Select(decision => decision.RequiredFactId))
+                .Concat((npc.FactSharings ??
+                    Array.Empty<FactSharingDefinition>())
+                    .Select(sharing => sharing.FactId))
+                .Concat((npc.TrustChangesAfterFactSharing ??
+                    Array.Empty<TrustChangeAfterFactSharedDefinition>())
+                    .Select(change => change.FactId)))
+            .Concat(events.OfType<FactShared>().Select(shared => shared.FactId))
+            .Concat(events.OfType<FactRevealed>().Select(revealed => revealed.FactId))
+            .Distinct()
+            .OrderBy(factId => factId.ToString(), StringComparer.Ordinal)
+            .ToArray();
 
     private static WorldSnapshot Replay(WorldEventLog eventLog)
     {

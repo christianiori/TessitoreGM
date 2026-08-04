@@ -67,6 +67,9 @@ public sealed class DeterministicNarrator
             FactShared shared =>
                 $"{context.Name(shared.SpeakerId)} condivide un'informazione " +
                 $"con {context.Name(shared.ListenerId)}.",
+            FactRevealed revealed =>
+                $"{context.Name(revealed.EntityId)} apprende una nuova " +
+                $"informazione.",
             TrustChanged changed =>
                 $"La fiducia di {context.Name(changed.SubjectId)} verso " +
                 $"{context.Name(changed.OtherEntityId)} " +

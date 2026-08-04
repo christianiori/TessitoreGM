@@ -32,6 +32,61 @@ app.MapPost("/advance", async (HttpContext context) =>
 
     return Results.Redirect("/");
 });
+app.MapPost("/move", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.MoveEntity(
+            worldFile,
+            form["entity"].ToString(),
+            form["location"].ToString());
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/reveal", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.RevealFact(
+            worldFile,
+            form["entity"].ToString(),
+            form["fact"].ToString(),
+            form["newFact"].ToString());
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
 app.MapGet("/styles.css", () => Results.Text(
     DashboardStyles.Content,
     "text/css; charset=utf-8"));

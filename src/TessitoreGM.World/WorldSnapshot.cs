@@ -475,6 +475,24 @@ public sealed class WorldSnapshot
         _sharedFacts.Any(shared =>
             shared.ListenerId == entityId && shared.FactId == factId);
 
+    public WorldSnapshot Apply(FactRevealed worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
+    }
+
     public WorldSnapshot Apply(TrustChanged worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);

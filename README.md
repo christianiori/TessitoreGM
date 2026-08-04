@@ -26,6 +26,10 @@ La dashboard mostra:
 - conoscenze personali;
 - controllo per avanzare il mondo di 1, 6 o 24 ore, applicando le regole
   autonome e salvando il risultato;
+- comando del GM per spostare un personaggio in un luogo e registrare
+  l'intervento nel mondo persistente;
+- rivelazione di informazioni agli NPC, utilizzabile dalle loro decisioni
+  autonome, scegliendo un fatto esistente o definendone un nuovo identificatore;
 - ultimi avvenimenti narrati.
 
 Per arrestarla, premere `Ctrl+C` nel terminale che la sta eseguendo.

@@ -20,6 +20,7 @@ public sealed class WorldEventProcessor
             OrderCompleted completed => world.Apply(completed),
             OrderDelivered delivered => world.Apply(delivered),
             FactShared shared => world.Apply(shared),
+            FactRevealed revealed => world.Apply(revealed),
             TrustChanged trustChanged => world.Apply(trustChanged),
             TradeCompleted trade => world.Apply(trade),
             NeedIncreased increased => world.Apply(increased),

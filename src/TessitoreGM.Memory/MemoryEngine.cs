@@ -62,6 +62,7 @@ public sealed class MemoryEngine
             FactShared shared =>
                 shared.SpeakerId == observerId ||
                 shared.ListenerId == observerId,
+            FactRevealed revealed => revealed.EntityId == observerId,
             TradeCompleted trade =>
                 trade.BuyerId == observerId ||
                 trade.SellerId == observerId,

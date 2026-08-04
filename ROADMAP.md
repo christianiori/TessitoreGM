@@ -263,6 +263,8 @@ senza intervento diretto del Game Master.
 - [ ] Selezionare un salvataggio dall'interfaccia
 - [ ] Accesso protetto dalla rete locale per smartphone
 - [ ] Introdurre azioni dei personaggi giocanti ed eventi esterni
+  - [x] Primo intervento del GM: spostare un personaggio in un luogo
+  - [x] Rivelare una conoscenza a un personaggio
 - [x] Avanzare il tempo dal Tavolo del GM e salvare le conseguenze
 - [ ] Anteprima delle conseguenze proposte
 - [ ] Approvare o rifiutare conseguenze importanti
