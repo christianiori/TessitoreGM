@@ -119,6 +119,10 @@ public sealed class WorldEventJsonSerializerTests
                             locationId,
                             At(3, 9, 30),
                             TimeSpan.FromHours(2))
+                    },
+                    new DailyLocationRoutineDefinition[]
+                    {
+                        new(locationId, TimeSpan.FromHours(9))
                     })
             });
         var eventLog = new WorldEventLog(
@@ -141,6 +145,9 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).OrderProductions,
             restoredNpc.OrderProductions);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).DailyLocationRoutines,
+            restoredNpc.DailyLocationRoutines);
     }
 
     [Fact]

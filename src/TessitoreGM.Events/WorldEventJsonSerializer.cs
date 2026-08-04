@@ -113,6 +113,9 @@ public sealed class WorldEventJsonSerializer
                 string.IsNullOrWhiteSpace(npc.Role) ||
                 npc.ScheduledArrivals is null ||
                 npc.OrderProductions is null ||
+                (npc.DailyLocationRoutines?.Any(routine =>
+                    routine.TimeOfDay < TimeSpan.Zero ||
+                    routine.TimeOfDay >= TimeSpan.FromDays(1)) ?? false) ||
                 npc.OrderProductions.Any(production =>
                     production.ProductionDuration <= TimeSpan.Zero)))
         {

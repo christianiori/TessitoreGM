@@ -132,6 +132,12 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
             .Select(arrival => (INpcBehavior)new ScheduledArrivalBehavior(
                 arrival.DestinationId,
                 arrival.ScheduledAt))
+            .Concat((npc.DailyLocationRoutines ??
+                Array.Empty<DailyLocationRoutineDefinition>())
+                .Select(routine =>
+                    (INpcBehavior)new DailyLocationRoutineBehavior(
+                        routine.DestinationId,
+                        routine.TimeOfDay)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,

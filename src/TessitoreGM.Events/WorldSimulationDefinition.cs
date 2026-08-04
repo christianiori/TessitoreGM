@@ -9,7 +9,12 @@ public sealed record NpcSimulationDefinition(
     EntityId EntityId,
     string Role,
     IReadOnlyList<ScheduledArrivalDefinition> ScheduledArrivals,
-    IReadOnlyList<OrderProductionDefinition> OrderProductions);
+    IReadOnlyList<OrderProductionDefinition> OrderProductions,
+    IReadOnlyList<DailyLocationRoutineDefinition>? DailyLocationRoutines = null);
+
+public sealed record DailyLocationRoutineDefinition(
+    LocationId DestinationId,
+    TimeSpan TimeOfDay);
 
 public sealed record ScheduledArrivalDefinition(
     LocationId DestinationId,

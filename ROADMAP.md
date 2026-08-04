@@ -210,11 +210,11 @@ mondo esattamente alle 13:00.
 
 Obiettivo: applicare il runtime autonomo a una giornata di villaggio.
 
-- [ ] Almeno tre NPC
-- [ ] Almeno tre luoghi
-- [ ] Routine giornaliere
-- [ ] Più attività simultanee
-- [ ] Spostamenti determinati dalle routine
+- [x] Almeno tre NPC nel primo scenario automatico
+- [x] Almeno tre luoghi nel primo scenario automatico
+- [x] Routine giornaliere persistenti
+- [x] Più attività simultanee e deterministiche
+- [x] Spostamenti determinati dalle routine
 - [ ] Decisioni basate su luogo, stato e conoscenze
 - [ ] Eventi che continuano fuori dalla scena osservata
 - [ ] Salvataggio e continuazione della giornata
@@ -283,9 +283,10 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Iniziare il Milestone 4 con il modello minimo di una giornata di villaggio:
+Proseguire il Milestone 4 trasformando il primo scenario automatico in un
+salvataggio di villaggio utilizzabile dalla console:
 
-1. definire tre NPC e tre luoghi senza aggiungere nuovi sistemi globali;
-2. rappresentare le routine giornaliere come dati persistenti;
-3. riutilizzare il ciclo autonomo per gli spostamenti;
-4. verificare che attività simultanee restino deterministiche.
+1. creare un comando che generi il piccolo villaggio;
+2. assegnare a ogni NPC almeno due tappe giornaliere;
+3. mostrare luoghi e NPC senza dipendere da un ordine del fabbro;
+4. salvare, ricaricare e continuare la giornata successiva.
