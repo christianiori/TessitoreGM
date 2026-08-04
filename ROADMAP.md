@@ -215,7 +215,9 @@ Obiettivo: applicare il runtime autonomo a una giornata di villaggio.
 - [x] Routine giornaliere persistenti
 - [x] Più attività simultanee e deterministiche
 - [x] Spostamenti determinati dalle routine
-- [ ] Decisioni basate su luogo, stato e conoscenze
+- [x] Prima decisione basata su una risorsa accessibile all'NPC
+- [ ] Decisioni basate sul luogo corrente
+- [ ] Decisioni basate sulle conoscenze personali
 - [x] Eventi che continuano fuori dalla scena osservata
 - [x] Salvataggio e continuazione della giornata
 - [x] Cronaca dell'intera giornata
@@ -283,9 +285,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Proseguire il Milestone 4 introducendo la prima decisione condizionale:
+Proseguire il Milestone 4 con una decisione basata sulle conoscenze:
 
-1. scegliere un caso minimo basato su luogo e stato del mondo;
-2. distinguere una routine da una decisione;
-3. usare soltanto informazioni accessibili all'NPC;
-4. verificare che la decisione cambi quando cambiano le condizioni.
+1. scegliere un fatto rilevante per la giornata del villaggio;
+2. fare agire un NPC soltanto se ricorda quel fatto;
+3. mantenere separata la conoscenza personale dallo stato globale;
+4. verificare due esiti diversi con e senza conoscenza.

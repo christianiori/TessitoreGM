@@ -123,6 +123,10 @@ public sealed class WorldEventJsonSerializerTests
                     new DailyLocationRoutineDefinition[]
                     {
                         new(locationId, TimeSpan.FromHours(9))
+                    },
+                    new BalanceConditionalLocationDefinition[]
+                    {
+                        new(locationId, TimeSpan.FromHours(12), 5)
                     })
             },
             new EntityPresentationDefinition[]
@@ -156,6 +160,9 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).DailyLocationRoutines,
             restoredNpc.DailyLocationRoutines);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).BalanceConditionalLocations,
+            restoredNpc.BalanceConditionalLocations);
         Assert.Equal(simulation.Entities, restoredSimulation.Entities);
         Assert.Equal(simulation.Locations, restoredSimulation.Locations);
     }

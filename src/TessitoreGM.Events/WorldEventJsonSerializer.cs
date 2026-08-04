@@ -116,6 +116,10 @@ public sealed class WorldEventJsonSerializer
                 (npc.DailyLocationRoutines?.Any(routine =>
                     routine.TimeOfDay < TimeSpan.Zero ||
                     routine.TimeOfDay >= TimeSpan.FromDays(1)) ?? false) ||
+                (npc.BalanceConditionalLocations?.Any(decision =>
+                    decision.TimeOfDay < TimeSpan.Zero ||
+                    decision.TimeOfDay >= TimeSpan.FromDays(1) ||
+                    decision.MaximumBalance < 0) ?? false) ||
                 npc.OrderProductions.Any(production =>
                     production.ProductionDuration <= TimeSpan.Zero)))
         {

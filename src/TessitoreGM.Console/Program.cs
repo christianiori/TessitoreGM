@@ -154,8 +154,14 @@ static void CreateVillage(string path)
                     farmerId,
                     "farmer",
                     (fieldsId, 6, 30),
-                    (marketId, 12, 30),
-                    (farmsteadId, 19, 0)),
+                    (farmsteadId, 19, 0)) with
+                {
+                    BalanceConditionalLocations =
+                        new BalanceConditionalLocationDefinition[]
+                        {
+                            new(marketId, new TimeSpan(12, 0, 0), 5)
+                        }
+                },
                 CreateRoutineNpc(
                     innkeeperId,
                     "innkeeper",
@@ -229,6 +235,13 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                     (INpcBehavior)new DailyLocationRoutineBehavior(
                         routine.DestinationId,
                         routine.TimeOfDay)))
+            .Concat((npc.BalanceConditionalLocations ??
+                Array.Empty<BalanceConditionalLocationDefinition>())
+                .Select(decision =>
+                    (INpcBehavior)new BalanceConditionalLocationBehavior(
+                        decision.DestinationId,
+                        decision.TimeOfDay,
+                        decision.MaximumBalance)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,

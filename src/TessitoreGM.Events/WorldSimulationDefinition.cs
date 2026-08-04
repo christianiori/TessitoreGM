@@ -20,11 +20,18 @@ public sealed record NpcSimulationDefinition(
     string Role,
     IReadOnlyList<ScheduledArrivalDefinition> ScheduledArrivals,
     IReadOnlyList<OrderProductionDefinition> OrderProductions,
-    IReadOnlyList<DailyLocationRoutineDefinition>? DailyLocationRoutines = null);
+    IReadOnlyList<DailyLocationRoutineDefinition>? DailyLocationRoutines = null,
+    IReadOnlyList<BalanceConditionalLocationDefinition>?
+        BalanceConditionalLocations = null);
 
 public sealed record DailyLocationRoutineDefinition(
     LocationId DestinationId,
     TimeSpan TimeOfDay);
+
+public sealed record BalanceConditionalLocationDefinition(
+    LocationId DestinationId,
+    TimeSpan TimeOfDay,
+    int MaximumBalance);
 
 public sealed record ScheduledArrivalDefinition(
     LocationId DestinationId,
