@@ -47,6 +47,12 @@ public sealed class NpcMemory
 
     public bool KnowsFact(FactId factId) => _knownFacts.Contains(factId);
 
+    public NpcMemory LearnFact(FactId factId)
+    {
+        var knownFacts = new HashSet<FactId>(_knownFacts) { factId };
+        return new NpcMemory(OwnerId, _observedEvents, knownFacts);
+    }
+
     public bool KnowsOrder(OrderId orderId) => KnowsFact(FactId.ForOrder(orderId));
 
     private FactId? GetFactId(IWorldEvent worldEvent) =>

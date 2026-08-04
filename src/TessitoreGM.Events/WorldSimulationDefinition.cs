@@ -22,7 +22,10 @@ public sealed record NpcSimulationDefinition(
     IReadOnlyList<OrderProductionDefinition> OrderProductions,
     IReadOnlyList<DailyLocationRoutineDefinition>? DailyLocationRoutines = null,
     IReadOnlyList<BalanceConditionalLocationDefinition>?
-        BalanceConditionalLocations = null);
+        BalanceConditionalLocations = null,
+    IReadOnlyList<KnowledgeConditionalLocationDefinition>?
+        KnowledgeConditionalLocations = null,
+    IReadOnlyList<FactId>? InitialKnownFacts = null);
 
 public sealed record DailyLocationRoutineDefinition(
     LocationId DestinationId,
@@ -32,6 +35,11 @@ public sealed record BalanceConditionalLocationDefinition(
     LocationId DestinationId,
     TimeSpan TimeOfDay,
     int MaximumBalance);
+
+public sealed record KnowledgeConditionalLocationDefinition(
+    LocationId DestinationId,
+    TimeSpan TimeOfDay,
+    FactId RequiredFactId);
 
 public sealed record ScheduledArrivalDefinition(
     LocationId DestinationId,

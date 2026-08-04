@@ -133,9 +133,17 @@ static void CreateVillage(string path)
     var marketId = new LocationId("market");
     var innkeeperHomeId = new LocationId("innkeeper-home");
     var innId = new LocationId("inn");
+    var marketOpenFactId = new FactId("village:market-open");
     var initialTime = At(6, 0);
     var eventLog = new WorldEventLog(
-        new WorldInitialState(initialTime, Array.Empty<EntityBalance>()),
+        new WorldInitialState(
+            initialTime,
+            new EntityBalance[]
+            {
+                new(bakerId, 10),
+                new(farmerId, 10),
+                new(innkeeperId, 10)
+            }),
         new IWorldEvent[]
         {
             new EntityEnteredLocation(bakerId, bakerHomeId, initialTime),
@@ -149,7 +157,14 @@ static void CreateVillage(string path)
                     bakerId,
                     "baker",
                     (bakeryId, 6, 0),
-                    (bakerHomeId, 18, 0)),
+                    (bakerHomeId, 18, 0)) with
+                {
+                    KnowledgeConditionalLocations =
+                        new KnowledgeConditionalLocationDefinition[]
+                        {
+                            new(marketId, new TimeSpan(12, 0, 0), marketOpenFactId)
+                        }
+                },
                 CreateRoutineNpc(
                     farmerId,
                     "farmer",
@@ -160,7 +175,13 @@ static void CreateVillage(string path)
                         new BalanceConditionalLocationDefinition[]
                         {
                             new(marketId, new TimeSpan(12, 0, 0), 5)
-                        }
+                        },
+                    KnowledgeConditionalLocations =
+                        new KnowledgeConditionalLocationDefinition[]
+                        {
+                            new(marketId, new TimeSpan(12, 0, 0), marketOpenFactId)
+                        },
+                    InitialKnownFacts = new FactId[] { marketOpenFactId }
                 },
                 CreateRoutineNpc(
                     innkeeperId,
@@ -242,6 +263,13 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                         decision.DestinationId,
                         decision.TimeOfDay,
                         decision.MaximumBalance)))
+            .Concat((npc.KnowledgeConditionalLocations ??
+                Array.Empty<KnowledgeConditionalLocationDefinition>())
+                .Select(decision =>
+                    (INpcBehavior)new KnowledgeConditionalLocationBehavior(
+                        decision.DestinationId,
+                        decision.TimeOfDay,
+                        decision.RequiredFactId)))
             .Concat(npc.OrderProductions.Select(production =>
                 (INpcBehavior)new OrderProductionBehavior(
                     production.OrderId,
@@ -251,13 +279,19 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
                     production.ProductionDuration)))
             .ToArray();
 
+        var memory = memoryEngine.Replay(
+            npc.EntityId,
+            initialWorld,
+            loadedWorld.EventLog.Events);
+        foreach (var factId in npc.InitialKnownFacts ?? Array.Empty<FactId>())
+        {
+            memory = memory.LearnFact(factId);
+        }
+
         return (IWorldRule)new NpcAgent(
             npc.EntityId,
             npc.Role,
-            memoryEngine.Replay(
-                npc.EntityId,
-                initialWorld,
-                loadedWorld.EventLog.Events),
+            memory,
             behaviors);
     }).ToArray();
     var simulator = new WorldSimulator(rules);

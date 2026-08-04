@@ -127,7 +127,15 @@ public sealed class WorldEventJsonSerializerTests
                     new BalanceConditionalLocationDefinition[]
                     {
                         new(locationId, TimeSpan.FromHours(12), 5)
-                    })
+                    },
+                    new KnowledgeConditionalLocationDefinition[]
+                    {
+                        new(
+                            locationId,
+                            TimeSpan.FromHours(13),
+                            new FactId("market-open"))
+                    },
+                    new FactId[] { new("market-open") })
             },
             new EntityPresentationDefinition[]
             {
@@ -163,6 +171,12 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             Assert.Single(simulation.Npcs).BalanceConditionalLocations,
             restoredNpc.BalanceConditionalLocations);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).KnowledgeConditionalLocations,
+            restoredNpc.KnowledgeConditionalLocations);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).InitialKnownFacts,
+            restoredNpc.InitialKnownFacts);
         Assert.Equal(simulation.Entities, restoredSimulation.Entities);
         Assert.Equal(simulation.Locations, restoredSimulation.Locations);
     }
