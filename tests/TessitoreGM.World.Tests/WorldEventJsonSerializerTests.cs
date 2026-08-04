@@ -20,6 +20,7 @@ public sealed class WorldEventJsonSerializerTests
         Assert.Equal(
             eventLog.InitialWorld.Balances,
             restoredLog.InitialWorld.Balances);
+        Assert.Equal(eventLog.Simulation, restoredLog.Simulation);
         Assert.Equal(eventLog.Events.Count, restoredLog.Events.Count);
 
         for (var index = 0; index < eventLog.Events.Count; index++)
@@ -91,6 +92,55 @@ public sealed class WorldEventJsonSerializerTests
             timeAdvanced,
             Assert.IsType<WorldTimeAdvanced>(Assert.Single(restored.Events)));
         Assert.Equal(timeAdvanced.OccurredAt, restoredWorld.CurrentTime);
+    }
+
+    [Fact]
+    public void SerializeThenDeserialize_SimulationDefinition_PreservesPlan()
+    {
+        var npcId = new EntityId("artisan");
+        var locationId = new LocationId("workshop");
+        var orderId = new OrderId("order-1");
+        var itemId = new ItemId("shield-1");
+        var simulation = new WorldSimulationDefinition(
+            new NpcSimulationDefinition[]
+            {
+                new(
+                    npcId,
+                    "armorer",
+                    new ScheduledArrivalDefinition[]
+                    {
+                        new(locationId, At(3, 9, 0))
+                    },
+                    new OrderProductionDefinition[]
+                    {
+                        new(
+                            orderId,
+                            itemId,
+                            locationId,
+                            At(3, 9, 30),
+                            TimeSpan.FromHours(2))
+                    })
+            });
+        var eventLog = new WorldEventLog(
+            new WorldInitialState(
+                At(3, 8, 0),
+                Array.Empty<EntityBalance>()),
+            Array.Empty<IWorldEvent>(),
+            simulation);
+
+        var restored = RoundTrip(eventLog);
+
+        var restoredSimulation = Assert.IsType<WorldSimulationDefinition>(
+            restored.Simulation);
+        var restoredNpc = Assert.Single(restoredSimulation.Npcs);
+        Assert.Equal(npcId, restoredNpc.EntityId);
+        Assert.Equal("armorer", restoredNpc.Role);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).ScheduledArrivals,
+            restoredNpc.ScheduledArrivals);
+        Assert.Equal(
+            Assert.Single(simulation.Npcs).OrderProductions,
+            restoredNpc.OrderProductions);
     }
 
     [Fact]

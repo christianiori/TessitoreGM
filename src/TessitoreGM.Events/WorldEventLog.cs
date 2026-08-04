@@ -4,7 +4,8 @@ namespace TessitoreGM.Events;
 
 public sealed record WorldEventLog(
     WorldInitialState InitialWorld,
-    IReadOnlyList<IWorldEvent> Events);
+    IReadOnlyList<IWorldEvent> Events,
+    WorldSimulationDefinition? Simulation = null);
 
 public sealed record WorldInitialState(
     DateTimeOffset CurrentTime,

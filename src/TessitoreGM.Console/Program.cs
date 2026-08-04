@@ -80,7 +80,27 @@ static void CreateWorld(ScenarioOptions options)
             customerId,
             blacksmithId,
             forgeId,
-            orderId));
+            orderId),
+        new WorldSimulationDefinition(
+            new NpcSimulationDefinition[]
+            {
+                new(
+                    blacksmithId,
+                    "blacksmith",
+                    new ScheduledArrivalDefinition[]
+                    {
+                        new(forgeId, At(8, 15))
+                    },
+                    new OrderProductionDefinition[]
+                    {
+                        new(
+                            orderId,
+                            new ItemId($"{options.ItemName}-1"),
+                            forgeId,
+                            At(8, 30),
+                            TimeSpan.FromHours(4))
+                    })
+            }));
     var eventFilePath = Path.GetFullPath(options.EventFilePath);
 
     SaveEventLog(eventFilePath, eventLog);
@@ -101,32 +121,36 @@ static void AdvanceWorld(string path, DateTimeOffset? until)
             $"'{simulationEnd:O}'.");
     }
 
-    var request = GetOrderRequest(loadedWorld.EventLog);
-    var itemId = new ItemId($"{request.RequestedItem}-1");
-    var forgeId = new LocationId("forge");
-    var blacksmithMemory = new MemoryEngine().Replay(
-        request.ArtisanId,
-        CreateInitialWorld(loadedWorld.EventLog),
-        loadedWorld.EventLog.Events);
-    var simulator = new WorldSimulator(new IWorldRule[]
+    var simulation = loadedWorld.EventLog.Simulation
+        ?? throw new InvalidDataException(
+            "The event log contains no simulation definition.");
+    var initialWorld = CreateInitialWorld(loadedWorld.EventLog);
+    var memoryEngine = new MemoryEngine();
+    var rules = simulation.Npcs.Select(npc =>
     {
-        new NpcAgent(
-            request.ArtisanId,
-            "blacksmith",
-            blacksmithMemory,
-            new INpcBehavior[]
-            {
-                new ScheduledArrivalBehavior(
-                    forgeId,
-                    OnSameDay(loadedWorld.World.CurrentTime, 8, 15)),
-                new OrderProductionBehavior(
-                    request.OrderId,
-                    itemId,
-                    forgeId,
-                    OnSameDay(loadedWorld.World.CurrentTime, 8, 30),
-                    TimeSpan.FromHours(4))
-            })
-    });
+        var behaviors = npc.ScheduledArrivals
+            .Select(arrival => (INpcBehavior)new ScheduledArrivalBehavior(
+                arrival.DestinationId,
+                arrival.ScheduledAt))
+            .Concat(npc.OrderProductions.Select(production =>
+                (INpcBehavior)new OrderProductionBehavior(
+                    production.OrderId,
+                    production.ProducedItemId,
+                    production.WorkLocationId,
+                    production.WorkStartsNotBefore,
+                    production.ProductionDuration)))
+            .ToArray();
+
+        return (IWorldRule)new NpcAgent(
+            npc.EntityId,
+            npc.Role,
+            memoryEngine.Replay(
+                npc.EntityId,
+                initialWorld,
+                loadedWorld.EventLog.Events),
+            behaviors);
+    }).ToArray();
+    var simulator = new WorldSimulator(rules);
     var result = simulator.Advance(
         loadedWorld.World,
         simulationEnd);

@@ -79,7 +79,7 @@ dalla richiesta alla consegna, mantenendo stato e cronologia persistenti.
 
 ## Milestone 3 — Simulation Runtime
 
-**Stato: da realizzare**
+**Stato: completato**
 
 Obiettivo: rendere autonoma la simulazione dello scenario piccolo prima di
 aggiungere più NPC e più luoghi.
@@ -110,7 +110,7 @@ accaduti e l'orario finale raggiunto dal mondo.
 - [x] Sostituire la valutazione a un singolo istante con la ricerca del prossimo
       evento applicabile entro un orario limite
 - [x] Spostare orari, durate e condizioni dentro comportamenti e regole
-- [ ] Eliminare dalla console gli orari `08:15`, `08:30` e `12:30`
+- [x] Eliminare dal comando di avanzamento gli orari `08:15`, `08:30` e `12:30`
 - [x] Fare in modo che una regola non produca eventi oltre l'orario richiesto
 - [x] Fare in modo che una regola non riproponga un evento già soddisfatto
 
@@ -190,7 +190,7 @@ dotnet run --project src/TessitoreGM.Console -- \
 - [x] Un salvataggio intermedio può essere ricaricato e continuato
 - [x] Il replay ricostruisce lo stesso stato finale
 - [x] Il narratore produce la stessa cronaca degli eventi generati
-- [ ] Nessun orario della commissione rimane codificato nel comando console
+- [x] Nessun orario della commissione rimane codificato nel comando di avanzamento
 
 ### Definition of Done
 
@@ -283,10 +283,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Completare il Milestone 3 eliminando dalla console gli orari specifici della
-commissione:
+Iniziare il Milestone 4 con il modello minimo di una giornata di villaggio:
 
-1. rappresentare pianificazione e durata come dati dello scenario;
-2. salvarli nel mondo persistente;
-3. costruire regole e comportamenti a partire dai dati caricati;
-4. ripetere tutti i test di accettazione senza orari codificati nel comando.
+1. definire tre NPC e tre luoghi senza aggiungere nuovi sistemi globali;
+2. rappresentare le routine giornaliere come dati persistenti;
+3. riutilizzare il ciclo autonomo per gli spostamenti;
+4. verificare che attività simultanee restino deterministiche.

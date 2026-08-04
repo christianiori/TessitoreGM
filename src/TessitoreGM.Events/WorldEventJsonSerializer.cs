@@ -20,6 +20,7 @@ public sealed class WorldEventJsonSerializer
         ArgumentNullException.ThrowIfNull(eventLog.Events);
 
         ValidateBalances(eventLog.InitialWorld.Balances);
+        ValidateSimulation(eventLog.Simulation);
 
         var persistedEvents = eventLog.Events.Select(worldEvent =>
         {
@@ -37,7 +38,8 @@ public sealed class WorldEventJsonSerializer
             new EventLogDocument(
                 CurrentVersion,
                 eventLog.InitialWorld,
-                persistedEvents),
+                persistedEvents,
+                eventLog.Simulation),
             JsonOptions);
     }
 
@@ -77,10 +79,12 @@ public sealed class WorldEventJsonSerializer
         }
 
         ValidateBalances(document.InitialWorld.Balances);
+        ValidateSimulation(document.Simulation);
 
         return new WorldEventLog(
             document.InitialWorld,
-            document.Events.Select(DeserializeEvent).ToArray());
+            document.Events.Select(DeserializeEvent).ToArray(),
+            document.Simulation);
     }
 
     private static void ValidateBalances(IReadOnlyList<EntityBalance> balances)
@@ -93,6 +97,34 @@ public sealed class WorldEventJsonSerializer
         if (balances.Select(balance => balance.EntityId).Distinct().Count() != balances.Count)
         {
             throw new InvalidDataException("Initial balances contain duplicate entities.");
+        }
+    }
+
+    private static void ValidateSimulation(WorldSimulationDefinition? simulation)
+    {
+        if (simulation is null)
+        {
+            return;
+        }
+
+        if (simulation.Npcs is null ||
+            simulation.Npcs.Any(npc =>
+                npc is null ||
+                string.IsNullOrWhiteSpace(npc.Role) ||
+                npc.ScheduledArrivals is null ||
+                npc.OrderProductions is null ||
+                npc.OrderProductions.Any(production =>
+                    production.ProductionDuration <= TimeSpan.Zero)))
+        {
+            throw new InvalidDataException(
+                "The world simulation definition is invalid.");
+        }
+
+        if (simulation.Npcs.Select(npc => npc.EntityId).Distinct().Count() !=
+            simulation.Npcs.Count)
+        {
+            throw new InvalidDataException(
+                "The world simulation contains duplicate NPC definitions.");
         }
     }
 
@@ -149,7 +181,8 @@ public sealed class WorldEventJsonSerializer
     private sealed record EventLogDocument(
         int Version,
         WorldInitialState InitialWorld,
-        IReadOnlyList<PersistedEvent> Events);
+        IReadOnlyList<PersistedEvent> Events,
+        WorldSimulationDefinition? Simulation = null);
 
     private sealed record PersistedEvent(
         string Type,
