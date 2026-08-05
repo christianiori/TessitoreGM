@@ -44,13 +44,19 @@ internal static class WorldDashboard
         return Path.GetFullPath(suppliedPath, launchDirectory);
     }
 
-    public static string Render(string worldFile, string actionToken)
+    public static string Render(
+        string worldFile,
+        string actionToken,
+        IReadOnlyList<CampaignEntry> campaigns)
     {
         try
         {
             return File.Exists(worldFile)
-                ? RenderWorld(worldFile, actionToken)
-                : RenderMissingWorld(worldFile);
+                ? RenderWorld(worldFile, actionToken, campaigns)
+                : RenderMissingWorld(
+                    worldFile,
+                    actionToken,
+                    campaigns);
         }
         catch (Exception exception) when (
             exception is IOException or InvalidDataException or
@@ -185,7 +191,10 @@ internal static class WorldDashboard
         File.Move(temporaryFile, worldFile, overwrite: true);
     }
 
-    private static string RenderWorld(string worldFile, string actionToken)
+    private static string RenderWorld(
+        string worldFile,
+        string actionToken,
+        IReadOnlyList<CampaignEntry> campaigns)
     {
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             File.ReadAllText(worldFile));
@@ -209,6 +218,10 @@ internal static class WorldDashboard
         var content = new StringBuilder();
 
         content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></header>");
+        content.Append(CampaignControls(
+            worldFile,
+            actionToken,
+            campaigns));
         content.Append("<section class=\"time-control\"><div><p class=\"eyebrow\">Simulazione</p><h2>Avanza il tempo</h2><p>Lascia che il villaggio agisca autonomamente fino al nuovo orario.</p></div><form method=\"post\" action=\"/advance\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"hours\">Intervallo</label><select id=\"hours\" name=\"hours\"><option value=\"1\">1 ora</option><option value=\"6\">6 ore</option><option value=\"24\">1 giorno</option></select><button type=\"submit\">Avanza</button></form></section>");
@@ -359,10 +372,40 @@ internal static class WorldDashboard
         return new WorldEventProcessor().Replay(initialWorld, eventLog.Events);
     }
 
-    private static string RenderMissingWorld(string worldFile) => Page(
+    private static string RenderMissingWorld(
+        string worldFile,
+        string actionToken,
+        IReadOnlyList<CampaignEntry> campaigns) => Page(
         "Apri un mondo",
-        "<main class=\"empty-state\"><p class=\"eyebrow\">TessitoreGM</p><h1>Il tavolo è pronto.</h1><p>Crea prima un villaggio persistente, poi ricarica questa pagina.</p><pre>dotnet run --project src/TessitoreGM.Console -- create-village village.json</pre>" +
-        $"<p class=\"path\">File atteso: <code>{Encode(worldFile)}</code></p><button type=\"button\" onclick=\"location.reload()\">Riprova</button></main>");
+        "<main class=\"empty-state\"><p class=\"eyebrow\">TessitoreGM</p><h1>Il tavolo è pronto.</h1><p>Seleziona una campagna disponibile oppure creane una nuova da un modello esistente.</p>" +
+        CampaignControls(worldFile, actionToken, campaigns) +
+        $"<p class=\"path\">File atteso: <code>{Encode(worldFile)}</code></p></main>");
+
+    private static string CampaignControls(
+        string worldFile,
+        string actionToken,
+        IReadOnlyList<CampaignEntry> campaigns)
+    {
+        var activeFileName = Path.GetFileName(worldFile);
+        var content = new StringBuilder();
+        content.Append("<section class=\"campaign-control\"><div><p class=\"eyebrow\">Campagne</p><h2>Gestisci il mondo</h2><p>Cambia salvataggio o crea una campagna pulita dallo stesso modello.</p></div><div class=\"campaign-forms\"><form method=\"post\" action=\"/campaign/select\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"campaign\">Campagna attiva</label><select id=\"campaign\" name=\"campaign\">");
+        foreach (var campaign in campaigns)
+        {
+            var selected = campaign.FileName.Equals(
+                activeFileName,
+                StringComparison.OrdinalIgnoreCase)
+                ? " selected"
+                : string.Empty;
+            content.Append($"<option value=\"{Encode(campaign.FileName)}\"{selected}>{Encode(Path.GetFileNameWithoutExtension(campaign.FileName))} · {campaign.EventCount} eventi</option>");
+        }
+
+        content.Append("</select><button type=\"submit\">Apri campagna</button></form><form method=\"post\" action=\"/campaign/create\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"campaign-name\">Nuova campagna</label><input id=\"campaign-name\" name=\"name\" maxlength=\"80\" placeholder=\"Le cronache del villaggio\" required><button type=\"submit\" class=\"secondary\">Crea</button></form></div></section>");
+        return content.ToString();
+    }
 
     private static string Metric(string label, string value) =>
         $"<article><span>{Encode(label)}</span><strong>{Encode(value)}</strong></article>";

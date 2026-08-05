@@ -256,11 +256,11 @@ senza intervento diretto del Game Master.
 
 **Stato: in corso**
 
-- [ ] Creare e caricare un mondo
+- [x] Creare e caricare un mondo
 - [x] Prima dashboard web locale in sola lettura
 - [x] Osservare luoghi, NPC, attività, scorte e bisogni
 - [x] Consultare ciò che un NPC sa
-- [ ] Selezionare un salvataggio dall'interfaccia
+- [x] Selezionare un salvataggio dall'interfaccia
 - [ ] Accesso protetto dalla rete locale per smartphone
 - [ ] Introdurre azioni dei personaggi giocanti ed eventi esterni
   - [x] Primo intervento del GM: spostare un personaggio in un luogo
@@ -302,13 +302,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Iniziare il Milestone 6 con una prima interfaccia di osservazione per il Game
-Master:
-
-1. caricare un salvataggio senza usare comandi tecnici;
-2. mostrare ora, luoghi, NPC, bisogni, scorte e conoscenze;
-3. distinguere ciò che il GM osserva da ciò che può modificare;
-4. mantenere il motore di simulazione indipendente dall'interfaccia.
+Rendere il Tavolo del GM accessibile in modo protetto dalla rete locale, così
+da poterlo usare da smartphone durante una sessione, mantenendo salvataggi e
+comandi sotto il controllo del computer che ospita la campagna.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

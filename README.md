@@ -12,7 +12,6 @@ interfaccia locale per il Game Master.
 Da PowerShell, nella cartella del repository:
 
 ```powershell
-dotnet run --project src/TessitoreGM.Console -- create-village village.json
 dotnet run --project src/TessitoreGM.Gm -- village.json
 ```
 
@@ -22,6 +21,7 @@ PC. La prima versione è accessibile soltanto dal computer che la esegue.
 La dashboard mostra:
 
 - ora ed eventi del mondo;
+- selezione e creazione delle campagne senza riavviare il server;
 - posizione, denaro, scorte e bisogni degli NPC;
 - conoscenze personali;
 - controllo per avanzare il mondo di 1, 6 o 24 ore, applicando le regole
@@ -30,6 +30,9 @@ La dashboard mostra:
   l'intervento nel mondo persistente;
 - rivelazione di informazioni agli NPC, utilizzabile dalle loro decisioni
   autonome, scegliendo un fatto esistente o definendone un nuovo identificatore;
+
+I salvataggi creati dall'interfaccia usano il suffisso `.save.json` e non
+vengono inclusi nei commit Git.
 - ultimi avvenimenti narrati.
 
 Per arrestarla, premere `Ctrl+C` nel terminale che la sta eseguendo.

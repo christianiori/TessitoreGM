@@ -458,3 +458,4 @@ world-events.json
 
 # Local manual simulation files in the repository root
 /test-*.json
+*.save.json
