@@ -1,19 +1,71 @@
 using TessitoreGM.Gm;
 
 var launchDirectory = Directory.GetCurrentDirectory();
+var lanEnabled = args.Any(argument =>
+    argument.Equals("--lan", StringComparison.OrdinalIgnoreCase));
+var portArgument = args.FirstOrDefault(argument =>
+    argument.StartsWith("--port=", StringComparison.OrdinalIgnoreCase));
+var port = portArgument is null
+    ? 5074
+    : int.TryParse(portArgument[7..], out var suppliedPort) &&
+      suppliedPort is >= 1024 and <= 65535
+        ? suppliedPort
+        : throw new ArgumentException(
+            "La porta deve essere un numero compreso tra 1024 e 65535.");
+var accessGate = new LanAccessGate(lanEnabled);
 var activeWorldFile = WorldDashboard.ResolveWorldFile(args, launchDirectory);
 var campaignCatalog = new CampaignCatalog(
     Path.GetDirectoryName(activeWorldFile) ?? launchDirectory);
 var actionToken = Guid.NewGuid().ToString("N");
 var worldLock = new SemaphoreSlim(1, 1);
+PendingWorldAdvance? pendingAdvance = null;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    if (accessGate.IsPublicPath(context.Request.Path) ||
+        accessGate.IsAuthorized(context))
+    {
+        await next();
+        return;
+    }
+
+    if (HttpMethods.IsGet(context.Request.Method))
+    {
+        context.Response.Redirect("/login");
+        return;
+    }
+
+    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+});
+
+app.MapGet("/login", () => Results.Content(
+    WorldDashboard.RenderLogin(error: false),
+    "text/html; charset=utf-8"));
+app.MapPost("/login", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (accessGate.TrySignIn(
+        form["accessCode"].ToString(),
+        context.Response))
+    {
+        context.Response.Redirect("/");
+        return;
+    }
+
+    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.WriteAsync(
+        WorldDashboard.RenderLogin(error: true));
+});
 
 app.MapGet("/", () => Results.Content(
     WorldDashboard.Render(
         activeWorldFile,
         actionToken,
-        campaignCatalog.Discover()),
+        campaignCatalog.Discover(),
+        pendingAdvance),
     "text/html; charset=utf-8"));
 app.MapPost("/campaign/select", async (HttpContext context) =>
 {
@@ -28,6 +80,7 @@ app.MapPost("/campaign/select", async (HttpContext context) =>
     {
         activeWorldFile = campaignCatalog.Select(
             form["campaign"].ToString());
+        pendingAdvance = null;
     }
     catch (ArgumentException exception)
     {
@@ -60,6 +113,7 @@ app.MapPost("/campaign/create", async (HttpContext context) =>
         activeWorldFile = campaignCatalog.Create(
             form["name"].ToString(),
             templatePath);
+        pendingAdvance = null;
     }
     catch (ArgumentException exception)
     {
@@ -85,7 +139,55 @@ app.MapPost("/advance", async (HttpContext context) =>
     await worldLock.WaitAsync();
     try
     {
-        WorldDashboard.Advance(activeWorldFile, TimeSpan.FromHours(hours));
+        pendingAdvance = WorldDashboard.PreviewAdvance(
+            activeWorldFile,
+            TimeSpan.FromHours(hours));
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/advance/approve", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken || pendingAdvance is null)
+    {
+        return Results.BadRequest("Non esiste un'anteprima da approvare.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.ApproveAdvance(activeWorldFile, pendingAdvance);
+        pendingAdvance = null;
+    }
+    catch (InvalidOperationException exception)
+    {
+        pendingAdvance = null;
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/advance/reject", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        pendingAdvance = null;
     }
     finally
     {
@@ -109,6 +211,7 @@ app.MapPost("/move", async (HttpContext context) =>
             activeWorldFile,
             form["entity"].ToString(),
             form["location"].ToString());
+        pendingAdvance = null;
     }
     catch (ArgumentException exception)
     {
@@ -137,6 +240,35 @@ app.MapPost("/reveal", async (HttpContext context) =>
             form["entity"].ToString(),
             form["fact"].ToString(),
             form["newFact"].ToString());
+        pendingAdvance = null;
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/player-action", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.RecordPlayerAction(
+            activeWorldFile,
+            form["actor"].ToString(),
+            form["description"].ToString());
+        pendingAdvance = null;
     }
     catch (ArgumentException exception)
     {
@@ -162,5 +294,15 @@ app.MapGet("/favicon.ico", () => Results.NoContent());
 
 Console.WriteLine("TessitoreGM — Tavolo del GM");
 Console.WriteLine($"Mondo iniziale: {activeWorldFile}");
-Console.WriteLine("Apri sul PC: http://localhost:5074");
-app.Run("http://127.0.0.1:5074");
+Console.WriteLine($"Apri sul PC: http://localhost:{port}");
+if (lanEnabled)
+{
+    Console.WriteLine($"Codice di accesso: {accessGate.AccessCode}");
+    foreach (var address in LanAccessGate.LocalAddresses())
+    {
+        Console.WriteLine($"Apri sul telefono: http://{address}:{port}");
+    }
+}
+app.Run(lanEnabled
+    ? $"http://0.0.0.0:{port}"
+    : $"http://127.0.0.1:{port}");

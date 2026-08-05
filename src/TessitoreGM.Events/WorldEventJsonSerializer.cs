@@ -243,6 +243,7 @@ public sealed class WorldEventJsonSerializer
                 "need-increased" => Deserialize<NeedIncreased>(persistedEvent.Data),
                 "resource-consumed" => Deserialize<ResourceConsumed>(persistedEvent.Data),
                 "resource-produced" => Deserialize<ResourceProduced>(persistedEvent.Data),
+                "player-action-recorded" => Deserialize<PlayerActionRecorded>(persistedEvent.Data),
                 "world-time-advanced" => Deserialize<WorldTimeAdvanced>(persistedEvent.Data),
                 _ => throw new InvalidDataException(
                     $"World event type '{persistedEvent.Type}' is not supported.")
@@ -279,6 +280,7 @@ public sealed class WorldEventJsonSerializer
         NeedIncreased => "need-increased",
         ResourceConsumed => "resource-consumed",
         ResourceProduced => "resource-produced",
+        PlayerActionRecorded => "player-action-recorded",
         WorldTimeAdvanced => "world-time-advanced",
         _ => throw new NotSupportedException(
             $"World event '{worldEvent.GetType().Name}' is not supported.")

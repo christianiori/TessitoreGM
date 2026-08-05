@@ -94,6 +94,8 @@ public sealed class DeterministicNarrator
                 $"{produced.Quantity} unità di " +
                 $"{context.Name(produced.ResourceId)} in " +
                 $"{context.Name(produced.LocationId)}.",
+            PlayerActionRecorded playerAction =>
+                $"{playerAction.Actor}: {playerAction.Description}",
             WorldTimeAdvanced =>
                 "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(

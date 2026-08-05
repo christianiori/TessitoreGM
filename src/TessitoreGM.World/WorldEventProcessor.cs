@@ -26,6 +26,7 @@ public sealed class WorldEventProcessor
             NeedIncreased increased => world.Apply(increased),
             ResourceConsumed consumed => world.Apply(consumed),
             ResourceProduced produced => world.Apply(produced),
+            PlayerActionRecorded playerAction => world.Apply(playerAction),
             WorldTimeAdvanced timeAdvanced => world.Apply(timeAdvanced),
             _ => throw new NotSupportedException(
                 $"World event '{worldEvent.GetType().Name}' is not supported.")

@@ -10,6 +10,14 @@ namespace TessitoreGM.Gm;
 
 internal static class WorldDashboard
 {
+    public static string RenderLogin(bool error) => Page(
+        "Accesso al Tavolo",
+        "<main class=\"login-shell\"><section class=\"login-card\"><p class=\"eyebrow\">TessitoreGM</p><h1>Entra al tavolo.</h1><p>Inserisci il codice temporaneo mostrato sul computer del Game Master.</p>" +
+        (error
+            ? "<p class=\"login-error\">Codice non valido o accesso temporaneamente bloccato.</p>"
+            : string.Empty) +
+        "<form method=\"post\" action=\"/login\"><label for=\"access-code\">Codice di accesso</label><input id=\"access-code\" name=\"accessCode\" inputmode=\"numeric\" autocomplete=\"one-time-code\" pattern=\"[0-9]{8}\" maxlength=\"8\" required autofocus><button type=\"submit\">Accedi</button></form></section></main>");
+
     public static string ResolveWorldFile(
         string[] args,
         string launchDirectory)
@@ -47,12 +55,17 @@ internal static class WorldDashboard
     public static string Render(
         string worldFile,
         string actionToken,
-        IReadOnlyList<CampaignEntry> campaigns)
+        IReadOnlyList<CampaignEntry> campaigns,
+        PendingWorldAdvance? pendingAdvance)
     {
         try
         {
             return File.Exists(worldFile)
-                ? RenderWorld(worldFile, actionToken, campaigns)
+                ? RenderWorld(
+                    worldFile,
+                    actionToken,
+                    campaigns,
+                    pendingAdvance)
                 : RenderMissingWorld(
                     worldFile,
                     actionToken,
@@ -71,7 +84,9 @@ internal static class WorldDashboard
         }
     }
 
-    public static void Advance(string worldFile, TimeSpan duration)
+    public static PendingWorldAdvance PreviewAdvance(
+        string worldFile,
+        TimeSpan duration)
     {
         if (duration <= TimeSpan.Zero)
         {
@@ -85,11 +100,41 @@ internal static class WorldDashboard
             eventLog,
             world,
             world.CurrentTime.Add(duration));
+        return new PendingWorldAdvance(
+            Path.GetFullPath(worldFile),
+            eventLog.Events.Count,
+            world.CurrentTime,
+            result.World.CurrentTime,
+            result.ProducedEvents);
+    }
+
+    public static void ApproveAdvance(
+        string worldFile,
+        PendingWorldAdvance proposal)
+    {
+        if (!Path.GetFullPath(worldFile).Equals(
+            proposal.WorldFile,
+            StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "La proposta appartiene a un'altra campagna.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var world = Replay(eventLog);
+        if (eventLog.Events.Count != proposal.BaseEventCount ||
+            world.CurrentTime != proposal.BaseTime)
+        {
+            throw new InvalidOperationException(
+                "Il mondo è cambiato: genera una nuova anteprima.");
+        }
+
+        _ = new WorldEventProcessor().Replay(world, proposal.Events);
         var updatedLog = eventLog with
         {
-            Events = eventLog.Events.Concat(result.ProducedEvents).ToArray()
+            Events = eventLog.Events.Concat(proposal.Events).ToArray()
         };
-
         Save(worldFile, serializer, updatedLog);
     }
 
@@ -180,6 +225,39 @@ internal static class WorldDashboard
         Save(worldFile, serializer, updatedLog);
     }
 
+    public static void RecordPlayerAction(
+        string worldFile,
+        string actorValue,
+        string descriptionValue)
+    {
+        var actor = actorValue.Trim();
+        var description = descriptionValue.Trim();
+        if (actor.Length is < 1 or > 80)
+        {
+            throw new ArgumentException(
+                "Il nome del personaggio deve contenere da 1 a 80 caratteri.");
+        }
+        if (description.Length is < 1 or > 500)
+        {
+            throw new ArgumentException(
+                "L'azione deve contenere da 1 a 500 caratteri.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var world = Replay(eventLog);
+        var playerAction = new PlayerActionRecorded(
+            actor,
+            description,
+            world.CurrentTime);
+        var updatedLog = new WorldEventLogEditor().Append(
+            eventLog,
+            world,
+            playerAction);
+
+        Save(worldFile, serializer, updatedLog);
+    }
+
     private static void Save(
         string worldFile,
         WorldEventJsonSerializer serializer,
@@ -194,7 +272,8 @@ internal static class WorldDashboard
     private static string RenderWorld(
         string worldFile,
         string actionToken,
-        IReadOnlyList<CampaignEntry> campaigns)
+        IReadOnlyList<CampaignEntry> campaigns,
+        PendingWorldAdvance? pendingAdvance)
     {
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             File.ReadAllText(worldFile));
@@ -222,9 +301,32 @@ internal static class WorldDashboard
             worldFile,
             actionToken,
             campaigns));
-        content.Append("<section class=\"time-control\"><div><p class=\"eyebrow\">Simulazione</p><h2>Avanza il tempo</h2><p>Lascia che il villaggio agisca autonomamente fino al nuovo orario.</p></div><form method=\"post\" action=\"/advance\">");
+        content.Append("<section class=\"time-control\"><div><p class=\"eyebrow\">Simulazione</p><h2>Avanza il tempo</h2><p>Calcola ciò che il villaggio farebbe, senza modificare subito il salvataggio.</p></div><form method=\"post\" action=\"/advance\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
-        content.Append("<label for=\"hours\">Intervallo</label><select id=\"hours\" name=\"hours\"><option value=\"1\">1 ora</option><option value=\"6\">6 ore</option><option value=\"24\">1 giorno</option></select><button type=\"submit\">Avanza</button></form></section>");
+        content.Append("<label for=\"hours\">Intervallo</label><select id=\"hours\" name=\"hours\"><option value=\"1\">1 ora</option><option value=\"6\">6 ore</option><option value=\"24\">1 giorno</option></select><button type=\"submit\">Mostra anteprima</button></form></section>");
+        if (pendingAdvance is not null && Path.GetFullPath(worldFile).Equals(
+            pendingAdvance.WorldFile,
+            StringComparison.OrdinalIgnoreCase))
+        {
+            var proposedNarration = new DeterministicNarrator().Narrate(
+                eventLog.Events.Concat(pendingAdvance.Events),
+                new NarrationContext(
+                    entityNames,
+                    locationNames,
+                    resourceNames,
+                    needNames))
+                .TakeLast(pendingAdvance.Events.Count)
+                .ToArray();
+            content.Append("<section class=\"consequence-preview\"><div><p class=\"eyebrow\">Anteprima</p><h2>Conseguenze proposte</h2>");
+            content.Append($"<p>Il mondo raggiungerà <strong>{Encode(pendingAdvance.TargetTime.ToString("dd MMM yyyy · HH:mm"))}</strong>. Nulla è ancora stato salvato.</p></div><ol>");
+            foreach (var line in proposedNarration)
+            {
+                content.Append($"<li><time>{Encode(line.OccurredAt.ToString("dd/MM · HH:mm"))}</time><span>{Encode(line.Text)}</span></li>");
+            }
+            content.Append("</ol><div class=\"preview-actions\"><form method=\"post\" action=\"/advance/approve\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><button type=\"submit\">Approva e salva</button></form><form method=\"post\" action=\"/advance/reject\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><button type=\"submit\" class=\"secondary\">Annulla</button></form></div></section>");
+        }
         content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Intervento del GM</p><h2>Sposta un personaggio</h2><p>Registra uno spostamento esterno all'ora attuale del mondo.</p></div><form method=\"post\" action=\"/move\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"entity\">Personaggio</label><select id=\"entity\" name=\"entity\">");
@@ -267,6 +369,9 @@ internal static class WorldDashboard
         }
 
         content.Append("</select><label for=\"new-fact\">Oppure nuovo ID</label><input id=\"new-fact\" name=\"newFact\" maxlength=\"100\" placeholder=\"village:bandits-seen\"><button type=\"submit\">Rivela informazione</button></form></section>");
+        content.Append("<section class=\"world-action player-action\"><div><p class=\"eyebrow\">Personaggi giocanti</p><h2>Registra un'azione</h2><p>Annota ciÃ² che un personaggio giocante ha fatto. Le conseguenze sul mondo si applicano con gli interventi specifici.</p></div><form method=\"post\" action=\"/player-action\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"player-actor\">Personaggio</label><input id=\"player-actor\" name=\"actor\" maxlength=\"80\" placeholder=\"Arianna\" required><label for=\"player-description\">Azione</label><textarea id=\"player-description\" name=\"description\" maxlength=\"500\" rows=\"3\" placeholder=\"Convince la guardia ad aprire il cancello.\" required></textarea><button type=\"submit\">Registra nella cronaca</button></form></section>");
         content.Append("<main><section class=\"world-strip\">");
         content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
         content.Append(Metric("Eventi registrati", eventLog.Events.Count.ToString()));

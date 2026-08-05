@@ -261,13 +261,15 @@ senza intervento diretto del Game Master.
 - [x] Osservare luoghi, NPC, attività, scorte e bisogni
 - [x] Consultare ciò che un NPC sa
 - [x] Selezionare un salvataggio dall'interfaccia
-- [ ] Accesso protetto dalla rete locale per smartphone
+- [x] Accesso protetto dalla rete locale per smartphone
 - [ ] Introdurre azioni dei personaggi giocanti ed eventi esterni
   - [x] Primo intervento del GM: spostare un personaggio in un luogo
   - [x] Rivelare una conoscenza a un personaggio
+  - [x] Registrare nella cronaca un'azione libera di un personaggio giocante
+  - [ ] Tradurre le conseguenze dell'azione in eventi specifici del mondo
 - [x] Avanzare il tempo dal Tavolo del GM e salvare le conseguenze
-- [ ] Anteprima delle conseguenze proposte
-- [ ] Approvare o rifiutare conseguenze importanti
+- [x] Anteprima delle conseguenze proposte dall'avanzamento temporale
+- [x] Approvare o rifiutare l'avanzamento prima del salvataggio
 - [ ] Generare cronache e riepiloghi di sessione
 
 Risultato atteso: TessitoreGM diventa utilizzabile direttamente durante una
@@ -298,13 +300,14 @@ e le conseguenze persistenti funzionano già.
 - [ ] Compatibilità e migrazione dei salvataggi
 - [ ] Strumenti di diagnostica della simulazione
 - [ ] Narratore basato su IA come componente opzionale
+- [ ] Hosting remoto opzionale con HTTPS, account, persistenza e backup
 - [ ] Prima release stabile
 
 ## Prossimo passo
 
-Rendere il Tavolo del GM accessibile in modo protetto dalla rete locale, così
-da poterlo usare da smartphone durante una sessione, mantenendo salvataggi e
-comandi sotto il controllo del computer che ospita la campagna.
+Generare la cronaca completa e un riepilogo di sessione direttamente
+dall'interfaccia, mantenendo separati i fatti registrati dalle conseguenze
+meccaniche applicate al mondo.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

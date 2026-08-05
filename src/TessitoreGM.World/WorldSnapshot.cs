@@ -793,6 +793,24 @@ public sealed class WorldSnapshot
             _lastNeedIncreases);
     }
 
+    public WorldSnapshot Apply(PlayerActionRecorded worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
+    }
+
     private void EnsureChronological(IWorldEvent worldEvent)
     {
         if (worldEvent.OccurredAt < CurrentTime)
