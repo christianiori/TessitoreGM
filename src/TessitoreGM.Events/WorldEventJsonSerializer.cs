@@ -22,6 +22,7 @@ public sealed class WorldEventJsonSerializer
         ValidateBalances(eventLog.InitialWorld.Balances);
         ValidateResourceStocks(eventLog.InitialWorld.ResourceStocks);
         ValidateSimulation(eventLog.Simulation);
+        ValidatePlayerActions(eventLog.PlayerActions);
 
         var persistedEvents = eventLog.Events.Select(worldEvent =>
         {
@@ -40,7 +41,8 @@ public sealed class WorldEventJsonSerializer
                 CurrentVersion,
                 eventLog.InitialWorld,
                 persistedEvents,
-                eventLog.Simulation),
+                eventLog.Simulation,
+                eventLog.PlayerActions),
             JsonOptions);
     }
 
@@ -82,11 +84,34 @@ public sealed class WorldEventJsonSerializer
         ValidateBalances(document.InitialWorld.Balances);
         ValidateResourceStocks(document.InitialWorld.ResourceStocks);
         ValidateSimulation(document.Simulation);
+        ValidatePlayerActions(document.PlayerActions);
 
         return new WorldEventLog(
             document.InitialWorld,
             document.Events.Select(DeserializeEvent).ToArray(),
-            document.Simulation);
+            document.Simulation,
+            document.PlayerActions);
+    }
+
+    private static void ValidatePlayerActions(
+        IReadOnlyList<PlayerActionProposal>? playerActions)
+    {
+        if (playerActions is null)
+        {
+            return;
+        }
+        if (playerActions.Select(action => action.Id).Distinct().Count() !=
+            playerActions.Count ||
+            playerActions.Any(action =>
+                action.Id == Guid.Empty ||
+                string.IsNullOrWhiteSpace(action.Description) ||
+                action.Roll is { Modifier: < -20 or > 20 } ||
+                action.Roll?.Difficulty is < 1 or > 40 ||
+                action.Roll?.Dice?.Any(die => die is < 1 or > 20) == true))
+        {
+            throw new InvalidDataException(
+                "The player action queue is invalid.");
+        }
     }
 
     private static void ValidateBalances(IReadOnlyList<EntityBalance> balances)
@@ -300,7 +325,8 @@ public sealed class WorldEventJsonSerializer
         int Version,
         WorldInitialState InitialWorld,
         IReadOnlyList<PersistedEvent> Events,
-        WorldSimulationDefinition? Simulation = null);
+        WorldSimulationDefinition? Simulation = null,
+        IReadOnlyList<PlayerActionProposal>? PlayerActions = null);
 
     private sealed record PersistedEvent(
         string Type,

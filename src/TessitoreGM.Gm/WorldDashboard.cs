@@ -1,6 +1,7 @@
 using System.Net;
 using System.Globalization;
 using System.Text;
+using System.Security.Cryptography;
 using TessitoreGM.Core;
 using TessitoreGM.Events;
 using TessitoreGM.Narration;
@@ -147,6 +148,159 @@ internal static class WorldDashboard
             return Page(
                 "Cronaca non disponibile",
                 $"<main class=\"empty-state\"><p class=\"eyebrow\">Cronaca</p><h1>Non riesco a generarla.</h1><p>{Encode(exception.Message)}</p><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></main>");
+        }
+    }
+
+    public static string RenderPlayer(
+        string worldFile,
+        string entityValue,
+        string playerInteractionToken)
+    {
+        try
+        {
+            var eventLog = new WorldEventJsonSerializer().Deserialize(
+                File.ReadAllText(worldFile));
+            var world = Replay(eventLog);
+            var simulation = eventLog.Simulation;
+            var playerCharacters = PlayerCharacters(eventLog.Events);
+            var character = playerCharacters.FirstOrDefault(candidate =>
+                candidate.EntityId.ToString() == entityValue)
+                ?? throw new ArgumentException(
+                    "Il personaggio giocante richiesto non esiste.");
+            var entityNames = EntityNames(simulation, eventLog.Events);
+            var locationNames = simulation?.Locations?.ToDictionary(
+                location => location.LocationId,
+                location => location.Name) ??
+                new Dictionary<LocationId, string>();
+            var resourceNames = simulation?.Resources?.ToDictionary(
+                resource => resource.ResourceId,
+                resource => resource.Name) ??
+                new Dictionary<ResourceId, string>();
+            var location = world.GetLocation(character.EntityId);
+            var locationName = location is LocationId locationId
+                ? locationNames.GetValueOrDefault(
+                    locationId,
+                    locationId.ToString())
+                : "Fuori scena";
+            var knownFacts = KnownFacts(character.EntityId, eventLog.Events);
+            var visibleEntities = (simulation?.Npcs ??
+                    Array.Empty<NpcSimulationDefinition>())
+                .Select(npc => npc.EntityId)
+                .Concat(playerCharacters.Select(player => player.EntityId))
+                .Where(entityId =>
+                    entityId != character.EntityId &&
+                    location is not null &&
+                    world.GetLocation(entityId) == location)
+                .Select(entityId => entityNames.GetValueOrDefault(
+                    entityId,
+                    entityId.ToString()))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var resources = (simulation?.Resources ??
+                    Array.Empty<ResourcePresentationDefinition>())
+                .Select(resource => new
+                {
+                    Name = resourceNames.GetValueOrDefault(
+                        resource.ResourceId,
+                        resource.ResourceId.ToString()),
+                    Quantity = world.GetResourceQuantity(
+                        character.EntityId,
+                        resource.ResourceId)
+                })
+                .Where(resource => resource.Quantity > 0)
+                .ToArray();
+            var ownActions = (eventLog.PlayerActions ??
+                    Array.Empty<PlayerActionProposal>())
+                .Where(action =>
+                    action.PlayerCharacterId == character.EntityId)
+                .OrderByDescending(action => action.SubmittedAt)
+                .Take(10)
+                .ToArray();
+            var needNames = simulation?.Needs?.ToDictionary(
+                need => need.NeedId,
+                need => need.Name) ?? new Dictionary<NeedId, string>();
+            var visibleEvents = ObservableEvents(
+                    eventLog.Events,
+                    character,
+                    location)
+                .TakeLast(8)
+                .ToArray();
+            var visibleNarration = new DeterministicNarrator().Narrate(
+                visibleEvents,
+                new NarrationContext(
+                    entityNames,
+                    locationNames,
+                    resourceNames,
+                    needNames));
+            var content = new StringBuilder();
+
+            content.Append("<header class=\"player-hero\"><div><p class=\"eyebrow\">Tavolo del giocatore</p>");
+            content.Append($"<h1>{Encode(character.Name)}</h1><p class=\"lede\">Ciò che il tuo personaggio può osservare e ricordare, adesso.</p></div><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></header>");
+            content.Append("<main class=\"player-view\"><section class=\"world-strip player-summary\">");
+            content.Append(Metric("Luogo", locationName));
+            content.Append(Metric(
+                "Monete",
+                world.GetBalance(character.EntityId).ToString()));
+            content.Append(Metric("Ora del mondo", world.CurrentTime.ToString(
+                "dd MMM yyyy · HH:mm")));
+            content.Append("</section><section class=\"player-action-box\"><div class=\"section-heading\"><p class=\"eyebrow\">La tua azione</p><h2>Cosa vuoi fare?</h2></div><form method=\"post\" action=\"/player/");
+            content.Append(Uri.EscapeDataString(character.EntityId.ToString()));
+            content.Append("/actions\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(playerInteractionToken)}\"><label for=\"proposed-action\">Descrivi l'intenzione del personaggio</label><textarea id=\"proposed-action\" name=\"description\" maxlength=\"500\" rows=\"4\" placeholder=\"Cerco tracce vicino al granaio.\" required></textarea><button type=\"submit\">Invia al GM</button></form></section>");
+            content.Append("<section><div class=\"section-heading\"><p class=\"eyebrow\">Richieste</p><h2>Le tue azioni</h2></div><div class=\"player-action-list\">");
+            if (ownActions.Length == 0)
+            {
+                content.Append("<p class=\"empty-copy\">Non hai ancora proposto azioni.</p>");
+            }
+            foreach (var action in ownActions)
+            {
+                content.Append("<article class=\"player-action-item\">");
+                content.Append($"<div><span class=\"action-status\">{Encode(PlayerActionStatusLabel(action.Status))}</span><p>{Encode(action.Description)}</p></div>");
+                if (action.Roll is not null)
+                {
+                    content.Append(RenderRollForPlayer(
+                        action,
+                        character.EntityId,
+                        playerInteractionToken));
+                }
+                if (!string.IsNullOrWhiteSpace(action.Resolution))
+                {
+                    content.Append($"<div class=\"action-resolution\"><strong>Esito del GM</strong><p>{Encode(action.Resolution)}</p></div>");
+                }
+                content.Append("</article>");
+            }
+            content.Append("</div></section><section><div class=\"section-heading\"><p class=\"eyebrow\">Scena attuale</p><h2>Chi è qui</h2></div><div class=\"player-panel\">");
+            content.Append(visibleEntities.Length == 0
+                ? "<p>Nessun altro personaggio è visibile in questo luogo.</p>"
+                : $"<ul>{string.Join(string.Empty, visibleEntities.Select(name => $"<li>{Encode(name)}</li>"))}</ul>");
+            content.Append("</div></section><section><div class=\"section-heading\"><p class=\"eyebrow\">Equipaggiamento</p><h2>Risorse possedute</h2></div><div class=\"player-panel\">");
+            content.Append(resources.Length == 0
+                ? "<p>Non possiedi risorse registrate.</p>"
+                : $"<div class=\"player-resource-grid\">{string.Join(string.Empty, resources.Select(resource => Stat(resource.Name, resource.Quantity.ToString())))}</div>");
+            content.Append("</div></section><section><div class=\"section-heading\"><p class=\"eyebrow\">Memoria</p><h2>Conoscenze</h2></div><div class=\"player-panel\">");
+            content.Append(knownFacts.Count == 0
+                ? "<p>Non conosci ancora informazioni registrate.</p>"
+                : $"<ul>{string.Join(string.Empty, knownFacts.OrderBy(fact => fact.ToString(), StringComparer.Ordinal).Select(fact => $"<li>{Encode(fact.ToString())}</li>"))}</ul>");
+            content.Append("</div></section><section class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Ciò che osservi</p><h2>Avvenimenti recenti</h2></div><ol>");
+            foreach (var line in visibleNarration.Reverse())
+            {
+                content.Append($"<li><time>{Encode(line.OccurredAt.ToString("dd/MM · HH:mm"))}</time><p>{Encode(line.Text)}</p></li>");
+            }
+            if (visibleNarration.Count == 0)
+            {
+                content.Append("<li><p>Non hai osservato nuovi avvenimenti.</p></li>");
+            }
+            content.Append("</ol></section></main><footer><span>Campagna</span>");
+            content.Append($"<code>{Encode(Path.GetFileName(worldFile))}</code></footer>");
+            return Page(character.Name, content.ToString());
+        }
+        catch (Exception exception) when (
+            exception is IOException or InvalidDataException or
+            InvalidOperationException or ArgumentException)
+        {
+            return Page(
+                "Personaggio non disponibile",
+                $"<main class=\"empty-state\"><p class=\"eyebrow\">Tavolo del giocatore</p><h1>Non riesco ad aprire questo personaggio.</h1><p>{Encode(exception.Message)}</p></main>");
         }
     }
 
@@ -511,6 +665,199 @@ internal static class WorldDashboard
         Save(worldFile, serializer, updatedLog);
     }
 
+    public static void SubmitPlayerAction(
+        string worldFile,
+        string entityValue,
+        string descriptionValue)
+    {
+        var description = descriptionValue.Trim();
+        if (description.Length is < 1 or > 500)
+        {
+            throw new ArgumentException(
+                "L'azione deve contenere da 1 a 500 caratteri.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var character = PlayerCharacters(eventLog.Events).FirstOrDefault(
+            candidate => candidate.EntityId.ToString() == entityValue)
+            ?? throw new ArgumentException(
+                "Personaggio giocante non valido.");
+        var world = Replay(eventLog);
+        var proposal = new PlayerActionProposal(
+            Guid.NewGuid(),
+            character.EntityId,
+            description,
+            world.CurrentTime);
+        var updatedLog = eventLog with
+        {
+            PlayerActions = (eventLog.PlayerActions ??
+                Array.Empty<PlayerActionProposal>())
+                .Append(proposal)
+                .ToArray()
+        };
+        Save(worldFile, serializer, updatedLog);
+    }
+
+    public static void ResolvePlayerAction(
+        string worldFile,
+        string actionValue,
+        string decision,
+        string resolutionValue)
+    {
+        if (!Guid.TryParse(actionValue, out var actionId))
+        {
+            throw new ArgumentException("Azione non valida.");
+        }
+        var resolution = resolutionValue.Trim();
+        if (resolution.Length is < 1 or > 500)
+        {
+            throw new ArgumentException(
+                "L'esito deve contenere da 1 a 500 caratteri.");
+        }
+        if (decision is not ("approve" or "reject"))
+        {
+            throw new ArgumentException("Decisione non valida.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var actions = (eventLog.PlayerActions ??
+            Array.Empty<PlayerActionProposal>()).ToArray();
+        var index = Array.FindIndex(actions, action => action.Id == actionId);
+        if (index < 0 || actions[index].Status is not (
+            PlayerActionStatus.Pending or
+            PlayerActionStatus.RollRequested or
+            PlayerActionStatus.Rolled))
+        {
+            throw new InvalidOperationException(
+                "L'azione non Ã¨ piÃ¹ in attesa di una decisione.");
+        }
+        var world = Replay(eventLog);
+        var status = decision == "approve"
+            ? PlayerActionStatus.Approved
+            : PlayerActionStatus.Rejected;
+        actions[index] = actions[index] with
+        {
+            Status = status,
+            Resolution = resolution,
+            ResolvedAt = world.CurrentTime
+        };
+        var updatedEvents = eventLog.Events;
+        if (status == PlayerActionStatus.Approved)
+        {
+            var character = PlayerCharacters(eventLog.Events).First(
+                candidate =>
+                    candidate.EntityId == actions[index].PlayerCharacterId);
+            updatedEvents = new WorldEventLogEditor().Append(
+                eventLog,
+                world,
+                new PlayerActionRecorded(
+                    character.Name,
+                    actions[index].Description,
+                    world.CurrentTime)).Events;
+        }
+        Save(worldFile, serializer, eventLog with
+        {
+            Events = updatedEvents,
+            PlayerActions = actions
+        });
+    }
+
+    public static void RequestD20Roll(
+        string worldFile,
+        string actionValue,
+        int modifier,
+        int? difficulty,
+        bool difficultyVisible,
+        string modeValue)
+    {
+        if (!Guid.TryParse(actionValue, out var actionId) ||
+            modifier is < -20 or > 20 ||
+            difficulty is < 1 or > 40 ||
+            !Enum.TryParse<D20RollMode>(
+                modeValue,
+                ignoreCase: true,
+                out var mode))
+        {
+            throw new ArgumentException("Richiesta di tiro non valida.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var actions = (eventLog.PlayerActions ??
+            Array.Empty<PlayerActionProposal>()).ToArray();
+        var index = Array.FindIndex(actions, action => action.Id == actionId);
+        if (index < 0 || actions[index].Status != PlayerActionStatus.Pending)
+        {
+            throw new InvalidOperationException(
+                "L'azione non puÃ² ricevere un nuovo tiro.");
+        }
+        actions[index] = actions[index] with
+        {
+            Status = PlayerActionStatus.RollRequested,
+            Roll = new D20Roll(
+                modifier,
+                difficulty,
+                difficultyVisible,
+                mode,
+                Replay(eventLog).CurrentTime)
+        };
+        Save(worldFile, serializer, eventLog with { PlayerActions = actions });
+    }
+
+    public static void RollD20(
+        string worldFile,
+        string entityValue,
+        string actionValue)
+    {
+        if (!Guid.TryParse(actionValue, out var actionId))
+        {
+            throw new ArgumentException("Tiro non valido.");
+        }
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var actions = (eventLog.PlayerActions ??
+            Array.Empty<PlayerActionProposal>()).ToArray();
+        var index = Array.FindIndex(actions, action =>
+            action.Id == actionId &&
+            action.PlayerCharacterId.ToString() == entityValue);
+        if (index < 0 ||
+            actions[index].Status != PlayerActionStatus.RollRequested ||
+            actions[index].Roll is null)
+        {
+            throw new InvalidOperationException(
+                "Questo tiro non Ã¨ disponibile.");
+        }
+
+        var roll = actions[index].Roll!;
+        var dice = roll.Mode == D20RollMode.Normal
+            ? new[] { RandomNumberGenerator.GetInt32(1, 21) }
+            : new[]
+            {
+                RandomNumberGenerator.GetInt32(1, 21),
+                RandomNumberGenerator.GetInt32(1, 21)
+            };
+        var keptDie = roll.Mode switch
+        {
+            D20RollMode.Advantage => dice.Max(),
+            D20RollMode.Disadvantage => dice.Min(),
+            _ => dice[0]
+        };
+        actions[index] = actions[index] with
+        {
+            Status = PlayerActionStatus.Rolled,
+            Roll = roll with
+            {
+                Dice = dice,
+                KeptDie = keptDie,
+                Total = keptDie + roll.Modifier,
+                RolledAt = Replay(eventLog).CurrentTime
+            }
+        };
+        Save(worldFile, serializer, eventLog with { PlayerActions = actions });
+    }
+
     private static void Save(
         string worldFile,
         WorldEventJsonSerializer serializer,
@@ -553,6 +900,10 @@ internal static class WorldDashboard
             worldFile,
             actionToken,
             campaigns));
+        content.Append(RenderPlayerActionQueue(
+            eventLog,
+            playerCharacters,
+            actionToken));
         content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Compagnia</p><h2>Personaggi giocanti</h2><p>Aggiungi un personaggio controllato dai giocatori. Il motore non prenderÃ  decisioni al suo posto.</p></div><form method=\"post\" action=\"/player-character\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"player-name\">Nome</label><input id=\"player-name\" name=\"name\" maxlength=\"80\" placeholder=\"Arianna\" required><button type=\"submit\">Aggiungi personaggio</button></form></section>");
@@ -738,8 +1089,9 @@ internal static class WorldDashboard
             content.Append("</div><div class=\"knowledge\"><span>Conoscenze</span>");
             content.Append(knownFacts.Count == 0
                 ? "<p>Nessuna informazione nota.</p>"
-                : $"<p>{string.Join(" Â· ", knownFacts.Select(fact => Encode(fact.ToString())))}</p>");
-            content.Append("</div></article>");
+                : $"<p>{string.Join(" · ", knownFacts.Select(fact => Encode(fact.ToString())))}</p>");
+            content.Append("</div>");
+            content.Append($"<a class=\"player-view-link\" href=\"/player/{Uri.EscapeDataString(character.EntityId.ToString())}\">Apri vista giocatore</a></article>");
         }
 
         content.Append("</div></section><section class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro</p><h2>Ultimi avvenimenti</h2></div><ol>");
@@ -752,6 +1104,149 @@ internal static class WorldDashboard
         content.Append($"<code>{Encode(worldFile)}</code></footer>");
         return Page("Tavolo del GM", content.ToString());
     }
+
+    private static string RenderPlayerActionQueue(
+        WorldEventLog eventLog,
+        IReadOnlyList<PlayerCharacterRegistered> playerCharacters,
+        string actionToken)
+    {
+        var activeActions = (eventLog.PlayerActions ??
+                Array.Empty<PlayerActionProposal>())
+            .Where(action => action.Status is
+                PlayerActionStatus.Pending or
+                PlayerActionStatus.RollRequested or
+                PlayerActionStatus.Rolled)
+            .OrderBy(action => action.SubmittedAt)
+            .ToArray();
+        var names = playerCharacters.ToDictionary(
+            character => character.EntityId,
+            character => character.Name);
+        var content = new StringBuilder();
+        content.Append("<section class=\"gm-action-queue\"><div class=\"section-heading\"><p class=\"eyebrow\">Giocatori</p><h2>Azioni in attesa</h2></div>");
+        if (activeActions.Length == 0)
+        {
+            content.Append("<div class=\"player-panel\"><p>Nessuna azione attende una decisione.</p></div></section>");
+            return content.ToString();
+        }
+        content.Append("<div class=\"gm-action-list\">");
+        foreach (var action in activeActions)
+        {
+            var playerName = names.GetValueOrDefault(
+                action.PlayerCharacterId,
+                action.PlayerCharacterId.ToString());
+            content.Append("<article class=\"gm-action-item\"><div class=\"gm-action-copy\">");
+            content.Append($"<span class=\"action-status\">{Encode(playerName)} · {Encode(PlayerActionStatusLabel(action.Status))}</span><p>{Encode(action.Description)}</p>");
+            if (action.Roll is not null)
+            {
+                content.Append($"<div class=\"roll-summary\">{Encode(RollSummary(action.Roll, includeSecretDifficulty: true))}</div>");
+            }
+            content.Append("</div>");
+            if (action.Status == PlayerActionStatus.Pending)
+            {
+                content.Append("<form class=\"roll-request-form\" method=\"post\" action=\"/player-actions/request-roll\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><label>ModalitÃ <select name=\"mode\"><option value=\"Normal\">Normale</option><option value=\"Advantage\">Vantaggio</option><option value=\"Disadvantage\">Svantaggio</option></select></label><label>Modificatore<input name=\"modifier\" type=\"number\" min=\"-20\" max=\"20\" value=\"0\" required></label><label>DifficoltÃ <input name=\"difficulty\" type=\"number\" min=\"1\" max=\"40\" placeholder=\"opzionale\"></label><label class=\"checkbox-label\"><input name=\"difficultyVisible\" type=\"checkbox\"> Mostra la difficoltÃ </label><button type=\"submit\" class=\"secondary\">Richiedi d20</button></form>");
+            }
+            content.Append("<form class=\"action-resolution-form\" method=\"post\" action=\"/player-actions/resolve\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><label>Esito<textarea name=\"resolution\" maxlength=\"500\" rows=\"3\" placeholder=\"Descrivi ciÃ² che accade.\" required></textarea></label><div class=\"resolution-buttons\"><button name=\"decision\" value=\"approve\" type=\"submit\">Approva</button><button name=\"decision\" value=\"reject\" type=\"submit\" class=\"secondary\">Rifiuta</button></div></form></article>");
+        }
+        content.Append("</div></section>");
+        return content.ToString();
+    }
+
+    private static string RenderRollForPlayer(
+        PlayerActionProposal action,
+        EntityId entityId,
+        string playerInteractionToken)
+    {
+        var roll = action.Roll!;
+        var content = new StringBuilder();
+        content.Append($"<div class=\"roll-summary\">{Encode(RollSummary(roll, includeSecretDifficulty: false))}</div>");
+        if (action.Status == PlayerActionStatus.RollRequested)
+        {
+            content.Append($"<form method=\"post\" action=\"/player/{Uri.EscapeDataString(entityId.ToString())}/roll\"><input type=\"hidden\" name=\"token\" value=\"{Encode(playerInteractionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><button type=\"submit\">Tira il d20</button></form>");
+        }
+        return content.ToString();
+    }
+
+    private static string RollSummary(
+        D20Roll roll,
+        bool includeSecretDifficulty)
+    {
+        var mode = roll.Mode switch
+        {
+            D20RollMode.Advantage => "vantaggio",
+            D20RollMode.Disadvantage => "svantaggio",
+            _ => "tiro normale"
+        };
+        var difficulty = roll.Difficulty is null
+            ? ""
+            : roll.DifficultyVisible || includeSecretDifficulty
+                ? $", difficoltÃ  {roll.Difficulty}"
+                : ", difficoltÃ  segreta";
+        if (roll.Dice is null || roll.Total is null)
+        {
+            return $"d20: {mode}, modificatore {roll.Modifier:+#;-#;0}{difficulty}.";
+        }
+        var dice = string.Join(" e ", roll.Dice);
+        var natural = roll.KeptDie is 1 or 20
+            ? $" · {roll.KeptDie} naturale"
+            : string.Empty;
+        return $"Dadi: {dice}; risultato {roll.KeptDie} " +
+            $"{roll.Modifier:+#;-#;+0} = {roll.Total}{natural}{difficulty}.";
+    }
+
+    private static string PlayerActionStatusLabel(PlayerActionStatus status) =>
+        status switch
+        {
+            PlayerActionStatus.Pending => "In attesa del GM",
+            PlayerActionStatus.RollRequested => "Tiro richiesto",
+            PlayerActionStatus.Rolled => "Tiro completato",
+            PlayerActionStatus.Approved => "Approvata",
+            PlayerActionStatus.Rejected => "Rifiutata",
+            _ => status.ToString()
+        };
+
+    private static IEnumerable<IWorldEvent> ObservableEvents(
+        IReadOnlyList<IWorldEvent> events,
+        PlayerCharacterRegistered character,
+        LocationId? currentLocation) =>
+        events.Where(worldEvent => worldEvent switch
+        {
+            EntityEnteredLocation entered =>
+                entered.EntityId == character.EntityId ||
+                entered.LocationId == currentLocation,
+            EntityLeftLocation left =>
+                left.EntityId == character.EntityId ||
+                left.LocationId == currentLocation,
+            FactShared shared =>
+                shared.SpeakerId == character.EntityId ||
+                shared.ListenerId == character.EntityId,
+            FactRevealed revealed =>
+                revealed.EntityId == character.EntityId,
+            CoinsTransferred coins =>
+                coins.PayerId == character.EntityId ||
+                coins.PayeeId == character.EntityId,
+            ResourceAcquired acquired =>
+                acquired.EntityId == character.EntityId,
+            ResourceLost lost => lost.EntityId == character.EntityId,
+            ResourceTransferred transferred =>
+                transferred.SourceId == character.EntityId ||
+                transferred.DestinationId == character.EntityId,
+            ResourceProduced produced =>
+                produced.ProducerId == character.EntityId ||
+                produced.LocationId == currentLocation,
+            TradeCompleted trade =>
+                trade.BuyerId == character.EntityId ||
+                trade.SellerId == character.EntityId,
+            TrustChanged trust =>
+                trust.SubjectId == character.EntityId ||
+                trust.OtherEntityId == character.EntityId,
+            PlayerActionRecorded action =>
+                action.Actor.Equals(
+                    character.Name,
+                    StringComparison.OrdinalIgnoreCase),
+            _ => false
+        });
 
     private static IReadOnlySet<FactId> KnownFacts(
         NpcSimulationDefinition npc,

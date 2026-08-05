@@ -43,6 +43,23 @@ La dashboard mostra:
 I salvataggi creati dall'interfaccia usano il suffisso `.save.json` e non
 vengono inclusi nei commit Git.
 
+### Vista del giocatore
+
+Ogni scheda PG nel Tavolo del GM contiene il collegamento **Apri vista
+giocatore**. La pagina separata mostra soltanto nome, luogo, monete, risorse,
+conoscenze del PG, personaggi compresenti ed eventi recenti osservabili. Non
+espone controlli del GM, cronaca globale o informazioni fuori scena.
+
+Il giocatore può proporre un'azione senza modificare direttamente il mondo.
+La proposta resta salvata nella coda del GM, che può richiedere un tiro d20
+normale, con vantaggio o svantaggio, e infine approvare o rifiutare l'azione
+scrivendone l'esito. Ogni richiesta produce un solo tiro generato sul server;
+risultato ed esito sopravvivono alla chiusura dell'applicazione.
+
+In questa prima versione la pagina usa ancora la protezione LAN generale del
+Tavolo. Il codice temporaneo personale per ogni PG è rinviato a un passaggio
+successivo.
+
 ### Usare il Tavolo dallo smartphone
 
 Con computer e telefono collegati alla stessa rete Wi-Fi, avviare esplicitamente

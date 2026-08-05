@@ -1264,6 +1264,36 @@
         "description": "Ruba le monete a Brina",
         "occurredAt": "2026-08-08T21:00:00\u002B00:00"
       }
+    },
+    {
+      "type": "coins-transferred",
+      "data": {
+        "payerId": {
+          "value": "brina-farmer"
+        },
+        "payeeId": {
+          "value": "pc:christian"
+        },
+        "amount": 15,
+        "reason": "Ruberia",
+        "occurredAt": "2026-08-08T21:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "player-action-recorded",
+      "data": {
+        "actor": "Christian",
+        "description": "Cerco di distrarre Brina",
+        "occurredAt": "2026-08-08T21:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "player-action-recorded",
+      "data": {
+        "actor": "Christian",
+        "description": "Tiro su Carisma",
+        "occurredAt": "2026-08-08T21:00:00\u002B00:00"
+      }
     }
   ],
   "simulation": {
@@ -1577,5 +1607,43 @@
         "name": "fame"
       }
     ]
-  }
+  },
+  "playerActions": [
+    {
+      "id": "bfa940aa-6c52-4919-8463-8d685d387dc6",
+      "playerCharacterId": {
+        "value": "pc:christian"
+      },
+      "description": "Cerco di distrarre Brina",
+      "submittedAt": "2026-08-08T21:00:00+00:00",
+      "status": 3,
+      "resolution": "Tira su Carisma per distrarla",
+      "resolvedAt": "2026-08-08T21:00:00+00:00",
+      "roll": null
+    },
+    {
+      "id": "12c1dd2c-dee6-4736-b60e-95c548c30296",
+      "playerCharacterId": {
+        "value": "pc:christian"
+      },
+      "description": "Tiro su Carisma",
+      "submittedAt": "2026-08-08T21:00:00+00:00",
+      "status": 3,
+      "resolution": "Non succede nulla",
+      "resolvedAt": "2026-08-08T21:00:00+00:00",
+      "roll": {
+        "modifier": 0,
+        "difficulty": null,
+        "difficultyVisible": false,
+        "mode": 0,
+        "requestedAt": "2026-08-08T21:00:00+00:00",
+        "dice": [
+          11
+        ],
+        "keptDie": 11,
+        "total": 11,
+        "rolledAt": "2026-08-08T21:00:00+00:00"
+      }
+    }
+  ]
 }

@@ -288,7 +288,7 @@ principali senza richiedere conoscenze tecniche del motore.
 
 ## Milestone 7 — Player Table
 
-**Stato: prossimo**
+**Stato: in corso — ciclo di gioco completato, accesso personale rinviato**
 
 Obiettivo: rendere la campagna giocabile fuori dal pannello di controllo del
 GM, mantenendo il GM come autorità e senza mostrare ai giocatori informazioni
@@ -296,24 +296,24 @@ che i loro personaggi non possiedono.
 
 ### 7.1 — Accesso e punto di vista del PG
 
-- [ ] Pagina giocatore separata dal Tavolo del GM
-- [ ] Codice o collegamento temporaneo associato a un solo PG
-- [ ] Selezione del PG autorizzata dal GM
-- [ ] Scheda essenziale con nome, posizione, monete e risorse
-- [ ] Mostrare soltanto le conoscenze possedute dal PG
-- [ ] Mostrare personaggi presenti nello stesso luogo
-- [ ] Nascondere controlli del GM, informazioni segrete e stato fuori scena
+- [x] Pagina giocatore separata dal Tavolo del GM
+- [ ] Codice o collegamento temporaneo associato a un solo PG *(rinviato)*
+- [ ] Selezione del PG autorizzata dal GM *(rinviata)*
+- [x] Scheda essenziale con nome, posizione, monete e risorse
+- [x] Mostrare soltanto le conoscenze possedute dal PG
+- [x] Mostrare personaggi presenti nello stesso luogo
+- [x] Nascondere controlli del GM, informazioni segrete e stato fuori scena
 
 ### 7.2 — Ciclo dell'azione
 
-- [ ] Il giocatore descrive e invia un'azione proposta
-- [ ] La proposta non modifica direttamente il mondo
-- [ ] Coda persistente delle proposte in attesa
-- [ ] Il GM vede autore, testo e momento della proposta
-- [ ] Il GM può approvare, rifiutare o risolvere la proposta
-- [ ] L'approvazione registra l'azione nella cronaca
-- [ ] Il GM applica separatamente le conseguenze meccaniche necessarie
-- [ ] Il giocatore vede esito narrato e nuovo stato del proprio PG
+- [x] Il giocatore descrive e invia un'azione proposta
+- [x] La proposta non modifica direttamente il mondo
+- [x] Coda persistente delle proposte in attesa
+- [x] Il GM vede autore, testo e momento della proposta
+- [x] Il GM può approvare, rifiutare o risolvere la proposta
+- [x] L'approvazione registra l'azione nella cronaca
+- [x] Il GM applica separatamente le conseguenze meccaniche necessarie
+- [x] Il giocatore vede esito narrato e nuovo stato del proprio PG
 
 Flusso minimo:
 
@@ -332,18 +332,18 @@ il giocatore vede il risultato
 Obiettivo: sostenere prove in stile D&D senza incorporare un regolamento
 completo e senza lasciare che un tiro modifichi automaticamente il mondo.
 
-- [ ] Il GM può richiedere un tiro collegato a un'azione proposta
-- [ ] Richiesta con descrizione, modificatore e difficoltà opzionale
-- [ ] Difficoltà pubblica oppure visibile soltanto al GM
-- [ ] Tiro normale di `1d20 + modificatore`
-- [ ] Vantaggio: due d20 e mantenimento del risultato maggiore
-- [ ] Svantaggio: due d20 e mantenimento del risultato minore
-- [ ] Generazione del tiro sul server, non nel browser del giocatore
-- [ ] Una richiesta può produrre un solo risultato e non può essere ritirata
-- [ ] Registrare dadi individuali, modificatore, totale e momento del tiro
-- [ ] Evidenziare 1 e 20 naturali senza imporre automaticamente un esito
-- [ ] Il replay usa il risultato registrato e non lancia nuovamente i dadi
-- [ ] Il GM resta responsabile dell'esito e delle conseguenze sul mondo
+- [x] Il GM può richiedere un tiro collegato a un'azione proposta
+- [x] Richiesta con descrizione, modificatore e difficoltà opzionale
+- [x] Difficoltà pubblica oppure visibile soltanto al GM
+- [x] Tiro normale di `1d20 + modificatore`
+- [x] Vantaggio: due d20 e mantenimento del risultato maggiore
+- [x] Svantaggio: due d20 e mantenimento del risultato minore
+- [x] Generazione del tiro sul server, non nel browser del giocatore
+- [x] Una richiesta può produrre un solo risultato e non può essere ritirata
+- [x] Registrare dadi individuali, modificatore, totale e momento del tiro
+- [x] Evidenziare 1 e 20 naturali senza imporre automaticamente un esito
+- [x] Il replay usa il risultato registrato e non lancia nuovamente i dadi
+- [x] Il GM resta responsabile dell'esito e delle conseguenze sul mondo
 
 Decisione iniziale: il primo taglio supporta soltanto il d20. Dadi generici,
 danni, tabelle, iniziativa e formule regolistiche arriveranno solo se un caso
@@ -351,20 +351,20 @@ d'uso reale li renderà necessari.
 
 ### 7.4 — Scena giocabile
 
-- [ ] Vista leggibile del luogo attuale
-- [ ] Eventi recenti osservabili dal PG
-- [ ] Narrazione deterministica dei fatti visibili
-- [ ] Aggiornamento manuale affidabile su PC e smartphone
-- [ ] Stato chiaro dell'azione: in attesa, risolta o rifiutata
+- [x] Vista leggibile del luogo attuale
+- [x] Eventi recenti osservabili dal PG
+- [x] Narrazione deterministica dei fatti visibili
+- [x] Aggiornamento manuale affidabile su PC e smartphone
+- [x] Stato chiaro dell'azione: in attesa, tiro richiesto, risolta o rifiutata
 - [ ] Interfaccia mobile utilizzabile durante una sessione reale
 
 ### 7.5 — Sicurezza e prova di accettazione
 
 - [ ] Un giocatore non può impersonare un altro PG
-- [ ] Un giocatore non può inviare eventi direttamente al motore
+- [x] Un giocatore non può inviare eventi direttamente al motore
 - [ ] Un giocatore non può leggere conoscenze o cronache riservate
-- [ ] Un giocatore non può alterare, ripetere o sostituire un tiro registrato
-- [ ] Chiusura o riavvio non perde le azioni in attesa
+- [x] Un giocatore non può alterare, ripetere o sostituire un tiro registrato
+- [x] Chiusura o riavvio non perde le azioni in attesa
 - [ ] Prova completa con due browser: uno GM e uno giocatore
 - [ ] Prova completa dalla rete locale con uno smartphone
 
@@ -409,9 +409,8 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Creare la prima pagina giocatore in sola lettura, associata a un PG, che mostri
-esclusivamente scheda essenziale, luogo attuale, personaggi compresenti e
-conoscenze realmente possedute.
+Provare il ciclo completo con due browser e poi da smartphone sulla rete
+locale. Il codice personale per ogni PG resta intenzionalmente rinviato.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

@@ -17,6 +17,7 @@ var activeWorldFile = WorldDashboard.ResolveWorldFile(args, launchDirectory);
 var campaignCatalog = new CampaignCatalog(
     Path.GetDirectoryName(activeWorldFile) ?? launchDirectory);
 var actionToken = Guid.NewGuid().ToString("N");
+var playerInteractionToken = Guid.NewGuid().ToString("N");
 var worldLock = new SemaphoreSlim(1, 1);
 PendingWorldAdvance? pendingAdvance = null;
 var builder = WebApplication.CreateBuilder(args);
@@ -69,6 +70,12 @@ app.MapGet("/", () => Results.Content(
     "text/html; charset=utf-8"));
 app.MapGet("/chronicle", () => Results.Content(
     WorldDashboard.RenderChronicle(activeWorldFile),
+    "text/html; charset=utf-8"));
+app.MapGet("/player/{entityId}", (string entityId) => Results.Content(
+    WorldDashboard.RenderPlayer(
+        activeWorldFile,
+        entityId,
+        playerInteractionToken),
     "text/html; charset=utf-8"));
 app.MapPost("/campaign/select", async (HttpContext context) =>
 {
@@ -376,6 +383,122 @@ app.MapPost("/resources/change", async (HttpContext context) =>
     }
 
     return Results.Redirect("/");
+});
+app.MapPost("/player/{entityId}/actions", async (
+    HttpContext context,
+    string entityId) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != playerInteractionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.SubmitPlayerAction(
+            activeWorldFile,
+            entityId,
+            form["description"].ToString());
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+    return Results.Redirect($"/player/{Uri.EscapeDataString(entityId)}");
+});
+app.MapPost("/player-actions/resolve", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.ResolvePlayerAction(
+            activeWorldFile,
+            form["actionId"].ToString(),
+            form["decision"].ToString(),
+            form["resolution"].ToString());
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+    return Results.Redirect("/");
+});
+app.MapPost("/player-actions/request-roll", async (
+    HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken ||
+        !int.TryParse(form["modifier"], out var modifier))
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+    int? difficulty = int.TryParse(form["difficulty"], out var parsedDifficulty)
+        ? parsedDifficulty
+        : null;
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.RequestD20Roll(
+            activeWorldFile,
+            form["actionId"].ToString(),
+            modifier,
+            difficulty,
+            form["difficultyVisible"] == "on",
+            form["mode"].ToString());
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+    return Results.Redirect("/");
+});
+app.MapPost("/player/{entityId}/roll", async (
+    HttpContext context,
+    string entityId) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != playerInteractionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.RollD20(
+            activeWorldFile,
+            entityId,
+            form["actionId"].ToString());
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+    return Results.Redirect($"/player/{Uri.EscapeDataString(entityId)}");
 });
 app.MapGet("/styles.css", () => Results.Text(
     DashboardStyles.Content,
