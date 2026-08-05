@@ -254,7 +254,7 @@ senza intervento diretto del Game Master.
 
 ## Milestone 6 — Game Master Interface
 
-**Stato: in corso**
+**Stato: completato per il primo uso locale**
 
 - [x] Creare e caricare un mondo
 - [x] Prima dashboard web locale in sola lettura
@@ -262,20 +262,124 @@ senza intervento diretto del Game Master.
 - [x] Consultare ciò che un NPC sa
 - [x] Selezionare un salvataggio dall'interfaccia
 - [x] Accesso protetto dalla rete locale per smartphone
-- [ ] Introdurre azioni dei personaggi giocanti ed eventi esterni
+- [x] Introdurre azioni dei personaggi giocanti ed eventi esterni
   - [x] Primo intervento del GM: spostare un personaggio in un luogo
   - [x] Rivelare una conoscenza a un personaggio
   - [x] Registrare nella cronaca un'azione libera di un personaggio giocante
-  - [ ] Tradurre le conseguenze dell'azione in eventi specifici del mondo
+  - [x] Roster persistente dei personaggi giocanti, distinti dagli NPC autonomi
+  - [x] Selezionare un PG registrato per azioni e spostamenti
+  - [x] Tradurre le conseguenze dell'azione in eventi specifici del mondo
+    - [x] Rivelare conoscenze anche ai PG
+    - [x] Trasferire monete tra PG e NPC con una motivazione persistente
+    - [x] Acquisire, perdere e trasferire risorse tramite eventi espliciti
 - [x] Avanzare il tempo dal Tavolo del GM e salvare le conseguenze
 - [x] Anteprima delle conseguenze proposte dall'avanzamento temporale
 - [x] Approvare o rifiutare l'avanzamento prima del salvataggio
-- [ ] Generare cronache e riepiloghi di sessione
+- [x] Generare cronache e riepiloghi della campagna
+  - [x] Cronaca completa ricostruita dal registro persistente
+  - [x] Riepilogo oggettivo di intervallo, avvenimenti e azioni dei giocatori
+  - [x] Vista leggibile e stampabile dal Tavolo del GM
 
-Risultato atteso: TessitoreGM diventa utilizzabile direttamente durante una
-campagna senza richiedere conoscenze tecniche del motore.
+La delimitazione formale delle singole sessioni resta rinviata: non è
+necessaria per rendere giocabile il primo ciclo locale.
 
-## Milestone 7 — World Pressure
+Risultato raggiunto: il GM può amministrare il mondo, i PG e le conseguenze
+principali senza richiedere conoscenze tecniche del motore.
+
+## Milestone 7 — Player Table
+
+**Stato: prossimo**
+
+Obiettivo: rendere la campagna giocabile fuori dal pannello di controllo del
+GM, mantenendo il GM come autorità e senza mostrare ai giocatori informazioni
+che i loro personaggi non possiedono.
+
+### 7.1 — Accesso e punto di vista del PG
+
+- [ ] Pagina giocatore separata dal Tavolo del GM
+- [ ] Codice o collegamento temporaneo associato a un solo PG
+- [ ] Selezione del PG autorizzata dal GM
+- [ ] Scheda essenziale con nome, posizione, monete e risorse
+- [ ] Mostrare soltanto le conoscenze possedute dal PG
+- [ ] Mostrare personaggi presenti nello stesso luogo
+- [ ] Nascondere controlli del GM, informazioni segrete e stato fuori scena
+
+### 7.2 — Ciclo dell'azione
+
+- [ ] Il giocatore descrive e invia un'azione proposta
+- [ ] La proposta non modifica direttamente il mondo
+- [ ] Coda persistente delle proposte in attesa
+- [ ] Il GM vede autore, testo e momento della proposta
+- [ ] Il GM può approvare, rifiutare o risolvere la proposta
+- [ ] L'approvazione registra l'azione nella cronaca
+- [ ] Il GM applica separatamente le conseguenze meccaniche necessarie
+- [ ] Il giocatore vede esito narrato e nuovo stato del proprio PG
+
+Flusso minimo:
+
+```text
+Giocatore propone un'azione
+        ↓
+GM la valuta e, se necessario, richiede un tiro
+        ↓
+azione registrata + conseguenze specifiche
+        ↓
+il giocatore vede il risultato
+```
+
+### 7.3 — Risoluzione d20
+
+Obiettivo: sostenere prove in stile D&D senza incorporare un regolamento
+completo e senza lasciare che un tiro modifichi automaticamente il mondo.
+
+- [ ] Il GM può richiedere un tiro collegato a un'azione proposta
+- [ ] Richiesta con descrizione, modificatore e difficoltà opzionale
+- [ ] Difficoltà pubblica oppure visibile soltanto al GM
+- [ ] Tiro normale di `1d20 + modificatore`
+- [ ] Vantaggio: due d20 e mantenimento del risultato maggiore
+- [ ] Svantaggio: due d20 e mantenimento del risultato minore
+- [ ] Generazione del tiro sul server, non nel browser del giocatore
+- [ ] Una richiesta può produrre un solo risultato e non può essere ritirata
+- [ ] Registrare dadi individuali, modificatore, totale e momento del tiro
+- [ ] Evidenziare 1 e 20 naturali senza imporre automaticamente un esito
+- [ ] Il replay usa il risultato registrato e non lancia nuovamente i dadi
+- [ ] Il GM resta responsabile dell'esito e delle conseguenze sul mondo
+
+Decisione iniziale: il primo taglio supporta soltanto il d20. Dadi generici,
+danni, tabelle, iniziativa e formule regolistiche arriveranno solo se un caso
+d'uso reale li renderà necessari.
+
+### 7.4 — Scena giocabile
+
+- [ ] Vista leggibile del luogo attuale
+- [ ] Eventi recenti osservabili dal PG
+- [ ] Narrazione deterministica dei fatti visibili
+- [ ] Aggiornamento manuale affidabile su PC e smartphone
+- [ ] Stato chiaro dell'azione: in attesa, risolta o rifiutata
+- [ ] Interfaccia mobile utilizzabile durante una sessione reale
+
+### 7.5 — Sicurezza e prova di accettazione
+
+- [ ] Un giocatore non può impersonare un altro PG
+- [ ] Un giocatore non può inviare eventi direttamente al motore
+- [ ] Un giocatore non può leggere conoscenze o cronache riservate
+- [ ] Un giocatore non può alterare, ripetere o sostituire un tiro registrato
+- [ ] Chiusura o riavvio non perde le azioni in attesa
+- [ ] Prova completa con due browser: uno GM e uno giocatore
+- [ ] Prova completa dalla rete locale con uno smartphone
+
+### Definition of Done
+
+Il milestone è completato quando, da un secondo dispositivo, un giocatore può
+aprire il proprio PG, vedere soltanto la sua scena, proporre un'azione e
+ricevere l'esito dopo la decisione del GM, senza accedere al Tavolo del GM e
+senza modificare direttamente il mondo.
+
+Non fanno parte di questo milestone: schede regolistiche complete, sistema di
+combattimento, danni, iniziativa, chat, IA narrativa e accesso remoto via
+Internet.
+
+## Milestone 8 — World Pressure
 
 **Stato: futuro**
 
@@ -289,7 +393,7 @@ campagna senza richiedere conoscenze tecniche del motore.
 Questi sistemi vengono introdotti soltanto quando il piccolo mondo, le routine
 e le conseguenze persistenti funzionano già.
 
-## Milestone 8 — Framework and 1.0
+## Milestone 9 — Framework and 1.0
 
 **Stato: futuro**
 
@@ -305,9 +409,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Generare la cronaca completa e un riepilogo di sessione direttamente
-dall'interfaccia, mantenendo separati i fatti registrati dalle conseguenze
-meccaniche applicate al mondo.
+Creare la prima pagina giocatore in sola lettura, associata a un PG, che mostri
+esclusivamente scheda essenziale, luogo attuale, personaggi compresenti e
+conoscenze realmente possedute.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

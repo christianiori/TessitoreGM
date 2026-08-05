@@ -16,6 +16,7 @@ public sealed class WorldEventProcessor
             OrderRequested requested => world.Apply(requested),
             OrderAccepted accepted => world.Apply(accepted),
             PaymentTransferred payment => world.Apply(payment),
+            CoinsTransferred coins => world.Apply(coins),
             OrderWorkStarted workStarted => world.Apply(workStarted),
             OrderCompleted completed => world.Apply(completed),
             OrderDelivered delivered => world.Apply(delivered),
@@ -26,7 +27,11 @@ public sealed class WorldEventProcessor
             NeedIncreased increased => world.Apply(increased),
             ResourceConsumed consumed => world.Apply(consumed),
             ResourceProduced produced => world.Apply(produced),
+            ResourceAcquired acquired => world.Apply(acquired),
+            ResourceLost lost => world.Apply(lost),
+            ResourceTransferred transferred => world.Apply(transferred),
             PlayerActionRecorded playerAction => world.Apply(playerAction),
+            PlayerCharacterRegistered playerCharacter => world.Apply(playerCharacter),
             WorldTimeAdvanced timeAdvanced => world.Apply(timeAdvanced),
             _ => throw new NotSupportedException(
                 $"World event '{worldEvent.GetType().Name}' is not supported.")

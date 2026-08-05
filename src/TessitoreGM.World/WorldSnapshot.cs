@@ -300,6 +300,54 @@ public sealed class WorldSnapshot
         return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
     }
 
+    public WorldSnapshot Apply(CoinsTransferred worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (worldEvent.Amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "A coin transfer amount must be greater than zero.");
+        }
+        if (worldEvent.PayerId == worldEvent.PayeeId)
+        {
+            throw new InvalidOperationException(
+                "A coin transfer requires two different entities.");
+        }
+        if (string.IsNullOrWhiteSpace(worldEvent.Reason))
+        {
+            throw new ArgumentException(
+                "A coin transfer requires a reason.",
+                nameof(worldEvent));
+        }
+
+        var payerBalance = GetBalance(worldEvent.PayerId);
+        if (payerBalance < worldEvent.Amount)
+        {
+            throw new InvalidOperationException(
+                $"Entity '{worldEvent.PayerId}' has insufficient funds.");
+        }
+
+        var balances = new Dictionary<EntityId, int>(_balances)
+        {
+            [worldEvent.PayerId] = payerBalance - worldEvent.Amount,
+            [worldEvent.PayeeId] = GetBalance(worldEvent.PayeeId) + worldEvent.Amount
+        };
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
+    }
+
     public WorldSnapshot Apply(OrderWorkStarted worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
@@ -769,6 +817,83 @@ public sealed class WorldSnapshot
             _lastNeedIncreases);
     }
 
+    public WorldSnapshot Apply(ResourceAcquired worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+        EnsureResourceConsequence(worldEvent.Quantity, worldEvent.Reason);
+
+        var key = new ResourceStockKey(
+            worldEvent.EntityId,
+            worldEvent.ResourceId);
+        var stocks = new Dictionary<ResourceStockKey, int>(_resourceStocks)
+        {
+            [key] = GetResourceQuantity(
+                worldEvent.EntityId,
+                worldEvent.ResourceId) + worldEvent.Quantity
+        };
+        return WithResourceStocks(worldEvent.OccurredAt, stocks);
+    }
+
+    public WorldSnapshot Apply(ResourceLost worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+        EnsureResourceConsequence(worldEvent.Quantity, worldEvent.Reason);
+
+        var currentQuantity = GetResourceQuantity(
+            worldEvent.EntityId,
+            worldEvent.ResourceId);
+        if (currentQuantity < worldEvent.Quantity)
+        {
+            throw new InvalidOperationException(
+                $"Entity '{worldEvent.EntityId}' has insufficient stock.");
+        }
+        var key = new ResourceStockKey(
+            worldEvent.EntityId,
+            worldEvent.ResourceId);
+        var stocks = new Dictionary<ResourceStockKey, int>(_resourceStocks)
+        {
+            [key] = currentQuantity - worldEvent.Quantity
+        };
+        return WithResourceStocks(worldEvent.OccurredAt, stocks);
+    }
+
+    public WorldSnapshot Apply(ResourceTransferred worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+        EnsureResourceConsequence(worldEvent.Quantity, worldEvent.Reason);
+        if (worldEvent.SourceId == worldEvent.DestinationId)
+        {
+            throw new InvalidOperationException(
+                "A resource transfer requires two different entities.");
+        }
+
+        var sourceQuantity = GetResourceQuantity(
+            worldEvent.SourceId,
+            worldEvent.ResourceId);
+        if (sourceQuantity < worldEvent.Quantity)
+        {
+            throw new InvalidOperationException(
+                $"Entity '{worldEvent.SourceId}' has insufficient stock.");
+        }
+        var sourceKey = new ResourceStockKey(
+            worldEvent.SourceId,
+            worldEvent.ResourceId);
+        var destinationKey = new ResourceStockKey(
+            worldEvent.DestinationId,
+            worldEvent.ResourceId);
+        var stocks = new Dictionary<ResourceStockKey, int>(_resourceStocks)
+        {
+            [sourceKey] = sourceQuantity - worldEvent.Quantity,
+            [destinationKey] = GetResourceQuantity(
+                worldEvent.DestinationId,
+                worldEvent.ResourceId) + worldEvent.Quantity
+        };
+        return WithResourceStocks(worldEvent.OccurredAt, stocks);
+    }
+
     public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
@@ -811,6 +936,24 @@ public sealed class WorldSnapshot
             _lastNeedIncreases);
     }
 
+    public WorldSnapshot Apply(PlayerCharacterRegistered worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases);
+    }
+
     private void EnsureChronological(IWorldEvent worldEvent)
     {
         if (worldEvent.OccurredAt < CurrentTime)
@@ -819,6 +962,37 @@ public sealed class WorldSnapshot
                 $"Event time '{worldEvent.OccurredAt:O}' precedes world time '{CurrentTime:O}'.");
         }
     }
+
+    private static void EnsureResourceConsequence(int quantity, string reason)
+    {
+        if (quantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                "A resource quantity must be greater than zero.");
+        }
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException(
+                "A resource consequence requires a reason.",
+                nameof(reason));
+        }
+    }
+
+    private WorldSnapshot WithResourceStocks(
+        DateTimeOffset occurredAt,
+        IReadOnlyDictionary<ResourceStockKey, int> resourceStocks) =>
+        new(
+            occurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            resourceStocks,
+            _needs,
+            _lastNeedIncreases);
 
     private readonly record struct SharedFact(
         EntityId SpeakerId,

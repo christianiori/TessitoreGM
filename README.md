@@ -33,6 +33,12 @@ La dashboard mostra:
   autonome, scegliendo un fatto esistente o definendone un nuovo identificatore;
 - registrazione libera delle azioni dei personaggi giocanti nella cronaca,
   separata dalle conseguenze meccaniche applicate al mondo.
+- roster persistente dei personaggi giocanti, selezionabili per azioni e
+  spostamenti ma esclusi dalle decisioni autonome del motore;
+- conseguenze persistenti sui PG: apprendimento di informazioni e
+  trasferimenti motivati di monete con gli NPC;
+- acquisizione, perdita e trasferimento motivato delle risorse possedute.
+- cronaca completa della campagna con riepilogo oggettivo e vista stampabile.
 
 I salvataggi creati dall'interfaccia usano il suffisso `.save.json` e non
 vengono inclusi nei commit Git.

@@ -233,6 +233,7 @@ public sealed class WorldEventJsonSerializer
                 "order-requested" => Deserialize<OrderRequested>(persistedEvent.Data),
                 "order-accepted" => Deserialize<OrderAccepted>(persistedEvent.Data),
                 "payment-transferred" => Deserialize<PaymentTransferred>(persistedEvent.Data),
+                "coins-transferred" => Deserialize<CoinsTransferred>(persistedEvent.Data),
                 "order-work-started" => Deserialize<OrderWorkStarted>(persistedEvent.Data),
                 "order-completed" => Deserialize<OrderCompleted>(persistedEvent.Data),
                 "order-delivered" => Deserialize<OrderDelivered>(persistedEvent.Data),
@@ -243,7 +244,11 @@ public sealed class WorldEventJsonSerializer
                 "need-increased" => Deserialize<NeedIncreased>(persistedEvent.Data),
                 "resource-consumed" => Deserialize<ResourceConsumed>(persistedEvent.Data),
                 "resource-produced" => Deserialize<ResourceProduced>(persistedEvent.Data),
+                "resource-acquired" => Deserialize<ResourceAcquired>(persistedEvent.Data),
+                "resource-lost" => Deserialize<ResourceLost>(persistedEvent.Data),
+                "resource-transferred" => Deserialize<ResourceTransferred>(persistedEvent.Data),
                 "player-action-recorded" => Deserialize<PlayerActionRecorded>(persistedEvent.Data),
+                "player-character-registered" => Deserialize<PlayerCharacterRegistered>(persistedEvent.Data),
                 "world-time-advanced" => Deserialize<WorldTimeAdvanced>(persistedEvent.Data),
                 _ => throw new InvalidDataException(
                     $"World event type '{persistedEvent.Type}' is not supported.")
@@ -270,6 +275,7 @@ public sealed class WorldEventJsonSerializer
         OrderRequested => "order-requested",
         OrderAccepted => "order-accepted",
         PaymentTransferred => "payment-transferred",
+        CoinsTransferred => "coins-transferred",
         OrderWorkStarted => "order-work-started",
         OrderCompleted => "order-completed",
         OrderDelivered => "order-delivered",
@@ -280,7 +286,11 @@ public sealed class WorldEventJsonSerializer
         NeedIncreased => "need-increased",
         ResourceConsumed => "resource-consumed",
         ResourceProduced => "resource-produced",
+        ResourceAcquired => "resource-acquired",
+        ResourceLost => "resource-lost",
+        ResourceTransferred => "resource-transferred",
         PlayerActionRecorded => "player-action-recorded",
+        PlayerCharacterRegistered => "player-character-registered",
         WorldTimeAdvanced => "world-time-advanced",
         _ => throw new NotSupportedException(
             $"World event '{worldEvent.GetType().Name}' is not supported.")

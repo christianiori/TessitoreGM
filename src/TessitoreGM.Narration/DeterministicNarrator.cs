@@ -54,6 +54,9 @@ public sealed class DeterministicNarrator
             PaymentTransferred payment =>
                 $"{context.Name(payment.PayerId)} trasferisce {payment.Amount} " +
                 $"monete a {context.Name(payment.PayeeId)}.",
+            CoinsTransferred coins =>
+                $"{context.Name(coins.PayerId)} dà {coins.Amount} monete a " +
+                $"{context.Name(coins.PayeeId)}: {coins.Reason}.",
             OrderWorkStarted started =>
                 $"{ArtisanName(started.OrderId, context, orders)} inizia la " +
                 $"lavorazione di {ItemName(started.OrderId, orders)}.",
@@ -94,8 +97,23 @@ public sealed class DeterministicNarrator
                 $"{produced.Quantity} unità di " +
                 $"{context.Name(produced.ResourceId)} in " +
                 $"{context.Name(produced.LocationId)}.",
+            ResourceAcquired acquired =>
+                $"{context.Name(acquired.EntityId)} acquisisce " +
+                $"{acquired.Quantity} unità di " +
+                $"{context.Name(acquired.ResourceId)}: {acquired.Reason}.",
+            ResourceLost lost =>
+                $"{context.Name(lost.EntityId)} perde {lost.Quantity} " +
+                $"unità di {context.Name(lost.ResourceId)}: {lost.Reason}.",
+            ResourceTransferred transferred =>
+                $"{context.Name(transferred.SourceId)} consegna " +
+                $"{transferred.Quantity} unità di " +
+                $"{context.Name(transferred.ResourceId)} a " +
+                $"{context.Name(transferred.DestinationId)}: " +
+                $"{transferred.Reason}.",
             PlayerActionRecorded playerAction =>
                 $"{playerAction.Actor}: {playerAction.Description}",
+            PlayerCharacterRegistered playerCharacter =>
+                $"{playerCharacter.Name} entra nella campagna.",
             WorldTimeAdvanced =>
                 "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(

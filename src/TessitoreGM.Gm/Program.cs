@@ -67,6 +67,9 @@ app.MapGet("/", () => Results.Content(
         campaignCatalog.Discover(),
         pendingAdvance),
     "text/html; charset=utf-8"));
+app.MapGet("/chronicle", () => Results.Content(
+    WorldDashboard.RenderChronicle(activeWorldFile),
+    "text/html; charset=utf-8"));
 app.MapPost("/campaign/select", async (HttpContext context) =>
 {
     var form = await context.Request.ReadFormAsync();
@@ -271,6 +274,99 @@ app.MapPost("/player-action", async (HttpContext context) =>
         pendingAdvance = null;
     }
     catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/player-character", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.RegisterPlayerCharacter(
+            activeWorldFile,
+            form["name"].ToString());
+        pendingAdvance = null;
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/coins/transfer", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken ||
+        !int.TryParse(form["amount"], out var amount))
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.TransferCoins(
+            activeWorldFile,
+            form["payer"].ToString(),
+            form["payee"].ToString(),
+            amount,
+            form["reason"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/resources/change", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken ||
+        !int.TryParse(form["quantity"], out var quantity))
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.ApplyResourceConsequence(
+            activeWorldFile,
+            form["operation"].ToString(),
+            form["entity"].ToString(),
+            form["destination"].ToString(),
+            form["resource"].ToString(),
+            quantity,
+            form["reason"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException)
     {
         return Results.BadRequest(exception.Message);
     }

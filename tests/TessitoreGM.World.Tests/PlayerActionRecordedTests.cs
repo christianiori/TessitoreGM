@@ -7,6 +7,38 @@ namespace TessitoreGM.World.Tests;
 public sealed class PlayerActionRecordedTests
 {
     [Fact]
+    public void SerializeReplayAndNarrate_PlayerRegistration_PreservesRosterEntry()
+    {
+        var occurredAt = new DateTimeOffset(
+            2026, 8, 3, 13, 0, 0, TimeSpan.Zero);
+        var registered = new PlayerCharacterRegistered(
+            new EntityId("pc:arianna"),
+            "Arianna",
+            occurredAt);
+        var log = new WorldEventLog(
+            new WorldInitialState(
+                occurredAt.AddHours(-1),
+                Array.Empty<EntityBalance>()),
+            new IWorldEvent[] { registered });
+        var serializer = new WorldEventJsonSerializer();
+
+        var restored = serializer.Deserialize(serializer.Serialize(log));
+        var world = new WorldEventProcessor().Replay(
+            WorldSnapshot.Create(
+                occurredAt.AddHours(-1),
+                new Dictionary<EntityId, int>()),
+            restored.Events);
+        var line = Assert.Single(new DeterministicNarrator().Narrate(
+            restored.Events,
+            new NarrationContext()));
+
+        Assert.Equal(registered, Assert.IsType<PlayerCharacterRegistered>(
+            Assert.Single(restored.Events)));
+        Assert.Equal(occurredAt, world.CurrentTime);
+        Assert.Equal("Arianna entra nella campagna.", line.Text);
+    }
+
+    [Fact]
     public void SerializeReplayAndNarrate_PlayerAction_PreservesChronicleEntry()
     {
         var occurredAt = new DateTimeOffset(

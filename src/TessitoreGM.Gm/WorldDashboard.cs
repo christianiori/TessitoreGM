@@ -1,4 +1,5 @@
 using System.Net;
+using System.Globalization;
 using System.Text;
 using TessitoreGM.Core;
 using TessitoreGM.Events;
@@ -84,6 +85,71 @@ internal static class WorldDashboard
         }
     }
 
+    public static string RenderChronicle(string worldFile)
+    {
+        try
+        {
+            var eventLog = new WorldEventJsonSerializer().Deserialize(
+                File.ReadAllText(worldFile));
+            var simulation = eventLog.Simulation;
+            var entityNames = EntityNames(simulation, eventLog.Events);
+            var locationNames = simulation?.Locations?.ToDictionary(
+                location => location.LocationId,
+                location => location.Name) ?? new Dictionary<LocationId, string>();
+            var resourceNames = simulation?.Resources?.ToDictionary(
+                resource => resource.ResourceId,
+                resource => resource.Name) ?? new Dictionary<ResourceId, string>();
+            var needNames = simulation?.Needs?.ToDictionary(
+                need => need.NeedId,
+                need => need.Name) ?? new Dictionary<NeedId, string>();
+            var narration = new DeterministicNarrator().Narrate(
+                eventLog.Events,
+                new NarrationContext(
+                    entityNames,
+                    locationNames,
+                    resourceNames,
+                    needNames));
+            var firstTime = narration.Count > 0
+                ? narration[0].OccurredAt
+                : eventLog.InitialWorld.CurrentTime;
+            var lastTime = narration.Count > 0
+                ? narration[^1].OccurredAt
+                : eventLog.InitialWorld.CurrentTime;
+            var playerActions = eventLog.Events
+                .OfType<PlayerActionRecorded>()
+                .Count();
+            var content = new StringBuilder();
+
+            content.Append("<header class=\"hero chronicle-hero\"><div><p class=\"eyebrow\">Cronaca della campagna</p><h1>CiÃ² che Ã¨ accaduto</h1><p class=\"lede\">Il racconto completo e deterministico ricostruito dal registro del mondo.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/\">Torna al tavolo</a><button type=\"button\" onclick=\"window.print()\">Stampa</button></div></header>");
+            content.Append("<main><section class=\"world-strip chronicle-summary\">");
+            content.Append(Metric(
+                "Intervallo",
+                $"{firstTime:dd MMM yyyy Â· HH:mm} â€“ {lastTime:dd MMM yyyy Â· HH:mm}"));
+            content.Append(Metric("Avvenimenti", narration.Count.ToString()));
+            content.Append(Metric("Azioni dei giocatori", playerActions.ToString()));
+            content.Append("</section><section class=\"chronicle chronicle-full\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro completo</p><h2>Tutti gli avvenimenti</h2></div><ol>");
+            foreach (var line in narration)
+            {
+                content.Append($"<li><time>{Encode(line.OccurredAt.ToString("dd/MM/yyyy Â· HH:mm"))}</time><p>{Encode(line.Text)}</p></li>");
+            }
+            if (narration.Count == 0)
+            {
+                content.Append("<li><p>La campagna non contiene ancora avvenimenti.</p></li>");
+            }
+            content.Append("</ol></section></main><footer><span>Campagna</span>");
+            content.Append($"<code>{Encode(Path.GetFileName(worldFile))}</code></footer>");
+            return Page("Cronaca", content.ToString());
+        }
+        catch (Exception exception) when (
+            exception is IOException or InvalidDataException or
+            InvalidOperationException or ArgumentException)
+        {
+            return Page(
+                "Cronaca non disponibile",
+                $"<main class=\"empty-state\"><p class=\"eyebrow\">Cronaca</p><h1>Non riesco a generarla.</h1><p>{Encode(exception.Message)}</p><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></main>");
+        }
+    }
+
     public static PendingWorldAdvance PreviewAdvance(
         string worldFile,
         TimeSpan duration)
@@ -148,9 +214,15 @@ internal static class WorldDashboard
         var simulation = eventLog.Simulation
             ?? throw new ArgumentException(
                 "Il salvataggio non contiene una simulazione configurata.");
-        var npc = simulation.Npcs.FirstOrDefault(candidate =>
-            candidate.EntityId.ToString() == entityValue)
-            ?? throw new ArgumentException("Personaggio non valido.");
+        var playerCharacters = PlayerCharacters(eventLog.Events);
+        var entityId = simulation.Npcs
+            .Select(candidate => candidate.EntityId)
+            .Concat(playerCharacters.Select(character => character.EntityId))
+            .FirstOrDefault(candidate => candidate.ToString() == entityValue);
+        if (entityId == default)
+        {
+            throw new ArgumentException("Personaggio non valido.");
+        }
         var location = (simulation.Locations ??
             Array.Empty<LocationPresentationDefinition>())
             .FirstOrDefault(candidate =>
@@ -158,14 +230,14 @@ internal static class WorldDashboard
             ?? throw new ArgumentException("Luogo non valido.");
         var world = Replay(eventLog);
 
-        if (world.GetLocation(npc.EntityId) == location.LocationId)
+        if (world.GetLocation(entityId) == location.LocationId)
         {
             throw new ArgumentException(
                 "Il personaggio si trova già nel luogo scelto.");
         }
 
         var movement = new EntityEnteredLocation(
-            npc.EntityId,
+            entityId,
             location.LocationId,
             world.CurrentTime);
         var updatedLog = new WorldEventLogEditor().Append(
@@ -188,8 +260,15 @@ internal static class WorldDashboard
             ?? throw new ArgumentException(
                 "Il salvataggio non contiene una simulazione configurata.");
         var npc = simulation.Npcs.FirstOrDefault(candidate =>
-            candidate.EntityId.ToString() == entityValue)
-            ?? throw new ArgumentException("Personaggio non valido.");
+            candidate.EntityId.ToString() == entityValue);
+        var playerCharacter = PlayerCharacters(eventLog.Events)
+            .FirstOrDefault(character =>
+                character.EntityId.ToString() == entityValue);
+        if (npc is null && playerCharacter is null)
+        {
+            throw new ArgumentException("Personaggio non valido.");
+        }
+        var entityId = npc?.EntityId ?? playerCharacter!.EntityId;
         var suppliedNewFact = newFactValue.Trim();
         if (suppliedNewFact.Length > 100)
         {
@@ -206,7 +285,10 @@ internal static class WorldDashboard
             throw new ArgumentException("Informazione non valida.");
         }
 
-        if (KnownFacts(npc, eventLog.Events).Contains(factId))
+        var knownFacts = npc is not null
+            ? KnownFacts(npc, eventLog.Events)
+            : KnownFacts(entityId, eventLog.Events);
+        if (knownFacts.Contains(factId))
         {
             throw new ArgumentException(
                 "Il personaggio conosce già questa informazione.");
@@ -214,7 +296,7 @@ internal static class WorldDashboard
 
         var world = Replay(eventLog);
         var revealed = new FactRevealed(
-            npc.EntityId,
+            entityId,
             factId,
             world.CurrentTime);
         var updatedLog = new WorldEventLogEditor().Append(
@@ -225,18 +307,137 @@ internal static class WorldDashboard
         Save(worldFile, serializer, updatedLog);
     }
 
+    public static void TransferCoins(
+        string worldFile,
+        string payerValue,
+        string payeeValue,
+        int amount,
+        string reasonValue)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentException(
+                "La quantitÃ  di monete deve essere maggiore di zero.");
+        }
+        var reason = reasonValue.Trim();
+        if (reason.Length is < 1 or > 200)
+        {
+            throw new ArgumentException(
+                "La motivazione deve contenere da 1 a 200 caratteri.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var validEntities = (eventLog.Simulation?.Npcs ??
+                Array.Empty<NpcSimulationDefinition>())
+            .Select(npc => npc.EntityId)
+            .Concat(PlayerCharacters(eventLog.Events).Select(
+                character => character.EntityId))
+            .ToArray();
+        var payerId = validEntities.FirstOrDefault(
+            entityId => entityId.ToString() == payerValue);
+        var payeeId = validEntities.FirstOrDefault(
+            entityId => entityId.ToString() == payeeValue);
+        if (payerId == default || payeeId == default)
+        {
+            throw new ArgumentException("Personaggio non valido.");
+        }
+
+        var world = Replay(eventLog);
+        var transferred = new CoinsTransferred(
+            payerId,
+            payeeId,
+            amount,
+            reason,
+            world.CurrentTime);
+        var updatedLog = new WorldEventLogEditor().Append(
+            eventLog,
+            world,
+            transferred);
+        Save(worldFile, serializer, updatedLog);
+    }
+
+    public static void ApplyResourceConsequence(
+        string worldFile,
+        string operation,
+        string entityValue,
+        string destinationValue,
+        string resourceValue,
+        int quantity,
+        string reasonValue)
+    {
+        if (quantity <= 0)
+        {
+            throw new ArgumentException(
+                "La quantitÃ  deve essere maggiore di zero.");
+        }
+        var reason = reasonValue.Trim();
+        if (reason.Length is < 1 or > 200)
+        {
+            throw new ArgumentException(
+                "La motivazione deve contenere da 1 a 200 caratteri.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var simulation = eventLog.Simulation
+            ?? throw new ArgumentException(
+                "Il salvataggio non contiene risorse configurate.");
+        var entities = simulation.Npcs.Select(npc => npc.EntityId)
+            .Concat(PlayerCharacters(eventLog.Events).Select(
+                character => character.EntityId))
+            .ToArray();
+        var entityId = entities.FirstOrDefault(
+            candidate => candidate.ToString() == entityValue);
+        var destinationId = entities.FirstOrDefault(
+            candidate => candidate.ToString() == destinationValue);
+        var resourceId = (simulation.Resources ??
+                Array.Empty<ResourcePresentationDefinition>())
+            .Select(resource => resource.ResourceId)
+            .FirstOrDefault(candidate => candidate.ToString() == resourceValue);
+        if (entityId == default || resourceId == default ||
+            (operation == "transfer" && destinationId == default))
+        {
+            throw new ArgumentException("Conseguenza non valida.");
+        }
+
+        var world = Replay(eventLog);
+        IWorldEvent consequence = operation switch
+        {
+            "acquire" => new ResourceAcquired(
+                entityId,
+                resourceId,
+                quantity,
+                reason,
+                world.CurrentTime),
+            "lose" => new ResourceLost(
+                entityId,
+                resourceId,
+                quantity,
+                reason,
+                world.CurrentTime),
+            "transfer" => new ResourceTransferred(
+                entityId,
+                destinationId,
+                resourceId,
+                quantity,
+                reason,
+                world.CurrentTime),
+            _ => throw new ArgumentException("Operazione non valida.")
+        };
+        var updatedLog = new WorldEventLogEditor().Append(
+            eventLog,
+            world,
+            consequence);
+        Save(worldFile, serializer, updatedLog);
+    }
+
     public static void RecordPlayerAction(
         string worldFile,
         string actorValue,
         string descriptionValue)
     {
-        var actor = actorValue.Trim();
         var description = descriptionValue.Trim();
-        if (actor.Length is < 1 or > 80)
-        {
-            throw new ArgumentException(
-                "Il nome del personaggio deve contenere da 1 a 80 caratteri.");
-        }
         if (description.Length is < 1 or > 500)
         {
             throw new ArgumentException(
@@ -245,9 +446,15 @@ internal static class WorldDashboard
 
         var serializer = new WorldEventJsonSerializer();
         var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var character = PlayerCharacters(eventLog.Events).FirstOrDefault(
+            candidate => candidate.EntityId.ToString() == actorValue);
+        if (character is null)
+        {
+            throw new ArgumentException("Personaggio giocante non valido.");
+        }
         var world = Replay(eventLog);
         var playerAction = new PlayerActionRecorded(
-            actor,
+            character.Name,
             description,
             world.CurrentTime);
         var updatedLog = new WorldEventLogEditor().Append(
@@ -255,6 +462,52 @@ internal static class WorldDashboard
             world,
             playerAction);
 
+        Save(worldFile, serializer, updatedLog);
+    }
+
+    public static void RegisterPlayerCharacter(
+        string worldFile,
+        string nameValue)
+    {
+        var name = nameValue.Trim();
+        if (name.Length is < 1 or > 80)
+        {
+            throw new ArgumentException(
+                "Il nome deve contenere da 1 a 80 caratteri.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var playerCharacters = PlayerCharacters(eventLog.Events);
+        if (playerCharacters.Any(character =>
+            character.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ArgumentException(
+                "Esiste giÃ  un personaggio giocante con questo nome.");
+        }
+
+        var usedIds = (eventLog.Simulation?.Npcs ??
+                Array.Empty<NpcSimulationDefinition>())
+            .Select(npc => npc.EntityId)
+            .Concat(playerCharacters.Select(character => character.EntityId))
+            .ToHashSet();
+        var baseValue = "pc:" + Slug(name);
+        var candidateValue = baseValue;
+        var suffix = 2;
+        while (usedIds.Contains(new EntityId(candidateValue)))
+        {
+            candidateValue = $"{baseValue}-{suffix++}";
+        }
+
+        var world = Replay(eventLog);
+        var registered = new PlayerCharacterRegistered(
+            new EntityId(candidateValue),
+            name,
+            world.CurrentTime);
+        var updatedLog = new WorldEventLogEditor().Append(
+            eventLog,
+            world,
+            registered);
         Save(worldFile, serializer, updatedLog);
     }
 
@@ -279,9 +532,8 @@ internal static class WorldDashboard
             File.ReadAllText(worldFile));
         var world = Replay(eventLog);
         var simulation = eventLog.Simulation;
-        var entityNames = simulation?.Entities?.ToDictionary(
-            entity => entity.EntityId,
-            entity => entity.Name) ?? new Dictionary<EntityId, string>();
+        var playerCharacters = PlayerCharacters(eventLog.Events);
+        var entityNames = EntityNames(simulation, eventLog.Events);
         var locationNames = simulation?.Locations?.ToDictionary(
             location => location.LocationId,
             location => location.Name) ?? new Dictionary<LocationId, string>();
@@ -296,11 +548,14 @@ internal static class WorldDashboard
             new NarrationContext(entityNames, locationNames, resourceNames, needNames));
         var content = new StringBuilder();
 
-        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></header>");
+        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/chronicle\">Cronaca completa</a><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></div></header>");
         content.Append(CampaignControls(
             worldFile,
             actionToken,
             campaigns));
+        content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Compagnia</p><h2>Personaggi giocanti</h2><p>Aggiungi un personaggio controllato dai giocatori. Il motore non prenderÃ  decisioni al suo posto.</p></div><form method=\"post\" action=\"/player-character\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"player-name\">Nome</label><input id=\"player-name\" name=\"name\" maxlength=\"80\" placeholder=\"Arianna\" required><button type=\"submit\">Aggiungi personaggio</button></form></section>");
         content.Append("<section class=\"time-control\"><div><p class=\"eyebrow\">Simulazione</p><h2>Avanza il tempo</h2><p>Calcola ciò che il villaggio farebbe, senza modificare subito il salvataggio.</p></div><form method=\"post\" action=\"/advance\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"hours\">Intervallo</label><select id=\"hours\" name=\"hours\"><option value=\"1\">1 ora</option><option value=\"6\">6 ore</option><option value=\"24\">1 giorno</option></select><button type=\"submit\">Mostra anteprima</button></form></section>");
@@ -338,6 +593,10 @@ internal static class WorldDashboard
                 npc.EntityId.ToString());
             content.Append($"<option value=\"{Encode(npc.EntityId.ToString())}\">{Encode(name)}</option>");
         }
+        foreach (var character in playerCharacters)
+        {
+            content.Append($"<option value=\"{Encode(character.EntityId.ToString())}\">{Encode(character.Name)} (PG)</option>");
+        }
 
         content.Append("</select><label for=\"location\">Destinazione</label><select id=\"location\" name=\"location\">");
         foreach (var location in simulation?.Locations ??
@@ -362,6 +621,11 @@ internal static class WorldDashboard
             content.Append($"<option value=\"{Encode(npc.EntityId.ToString())}\">{Encode(name)}</option>");
         }
 
+        foreach (var character in playerCharacters)
+        {
+            content.Append($"<option value=\"{Encode(character.EntityId.ToString())}\">{Encode(character.Name)} (PG)</option>");
+        }
+
         content.Append("</select><label for=\"fact\">Informazione</label><select id=\"fact\" name=\"fact\">");
         foreach (var factId in availableFacts)
         {
@@ -369,13 +633,49 @@ internal static class WorldDashboard
         }
 
         content.Append("</select><label for=\"new-fact\">Oppure nuovo ID</label><input id=\"new-fact\" name=\"newFact\" maxlength=\"100\" placeholder=\"village:bandits-seen\"><button type=\"submit\">Rivela informazione</button></form></section>");
-        content.Append("<section class=\"world-action player-action\"><div><p class=\"eyebrow\">Personaggi giocanti</p><h2>Registra un'azione</h2><p>Annota ciÃ² che un personaggio giocante ha fatto. Le conseguenze sul mondo si applicano con gli interventi specifici.</p></div><form method=\"post\" action=\"/player-action\">");
+        content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Conseguenze</p><h2>Trasferisci monete</h2><p>Registra un passaggio di denaro motivato tra due personaggi.</p></div><form method=\"post\" action=\"/coins/transfer\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
-        content.Append("<label for=\"player-actor\">Personaggio</label><input id=\"player-actor\" name=\"actor\" maxlength=\"80\" placeholder=\"Arianna\" required><label for=\"player-description\">Azione</label><textarea id=\"player-description\" name=\"description\" maxlength=\"500\" rows=\"3\" placeholder=\"Convince la guardia ad aprire il cancello.\" required></textarea><button type=\"submit\">Registra nella cronaca</button></form></section>");
+        content.Append("<label for=\"coin-payer\">Da</label><select id=\"coin-payer\" name=\"payer\">");
+        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        {
+            content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
+        }
+        content.Append("</select><label for=\"coin-payee\">A</label><select id=\"coin-payee\" name=\"payee\">");
+        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        {
+            content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
+        }
+        content.Append("</select><label for=\"coin-amount\">Monete</label><input id=\"coin-amount\" name=\"amount\" type=\"number\" min=\"1\" max=\"1000000\" value=\"1\" required><label for=\"coin-reason\">Motivazione</label><input id=\"coin-reason\" name=\"reason\" maxlength=\"200\" placeholder=\"Ricompensa per l'incarico\" required><button type=\"submit\">Registra trasferimento</button></form></section>");
+        content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Conseguenze</p><h2>Gestisci una risorsa</h2><p>Registra un'acquisizione, una perdita o un trasferimento motivato.</p></div><form method=\"post\" action=\"/resources/change\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"resource-operation\">Operazione</label><select id=\"resource-operation\" name=\"operation\"><option value=\"acquire\">Acquisisce</option><option value=\"lose\">Perde</option><option value=\"transfer\">Trasferisce</option></select><label for=\"resource-entity\">Personaggio</label><select id=\"resource-entity\" name=\"entity\">");
+        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        {
+            content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
+        }
+        content.Append("</select><label for=\"resource-destination\">Destinatario</label><select id=\"resource-destination\" name=\"destination\">");
+        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        {
+            content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
+        }
+        content.Append("</select><label for=\"resource-kind\">Risorsa</label><select id=\"resource-kind\" name=\"resource\">");
+        foreach (var resource in simulation?.Resources ?? Array.Empty<ResourcePresentationDefinition>())
+        {
+            content.Append($"<option value=\"{Encode(resource.ResourceId.ToString())}\">{Encode(resource.Name)}</option>");
+        }
+        content.Append("</select><label for=\"resource-quantity\">Quantità</label><input id=\"resource-quantity\" name=\"quantity\" type=\"number\" min=\"1\" max=\"1000000\" value=\"1\" required><label for=\"resource-reason\">Motivazione</label><input id=\"resource-reason\" name=\"reason\" maxlength=\"200\" placeholder=\"Trovato durante l'esplorazione\" required><button type=\"submit\">Applica conseguenza</button></form></section>");
+        content.Append("<section class=\"world-action player-action\"><div><p class=\"eyebrow\">Personaggi giocanti</p><h2>Registra un'azione</h2><p>Annota ciò che un personaggio giocante ha fatto. Le conseguenze sul mondo si applicano con gli interventi specifici.</p></div><form method=\"post\" action=\"/player-action\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+        content.Append("<label for=\"player-actor\">Personaggio</label><select id=\"player-actor\" name=\"actor\" required>");
+        foreach (var character in playerCharacters)
+        {
+            content.Append($"<option value=\"{Encode(character.EntityId.ToString())}\">{Encode(character.Name)}</option>");
+        }
+        content.Append("</select><label for=\"player-description\">Azione</label><textarea id=\"player-description\" name=\"description\" maxlength=\"500\" rows=\"3\" placeholder=\"Convince la guardia ad aprire il cancello.\" required></textarea><button type=\"submit\">Registra nella cronaca</button></form></section>");
         content.Append("<main><section class=\"world-strip\">");
         content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
         content.Append(Metric("Eventi registrati", eventLog.Events.Count.ToString()));
-        content.Append(Metric("Personaggi attivi", (simulation?.Npcs.Count ?? 0).ToString()));
+        content.Append(Metric("Personaggi attivi", ((simulation?.Npcs.Count ?? 0) + playerCharacters.Count).ToString()));
         content.Append("</section><section><div class=\"section-heading\"><p class=\"eyebrow\">Presenze</p><h2>Personaggi</h2></div><div class=\"npc-grid\">");
 
         foreach (var npc in simulation?.Npcs ?? Array.Empty<NpcSimulationDefinition>())
@@ -415,6 +715,33 @@ internal static class WorldDashboard
             content.Append("</div></article>");
         }
 
+        foreach (var character in playerCharacters)
+        {
+            var location = world.GetLocation(character.EntityId);
+            var locationName = location is LocationId locationId
+                ? locationNames.GetValueOrDefault(locationId, locationId.ToString())
+                : "Fuori scena";
+            var knownFacts = KnownFacts(character.EntityId, eventLog.Events);
+
+            content.Append("<article class=\"npc-card player-card\"><div class=\"npc-top\"><div>");
+            content.Append($"<p class=\"role\">personaggio giocante</p><h3>{Encode(character.Name)}</h3></div>");
+            content.Append($"<span class=\"location\">{Encode(locationName)}</span></div><div class=\"stats\">");
+            content.Append(Stat("Monete", world.GetBalance(character.EntityId).ToString()));
+            foreach (var resource in simulation?.Resources ?? Array.Empty<ResourcePresentationDefinition>())
+            {
+                var quantity = world.GetResourceQuantity(character.EntityId, resource.ResourceId);
+                if (quantity > 0)
+                {
+                    content.Append(Stat(resource.Name, quantity.ToString()));
+                }
+            }
+            content.Append("</div><div class=\"knowledge\"><span>Conoscenze</span>");
+            content.Append(knownFacts.Count == 0
+                ? "<p>Nessuna informazione nota.</p>"
+                : $"<p>{string.Join(" Â· ", knownFacts.Select(fact => Encode(fact.ToString())))}</p>");
+            content.Append("</div></article>");
+        }
+
         content.Append("</div></section><section class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro</p><h2>Ultimi avvenimenti</h2></div><ol>");
         foreach (var line in narration.TakeLast(12).Reverse())
         {
@@ -441,6 +768,91 @@ internal static class WorldDashboard
             facts.Add(revealed.FactId);
         }
         return facts;
+    }
+
+    private static IReadOnlySet<FactId> KnownFacts(
+        EntityId entityId,
+        IReadOnlyList<IWorldEvent> events)
+    {
+        var facts = new HashSet<FactId>();
+        foreach (var shared in events.OfType<FactShared>().Where(
+            shared => shared.ListenerId == entityId))
+        {
+            facts.Add(shared.FactId);
+        }
+        foreach (var revealed in events.OfType<FactRevealed>().Where(
+            revealed => revealed.EntityId == entityId))
+        {
+            facts.Add(revealed.FactId);
+        }
+        return facts;
+    }
+
+    private static IReadOnlyList<PlayerCharacterRegistered> PlayerCharacters(
+        IReadOnlyList<IWorldEvent> events) =>
+        events.OfType<PlayerCharacterRegistered>()
+            .GroupBy(character => character.EntityId)
+            .Select(group => group.Last())
+            .OrderBy(character => character.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private static Dictionary<EntityId, string> EntityNames(
+        WorldSimulationDefinition? simulation,
+        IReadOnlyList<IWorldEvent> events)
+    {
+        var names = simulation?.Entities?.ToDictionary(
+            entity => entity.EntityId,
+            entity => entity.Name) ?? new Dictionary<EntityId, string>();
+        foreach (var character in PlayerCharacters(events))
+        {
+            names[character.EntityId] = character.Name;
+        }
+        return names;
+    }
+
+    private static IReadOnlyList<(EntityId Id, string Name)> CharacterOptions(
+        WorldSimulationDefinition? simulation,
+        IReadOnlyList<PlayerCharacterRegistered> playerCharacters,
+        IReadOnlyDictionary<EntityId, string> entityNames) =>
+        (simulation?.Npcs ?? Array.Empty<NpcSimulationDefinition>())
+            .Select(npc => (
+                npc.EntityId,
+                entityNames.GetValueOrDefault(
+                    npc.EntityId,
+                    npc.EntityId.ToString())))
+            .Concat(playerCharacters.Select(character => (
+                character.EntityId,
+                character.Name)))
+            .OrderBy(character => character.Item2, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private static string Slug(string value)
+    {
+        var normalized = value.Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder();
+        var separatorPending = false;
+        foreach (var character in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character) ==
+                UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+            if (char.IsLetterOrDigit(character))
+            {
+                if (separatorPending && builder.Length > 0)
+                {
+                    builder.Append('-');
+                }
+                builder.Append(char.ToLowerInvariant(character));
+                separatorPending = false;
+            }
+            else
+            {
+                separatorPending = true;
+            }
+        }
+        return builder.Length > 0 ? builder.ToString() : "personaggio";
     }
 
     private static FactId[] AvailableFacts(

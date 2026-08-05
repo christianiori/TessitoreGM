@@ -1222,6 +1222,48 @@
       "data": {
         "occurredAt": "2026-08-08T21:00:00\u002B00:00"
       }
+    },
+    {
+      "type": "player-character-registered",
+      "data": {
+        "entityId": {
+          "value": "pc:christian"
+        },
+        "name": "Christian",
+        "occurredAt": "2026-08-08T21:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "pc:christian"
+        },
+        "locationId": {
+          "value": "market"
+        },
+        "occurredAt": "2026-08-08T21:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "entity-entered-location",
+      "data": {
+        "entityId": {
+          "value": "pc:christian"
+        },
+        "locationId": {
+          "value": "farmstead"
+        },
+        "occurredAt": "2026-08-08T21:00:00\u002B00:00"
+      }
+    },
+    {
+      "type": "player-action-recorded",
+      "data": {
+        "actor": "Christian",
+        "description": "Ruba le monete a Brina",
+        "occurredAt": "2026-08-08T21:00:00\u002B00:00"
+      }
     }
   ],
   "simulation": {
