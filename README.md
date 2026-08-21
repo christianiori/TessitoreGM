@@ -24,7 +24,7 @@ PC. La prima versione è accessibile soltanto dal computer che la esegue.
 
 La dashboard mostra:
 
-- ora ed eventi del mondo;
+- ora, clima ed eventi del mondo;
 - selezione e creazione delle campagne senza riavviare il server;
 - posizione, denaro, scorte e bisogni degli NPC;
 - conoscenze personali;
@@ -43,6 +43,8 @@ La dashboard mostra:
   trasferimenti motivati di monete con gli NPC;
 - acquisizione, perdita e trasferimento motivato delle risorse possedute.
 - cronaca completa della campagna con riepilogo oggettivo e vista stampabile.
+- ciclo climatico giornaliero deterministico, persistente e narrato nelle viste
+  del GM e dei giocatori.
 
 I salvataggi creati dall'interfaccia usano il suffisso `.save.json` e non
 vengono inclusi nei commit Git.
@@ -50,7 +52,7 @@ vengono inclusi nei commit Git.
 ### Vista del giocatore
 
 Ogni scheda PG nel Tavolo del GM contiene il collegamento **Apri vista
-giocatore**. La pagina separata mostra soltanto nome, luogo, monete, risorse,
+giocatore**. La pagina separata mostra soltanto nome, luogo, clima, monete, risorse,
 conoscenze del PG, personaggi compresenti ed eventi recenti osservabili. Non
 espone controlli del GM, cronaca globale o informazioni fuori scena.
 

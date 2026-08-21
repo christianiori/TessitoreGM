@@ -48,7 +48,8 @@ public sealed record D20Roll(
 public sealed record WorldInitialState(
     DateTimeOffset CurrentTime,
     IReadOnlyList<EntityBalance> Balances,
-    IReadOnlyList<EntityResourceStock>? ResourceStocks = null);
+    IReadOnlyList<EntityResourceStock>? ResourceStocks = null,
+    WeatherCondition Weather = WeatherCondition.Clear);
 
 public sealed record EntityBalance(
     EntityId EntityId,

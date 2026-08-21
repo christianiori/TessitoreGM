@@ -15,6 +15,8 @@ public sealed class WorldSnapshot
     private readonly IReadOnlyDictionary<NeedStateKey, int> _needs;
     private readonly IReadOnlyDictionary<NeedStateKey, DateTimeOffset>
         _lastNeedIncreases;
+    private readonly WeatherCondition _weather;
+    private readonly DateTimeOffset? _lastWeatherChangedAt;
 
     private WorldSnapshot(
         DateTimeOffset currentTime,
@@ -27,7 +29,9 @@ public sealed class WorldSnapshot
         IReadOnlyDictionary<ResourceStockKey, int>? resourceStocks = null,
         IReadOnlyDictionary<NeedStateKey, int>? needs = null,
         IReadOnlyDictionary<NeedStateKey, DateTimeOffset>?
-            lastNeedIncreases = null)
+            lastNeedIncreases = null,
+        WeatherCondition weather = WeatherCondition.Clear,
+        DateTimeOffset? lastWeatherChangedAt = null)
     {
         CurrentTime = currentTime;
         _entityLocations = entityLocations;
@@ -41,6 +45,8 @@ public sealed class WorldSnapshot
         _needs = needs ?? new Dictionary<NeedStateKey, int>();
         _lastNeedIncreases = lastNeedIncreases ??
             new Dictionary<NeedStateKey, DateTimeOffset>();
+        _weather = weather;
+        _lastWeatherChangedAt = lastWeatherChangedAt;
     }
 
     public static WorldSnapshot Empty { get; } =
@@ -65,7 +71,8 @@ public sealed class WorldSnapshot
     public static WorldSnapshot Create(
         DateTimeOffset currentTime,
         IReadOnlyDictionary<EntityId, int> balances,
-        IReadOnlyList<EntityResourceStock> resourceStocks)
+        IReadOnlyList<EntityResourceStock> resourceStocks,
+        WeatherCondition weather = WeatherCondition.Clear)
     {
         ArgumentNullException.ThrowIfNull(balances);
         ArgumentNullException.ThrowIfNull(resourceStocks);
@@ -82,6 +89,11 @@ public sealed class WorldSnapshot
                 nameof(resourceStocks));
         }
 
+        if (!Enum.IsDefined(weather))
+        {
+            throw new ArgumentOutOfRangeException(nameof(weather));
+        }
+
         var stocks = resourceStocks.ToDictionary(
             stock => new ResourceStockKey(stock.EntityId, stock.ResourceId),
             stock => stock.Quantity);
@@ -92,10 +104,15 @@ public sealed class WorldSnapshot
             new Dictionary<OrderId, Order>(),
             new Dictionary<EntityId, int>(balances),
             new Dictionary<ItemId, WorldItem>(),
-            resourceStocks: stocks);
+            resourceStocks: stocks,
+            weather: weather);
     }
 
     public DateTimeOffset CurrentTime { get; }
+
+    public WeatherCondition Weather => _weather;
+
+    public DateTimeOffset? LastWeatherChangedAt => _lastWeatherChangedAt;
 
     public LocationId? GetLocation(EntityId entityId) =>
         _entityLocations.TryGetValue(entityId, out var locationId)
@@ -148,7 +165,7 @@ public sealed class WorldSnapshot
             [worldEvent.EntityId] = worldEvent.LocationId
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases, _weather, _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(EntityLeftLocation worldEvent)
@@ -165,7 +182,7 @@ public sealed class WorldSnapshot
         var entityLocations = new Dictionary<EntityId, LocationId>(_entityLocations);
         entityLocations.Remove(worldEvent.EntityId);
 
-        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
+        return new WorldSnapshot(worldEvent.OccurredAt, entityLocations, _orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases, _weather, _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(OrderRequested worldEvent)
@@ -204,7 +221,7 @@ public sealed class WorldSnapshot
                 DeliveredAt: null)
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases, _weather, _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(OrderAccepted worldEvent)
@@ -241,7 +258,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, _balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases, _weather, _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(PaymentTransferred worldEvent)
@@ -297,7 +314,7 @@ public sealed class WorldSnapshot
             }
         };
 
-        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases);
+        return new WorldSnapshot(worldEvent.OccurredAt, _entityLocations, orders, balances, _items, _sharedFacts, _trustChanges, _resourceStocks, _needs, _lastNeedIncreases, _weather, _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(CoinsTransferred worldEvent)
@@ -345,7 +362,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(OrderWorkStarted worldEvent)
@@ -379,7 +398,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(OrderCompleted worldEvent)
@@ -429,7 +450,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(OrderDelivered worldEvent)
@@ -481,7 +504,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(FactShared worldEvent)
@@ -510,7 +535,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public bool HasSharedFact(
@@ -538,7 +565,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(TrustChanged worldEvent)
@@ -594,7 +623,9 @@ public sealed class WorldSnapshot
             trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public int GetTrust(EntityId subjectId, EntityId otherEntityId) =>
@@ -680,7 +711,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(NeedIncreased worldEvent)
@@ -720,7 +753,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             needs,
-            lastNeedIncreases);
+            lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(ResourceConsumed worldEvent)
@@ -773,7 +808,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             stocks,
             needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(ResourceProduced worldEvent)
@@ -814,7 +851,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             stocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(ResourceAcquired worldEvent)
@@ -894,6 +933,39 @@ public sealed class WorldSnapshot
         return WithResourceStocks(worldEvent.OccurredAt, stocks);
     }
 
+    public WorldSnapshot Apply(WeatherChanged worldEvent)
+    {
+        ArgumentNullException.ThrowIfNull(worldEvent);
+        EnsureChronological(worldEvent);
+
+        if (!Enum.IsDefined(worldEvent.Condition))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(worldEvent),
+                "The weather condition is not defined.");
+        }
+
+        if (worldEvent.Condition == _weather)
+        {
+            throw new InvalidOperationException(
+                $"Weather is already '{worldEvent.Condition}'.");
+        }
+
+        return new WorldSnapshot(
+            worldEvent.OccurredAt,
+            _entityLocations,
+            _orders,
+            _balances,
+            _items,
+            _sharedFacts,
+            _trustChanges,
+            _resourceStocks,
+            _needs,
+            _lastNeedIncreases,
+            worldEvent.Condition,
+            worldEvent.OccurredAt);
+    }
+
     public WorldSnapshot Apply(WorldTimeAdvanced worldEvent)
     {
         ArgumentNullException.ThrowIfNull(worldEvent);
@@ -915,7 +987,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(PlayerActionRecorded worldEvent)
@@ -933,7 +1007,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     public WorldSnapshot Apply(PlayerCharacterRegistered worldEvent)
@@ -951,7 +1027,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             _resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
     }
 
     private void EnsureChronological(IWorldEvent worldEvent)
@@ -992,7 +1070,9 @@ public sealed class WorldSnapshot
             _trustChanges,
             resourceStocks,
             _needs,
-            _lastNeedIncreases);
+            _lastNeedIncreases,
+            _weather,
+            _lastWeatherChangedAt);
 
     private readonly record struct SharedFact(
         EntityId SpeakerId,

@@ -114,6 +114,15 @@ public sealed class DeterministicNarrator
                 $"{playerAction.Actor}: {playerAction.Description}",
             PlayerCharacterRegistered playerCharacter =>
                 $"{playerCharacter.Name} entra nella campagna.",
+            WeatherChanged weather => weather.Condition switch
+            {
+                WeatherCondition.Clear => "Il cielo torna sereno.",
+                WeatherCondition.Cloudy => "Il cielo si copre di nuvole.",
+                WeatherCondition.Rain => "Comincia a piovere.",
+                WeatherCondition.Storm => "Sul territorio si abbatte una tempesta.",
+                _ => throw new NotSupportedException(
+                    $"Weather condition '{weather.Condition}' cannot be narrated.")
+            },
             WorldTimeAdvanced =>
                 "Il tempo del mondo avanza.",
             _ => throw new NotSupportedException(

@@ -7,7 +7,12 @@ public sealed record WorldSimulationDefinition(
     IReadOnlyList<EntityPresentationDefinition>? Entities = null,
     IReadOnlyList<LocationPresentationDefinition>? Locations = null,
     IReadOnlyList<ResourcePresentationDefinition>? Resources = null,
-    IReadOnlyList<NeedPresentationDefinition>? Needs = null);
+    IReadOnlyList<NeedPresentationDefinition>? Needs = null,
+    DailyWeatherCycleDefinition? WeatherCycle = null);
+
+public sealed record DailyWeatherCycleDefinition(
+    TimeSpan TimeOfDay,
+    IReadOnlyList<WeatherCondition> Conditions);
 
 public sealed record EntityPresentationDefinition(
     EntityId EntityId,

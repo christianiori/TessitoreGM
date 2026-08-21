@@ -381,9 +381,15 @@ Internet.
 
 ## Milestone 8 — World Pressure
 
-**Stato: futuro**
+**Stato: in corso — fondazione climatica implementata, collaudo richiesto**
 
-- [ ] Clima
+- [x] Clima
+  - [x] Stato climatico persistente nel mondo
+  - [x] Ciclo giornaliero configurabile e deterministico
+  - [x] Cambiamenti registrati come eventi e ricostruibili dal replay
+  - [x] Narrazione del cambiamento climatico
+  - [x] Clima corrente ed eventi visibili al GM e ai giocatori
+  - [x] Copertura automatica di ciclo, persistenza e determinismo
 - [ ] Scarsità
 - [ ] Agricoltura
 - [ ] Crimine
@@ -409,8 +415,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Provare il ciclo completo con due browser e poi da smartphone sulla rete
-locale. Il codice personale per ogni PG resta intenzionalmente rinviato.
+Collaudare il clima avanzando il mondo di più giorni dal Tavolo del GM e
+verificando la stessa sequenza dopo il riavvio. Poi collegare pioggia e tempesta
+alla produzione delle risorse, introducendo la prima pressione di scarsità.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

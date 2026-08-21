@@ -23,7 +23,8 @@ public sealed class WorldCampaignTemplate
                     balance => balance.EntityId,
                     balance => balance.Amount),
                 source.InitialWorld.ResourceStocks ??
-                    Array.Empty<EntityResourceStock>()),
+                    Array.Empty<EntityResourceStock>(),
+                source.InitialWorld.Weather),
             initialEvents);
 
         return new WorldEventLog(

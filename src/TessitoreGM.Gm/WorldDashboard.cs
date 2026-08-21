@@ -258,6 +258,7 @@ internal static class WorldDashboard
             content.Append(Metric(
                 "Monete",
                 world.GetBalance(character.EntityId).ToString()));
+            content.Append(Metric("Clima", WeatherLabel(world.Weather)));
             content.Append(Metric("Ora del mondo", world.CurrentTime.ToString(
                 "dd MMM yyyy · HH:mm")));
             content.Append("</section><section class=\"player-action-box\"><div class=\"section-heading\"><p class=\"eyebrow\">La tua azione</p><h2>Cosa vuoi fare?</h2></div><form method=\"post\" action=\"/player/");
@@ -1054,6 +1055,7 @@ internal static class WorldDashboard
         content.Append("</select><label for=\"player-description\">Azione</label><textarea id=\"player-description\" name=\"description\" maxlength=\"500\" rows=\"3\" placeholder=\"Convince la guardia ad aprire il cancello.\" required></textarea><button type=\"submit\">Registra nella cronaca</button></form></section>");
         content.Append("<main><section class=\"world-strip\">");
         content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
+        content.Append(Metric("Clima", WeatherLabel(world.Weather)));
         content.Append(Metric("Eventi registrati", eventLog.Events.Count.ToString()));
         content.Append(Metric("Personaggi attivi", ((simulation?.Npcs.Count ?? 0) + playerCharacters.Count).ToString()));
         content.Append("</section><section><div class=\"section-heading\"><p class=\"eyebrow\">Presenze</p><h2>Personaggi</h2></div><div class=\"npc-grid\">");
@@ -1278,6 +1280,7 @@ internal static class WorldDashboard
                 action.Actor.Equals(
                     character.Name,
                     StringComparison.OrdinalIgnoreCase),
+            WeatherChanged => true,
             _ => false
         });
 
@@ -1413,7 +1416,8 @@ internal static class WorldDashboard
             eventLog.InitialWorld.CurrentTime,
             balances,
             eventLog.InitialWorld.ResourceStocks ??
-                Array.Empty<EntityResourceStock>());
+                Array.Empty<EntityResourceStock>(),
+            eventLog.InitialWorld.Weather);
         return new WorldEventProcessor().Replay(initialWorld, eventLog.Events);
     }
 
@@ -1454,6 +1458,15 @@ internal static class WorldDashboard
 
     private static string Metric(string label, string value) =>
         $"<article><span>{Encode(label)}</span><strong>{Encode(value)}</strong></article>";
+    private static string WeatherLabel(WeatherCondition condition) =>
+        condition switch
+        {
+            WeatherCondition.Clear => "Sereno",
+            WeatherCondition.Cloudy => "Nuvoloso",
+            WeatherCondition.Rain => "Pioggia",
+            WeatherCondition.Storm => "Tempesta",
+            _ => condition.ToString()
+        };
     private static string Stat(string label, string value) =>
         $"<div><span>{Encode(label)}</span><strong>{Encode(value)}</strong></div>";
     private static string Page(string title, string content) =>

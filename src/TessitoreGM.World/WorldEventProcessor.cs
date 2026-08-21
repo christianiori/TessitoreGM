@@ -32,6 +32,7 @@ public sealed class WorldEventProcessor
             ResourceTransferred transferred => world.Apply(transferred),
             PlayerActionRecorded playerAction => world.Apply(playerAction),
             PlayerCharacterRegistered playerCharacter => world.Apply(playerCharacter),
+            WeatherChanged weatherChanged => world.Apply(weatherChanged),
             WorldTimeAdvanced timeAdvanced => world.Apply(timeAdvanced),
             _ => throw new NotSupportedException(
                 $"World event '{worldEvent.GetType().Name}' is not supported.")

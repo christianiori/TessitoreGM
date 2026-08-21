@@ -25,9 +25,18 @@ public sealed class ConfiguredWorldSimulator
             eventLog.InitialWorld.CurrentTime,
             balances,
             eventLog.InitialWorld.ResourceStocks ??
-                Array.Empty<EntityResourceStock>());
+                Array.Empty<EntityResourceStock>(),
+            eventLog.InitialWorld.Weather);
         var memoryEngine = new MemoryEngine();
-        var rules = simulation.Npcs.Select(npc =>
+        var rules = new List<IWorldRule>();
+        if (simulation.WeatherCycle is { } weatherCycle)
+        {
+            rules.Add(new DailyWeatherCycleRule(
+                weatherCycle.TimeOfDay,
+                weatherCycle.Conditions));
+        }
+
+        rules.AddRange(simulation.Npcs.Select(npc =>
         {
             var memory = memoryEngine.Replay(
                 npc.EntityId,
@@ -44,7 +53,7 @@ public sealed class ConfiguredWorldSimulator
                 npc.Role,
                 memory,
                 CreateBehaviors(npc));
-        }).ToArray();
+        }));
 
         return new WorldSimulator(rules).Advance(world, until);
     }

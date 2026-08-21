@@ -2,6 +2,7 @@
   "version": 2,
   "initialWorld": {
     "currentTime": "2026-08-03T06:00:00+00:00",
+    "weather": "Clear",
     "balances": [
       {
         "entityId": {
@@ -1297,6 +1298,15 @@
     }
   ],
   "simulation": {
+    "weatherCycle": {
+      "timeOfDay": "06:00:00",
+      "conditions": [
+        "Clear",
+        "Cloudy",
+        "Rain",
+        "Storm"
+      ]
+    },
     "npcs": [
       {
         "entityId": {

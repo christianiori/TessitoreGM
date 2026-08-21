@@ -21,6 +21,7 @@ public sealed class WorldEventJsonSerializer
 
         ValidateBalances(eventLog.InitialWorld.Balances);
         ValidateResourceStocks(eventLog.InitialWorld.ResourceStocks);
+        ValidateWeather(eventLog.InitialWorld.Weather);
         ValidateSimulation(eventLog.Simulation);
         ValidatePlayerActions(eventLog.PlayerActions);
 
@@ -83,6 +84,7 @@ public sealed class WorldEventJsonSerializer
 
         ValidateBalances(document.InitialWorld.Balances);
         ValidateResourceStocks(document.InitialWorld.ResourceStocks);
+        ValidateWeather(document.InitialWorld.Weather);
         ValidateSimulation(document.Simulation);
         ValidatePlayerActions(document.PlayerActions);
 
@@ -147,6 +149,15 @@ public sealed class WorldEventJsonSerializer
         {
             throw new InvalidDataException(
                 "Initial resource stocks contain duplicate entries.");
+        }
+    }
+
+    private static void ValidateWeather(WeatherCondition weather)
+    {
+        if (!Enum.IsDefined(weather))
+        {
+            throw new InvalidDataException(
+                "The initial weather condition is invalid.");
         }
     }
 
@@ -245,6 +256,20 @@ public sealed class WorldEventJsonSerializer
             throw new InvalidDataException(
                 "The world simulation contains invalid need names.");
         }
+
+        if (simulation.WeatherCycle is { } weatherCycle &&
+            (weatherCycle.TimeOfDay < TimeSpan.Zero ||
+             weatherCycle.TimeOfDay >= TimeSpan.FromDays(1) ||
+             weatherCycle.Conditions is null ||
+             weatherCycle.Conditions.Count < 2 ||
+             weatherCycle.Conditions.Distinct().Count() !=
+                 weatherCycle.Conditions.Count ||
+             weatherCycle.Conditions.Any(condition =>
+                 !Enum.IsDefined(condition))))
+        {
+            throw new InvalidDataException(
+                "The world simulation contains an invalid weather cycle.");
+        }
     }
 
     private static IWorldEvent DeserializeEvent(PersistedEvent persistedEvent)
@@ -274,6 +299,7 @@ public sealed class WorldEventJsonSerializer
                 "resource-transferred" => Deserialize<ResourceTransferred>(persistedEvent.Data),
                 "player-action-recorded" => Deserialize<PlayerActionRecorded>(persistedEvent.Data),
                 "player-character-registered" => Deserialize<PlayerCharacterRegistered>(persistedEvent.Data),
+                "weather-changed" => Deserialize<WeatherChanged>(persistedEvent.Data),
                 "world-time-advanced" => Deserialize<WorldTimeAdvanced>(persistedEvent.Data),
                 _ => throw new InvalidDataException(
                     $"World event type '{persistedEvent.Type}' is not supported.")
@@ -316,6 +342,7 @@ public sealed class WorldEventJsonSerializer
         ResourceTransferred => "resource-transferred",
         PlayerActionRecorded => "player-action-recorded",
         PlayerCharacterRegistered => "player-character-registered",
+        WeatherChanged => "weather-changed",
         WorldTimeAdvanced => "world-time-advanced",
         _ => throw new NotSupportedException(
             $"World event '{worldEvent.GetType().Name}' is not supported.")

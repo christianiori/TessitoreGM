@@ -543,7 +543,8 @@ static WorldSnapshot CreateInitialWorld(WorldEventLog eventLog)
         eventLog.InitialWorld.CurrentTime,
         balances,
         eventLog.InitialWorld.ResourceStocks ??
-            Array.Empty<EntityResourceStock>());
+            Array.Empty<EntityResourceStock>(),
+        eventLog.InitialWorld.Weather);
 }
 
 static void SaveEventLog(string path, WorldEventLog eventLog)
