@@ -21,6 +21,7 @@ var actionToken = Guid.NewGuid().ToString("N");
 var playerInteractionToken = Guid.NewGuid().ToString("N");
 var worldLock = new SemaphoreSlim(1, 1);
 PendingWorldAdvance? pendingAdvance = null;
+string? focusedScene = null;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
@@ -100,7 +101,8 @@ app.MapGet("/", () => Results.Content(
         activeWorldFile,
         actionToken,
         campaignCatalog.Discover(),
-        pendingAdvance),
+        pendingAdvance,
+        focusedScene),
     "text/html; charset=utf-8"));
 app.MapGet("/chronicle", () => Results.Content(
     WorldDashboard.RenderChronicle(activeWorldFile),
@@ -132,6 +134,7 @@ app.MapPost("/campaign/select", async (HttpContext context) =>
         activeWorldFile = campaignCatalog.Select(
             form["campaign"].ToString());
         pendingAdvance = null;
+        focusedScene = null;
         playerAccessGate.RevokeAll();
     }
     catch (ArgumentException exception)
@@ -166,6 +169,7 @@ app.MapPost("/campaign/create", async (HttpContext context) =>
             form["name"].ToString(),
             templatePath);
         pendingAdvance = null;
+        focusedScene = null;
         playerAccessGate.RevokeAll();
     }
     catch (ArgumentException exception)
@@ -178,6 +182,27 @@ app.MapPost("/campaign/create", async (HttpContext context) =>
     }
 
     return Results.Redirect("/");
+});
+app.MapPost("/scene/focus", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        var scene = form["scene"].ToString().Trim();
+        focusedScene = string.IsNullOrEmpty(scene) ? null : scene;
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/#scene-focus");
 });
 app.MapPost("/advance", async (HttpContext context) =>
 {

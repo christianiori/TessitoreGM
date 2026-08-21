@@ -357,6 +357,8 @@ d'uso reale li renderà necessari.
 - [x] Aggiornamento manuale affidabile su PC e smartphone
 - [x] Aggiornamento automatico senza perdere un'azione in scrittura
 - [x] Stato chiaro dell'azione: in attesa, tiro richiesto, risolta o rifiutata
+- [x] Messa a fuoco di un luogo nella vista del GM
+- [x] Personaggi presenti e cronaca filtrati sulla scena scelta
 - [ ] Interfaccia mobile utilizzabile durante una sessione reale
 
 ### 7.5 — Sicurezza e prova di accettazione
@@ -420,9 +422,9 @@ da progettare insieme a scarsità e agricoltura.
 
 ## Prossimo passo
 
-Collaudare l'aggiornamento automatico della vista giocatore durante una sessione
-reale e poi introdurre strumenti pratici per organizzare e seguire la scena del
-GM, senza aggiungere ancora nuove pressioni economiche al mondo.
+Collaudare aggiornamento automatico e messa a fuoco della scena durante una
+sessione reale. Poi aggiungere strumenti rapidi del GM per agire sui personaggi
+già presenti, senza nuove pressioni economiche sul mondo.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

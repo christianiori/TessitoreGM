@@ -75,7 +75,8 @@ internal static class WorldDashboard
         string worldFile,
         string actionToken,
         IReadOnlyList<CampaignEntry> campaigns,
-        PendingWorldAdvance? pendingAdvance)
+        PendingWorldAdvance? pendingAdvance,
+        string? focusedScene)
     {
         try
         {
@@ -84,7 +85,8 @@ internal static class WorldDashboard
                     worldFile,
                     actionToken,
                     campaigns,
-                    pendingAdvance)
+                    pendingAdvance,
+                    focusedScene)
                 : RenderMissingWorld(
                     worldFile,
                     actionToken,
@@ -922,7 +924,8 @@ internal static class WorldDashboard
         string worldFile,
         string actionToken,
         IReadOnlyList<CampaignEntry> campaigns,
-        PendingWorldAdvance? pendingAdvance)
+        PendingWorldAdvance? pendingAdvance,
+        string? focusedScene)
     {
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             File.ReadAllText(worldFile));
@@ -939,8 +942,25 @@ internal static class WorldDashboard
         var needNames = simulation?.Needs?.ToDictionary(
             need => need.NeedId,
             need => need.Name) ?? new Dictionary<NeedId, string>();
+        var focusedLocationDefinition = simulation?.Locations?.FirstOrDefault(
+            location => location.LocationId.ToString() == focusedScene);
+        var focusedLocation = focusedLocationDefinition?.LocationId;
+        var displayedNpcs = (simulation?.Npcs ??
+                Array.Empty<NpcSimulationDefinition>())
+            .Where(npc =>
+                focusedLocation is not LocationId locationId ||
+                world.GetLocation(npc.EntityId) == locationId)
+            .ToArray();
+        var displayedPlayers = playerCharacters
+            .Where(character =>
+                focusedLocation is not LocationId locationId ||
+                world.GetLocation(character.EntityId) == locationId)
+            .ToArray();
+        var narratedEvents = focusedLocation is LocationId sceneLocation
+            ? EventsInLocation(eventLog, sceneLocation, entityNames)
+            : eventLog.Events;
         var narration = new DeterministicNarrator().Narrate(
-            eventLog.Events,
+            narratedEvents,
             new NarrationContext(entityNames, locationNames, resourceNames, needNames));
         var content = new StringBuilder();
 
@@ -949,6 +969,13 @@ internal static class WorldDashboard
             worldFile,
             actionToken,
             campaigns));
+        content.Append(RenderSceneFocus(
+            simulation?.Locations ??
+                Array.Empty<LocationPresentationDefinition>(),
+            focusedLocationDefinition,
+            displayedNpcs.Length + displayedPlayers.Length,
+            world,
+            actionToken));
         content.Append(RenderPlayerActionQueue(
             eventLog,
             playerCharacters,
@@ -1076,10 +1103,20 @@ internal static class WorldDashboard
         content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
         content.Append(Metric("Clima", WeatherLabel(world.Weather)));
         content.Append(Metric("Eventi registrati", eventLog.Events.Count.ToString()));
-        content.Append(Metric("Personaggi attivi", ((simulation?.Npcs.Count ?? 0) + playerCharacters.Count).ToString()));
-        content.Append("</section><section><div class=\"section-heading\"><p class=\"eyebrow\">Presenze</p><h2>Personaggi</h2></div><div class=\"npc-grid\">");
+        content.Append(Metric(
+            focusedLocation is null ? "Personaggi attivi" : "Presenti nella scena",
+            (displayedNpcs.Length + displayedPlayers.Length).ToString()));
+        content.Append("</section><section><div class=\"section-heading\"><p class=\"eyebrow\">Presenze</p><h2>");
+        content.Append(focusedLocationDefinition is null
+            ? "Personaggi"
+            : $"Personaggi in {Encode(focusedLocationDefinition.Name)}");
+        content.Append("</h2></div><div class=\"npc-grid\">");
+        if (displayedNpcs.Length + displayedPlayers.Length == 0)
+        {
+            content.Append("<p class=\"empty-copy\">Nessun personaggio è presente in questa scena.</p>");
+        }
 
-        foreach (var npc in simulation?.Npcs ?? Array.Empty<NpcSimulationDefinition>())
+        foreach (var npc in displayedNpcs)
         {
             var name = entityNames.GetValueOrDefault(npc.EntityId, npc.EntityId.ToString());
             var location = world.GetLocation(npc.EntityId);
@@ -1116,7 +1153,7 @@ internal static class WorldDashboard
             content.Append("</div></article>");
         }
 
-        foreach (var character in playerCharacters)
+        foreach (var character in displayedPlayers)
         {
             var location = world.GetLocation(character.EntityId);
             var locationName = location is LocationId locationId
@@ -1148,16 +1185,163 @@ internal static class WorldDashboard
             content.Append($"<a class=\"player-view-link\" href=\"/player/{Uri.EscapeDataString(character.EntityId.ToString())}\">Anteprima vista giocatore</a></article>");
         }
 
-        content.Append("</div></section><section class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro</p><h2>Ultimi avvenimenti</h2></div><ol>");
+        content.Append("</div></section><section class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro</p><h2>");
+        content.Append(focusedLocationDefinition is null
+            ? "Ultimi avvenimenti"
+            : $"Cronaca di {Encode(focusedLocationDefinition.Name)}");
+        content.Append("</h2></div><ol>");
         foreach (var line in narration.TakeLast(12).Reverse())
         {
             content.Append($"<li><time>{Encode(line.OccurredAt.ToString("dd/MM · HH:mm"))}</time><p>{Encode(line.Text)}</p></li>");
+        }
+
+        if (narration.Count == 0)
+        {
+            content.Append("<li><p>Nessun avvenimento registrato per questa scena.</p></li>");
         }
 
         content.Append("</ol></section></main><footer><span>Salvataggio</span>");
         content.Append($"<code>{Encode(worldFile)}</code></footer>");
         return Page("Tavolo del GM", content.ToString());
     }
+
+    private static string RenderSceneFocus(
+        IReadOnlyList<LocationPresentationDefinition> locations,
+        LocationPresentationDefinition? focusedLocation,
+        int presentCharacters,
+        WorldSnapshot world,
+        string actionToken)
+    {
+        if (locations.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var content = new StringBuilder();
+        content.Append("<section id=\"scene-focus\" class=\"scene-focus\"><div><p class=\"eyebrow\">Scena del GM</p>");
+        if (focusedLocation is null)
+        {
+            content.Append("<h2>Vista globale</h2><p>Stai osservando tutti i luoghi e l'intera cronaca del mondo.</p>");
+        }
+        else
+        {
+            content.Append($"<h2>{Encode(focusedLocation.Name)}</h2><p><strong>{presentCharacters}</strong> personaggi presenti · {Encode(WeatherLabel(world.Weather))} · {Encode(world.CurrentTime.ToString("HH:mm"))}. Schede e cronaca sono filtrate su questo luogo.</p>");
+        }
+
+        content.Append("</div><form method=\"post\" action=\"/scene/focus\">");
+        content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label for=\"focused-scene\">Luogo in primo piano</label><select id=\"focused-scene\" name=\"scene\">");
+        content.Append($"<option value=\"\"{(focusedLocation is null ? " selected" : string.Empty)}>Tutto il mondo</option>");
+        foreach (var location in locations.OrderBy(
+            location => location.Name,
+            StringComparer.OrdinalIgnoreCase))
+        {
+            var selected = focusedLocation?.LocationId == location.LocationId
+                ? " selected"
+                : string.Empty;
+            content.Append($"<option value=\"{Encode(location.LocationId.ToString())}\"{selected}>{Encode(location.Name)}</option>");
+        }
+
+        content.Append("</select><button type=\"submit\">Metti a fuoco</button></form></section>");
+        return content.ToString();
+    }
+
+    private static IReadOnlyList<IWorldEvent> EventsInLocation(
+        WorldEventLog eventLog,
+        LocationId locationId,
+        IReadOnlyDictionary<EntityId, string> entityNames)
+    {
+        var balances = eventLog.InitialWorld.Balances.ToDictionary(
+            balance => balance.EntityId,
+            balance => balance.Amount);
+        var world = WorldSnapshot.Create(
+            eventLog.InitialWorld.CurrentTime,
+            balances,
+            eventLog.InitialWorld.ResourceStocks ??
+                Array.Empty<EntityResourceStock>(),
+            eventLog.InitialWorld.Weather);
+        var processor = new WorldEventProcessor();
+        var localEvents = new List<IWorldEvent>();
+
+        foreach (var worldEvent in eventLog.Events)
+        {
+            if (OccursInLocation(
+                world,
+                worldEvent,
+                locationId,
+                entityNames))
+            {
+                localEvents.Add(worldEvent);
+            }
+
+            world = processor.Apply(world, worldEvent);
+        }
+
+        return localEvents;
+    }
+
+    private static bool OccursInLocation(
+        WorldSnapshot world,
+        IWorldEvent worldEvent,
+        LocationId locationId,
+        IReadOnlyDictionary<EntityId, string> entityNames) =>
+        worldEvent switch
+        {
+            WeatherChanged => true,
+            EntityEnteredLocation entered =>
+                entered.LocationId == locationId,
+            EntityLeftLocation left => left.LocationId == locationId,
+            ResourceProduced produced => produced.LocationId == locationId,
+            PlayerActionRecorded action => entityNames.Any(entity =>
+                entity.Value.Equals(
+                    action.Actor,
+                    StringComparison.OrdinalIgnoreCase) &&
+                world.GetLocation(entity.Key) == locationId),
+            _ => EventEntities(world, worldEvent).Any(entityId =>
+                world.GetLocation(entityId) == locationId)
+        };
+
+    private static IReadOnlyList<EntityId> EventEntities(
+        WorldSnapshot world,
+        IWorldEvent worldEvent) =>
+        worldEvent switch
+        {
+            OrderRequested requested =>
+                new[] { requested.CustomerId, requested.ArtisanId },
+            OrderAccepted accepted =>
+                OrderParticipants(world, accepted.OrderId),
+            PaymentTransferred payment =>
+                new[] { payment.PayerId, payment.PayeeId },
+            CoinsTransferred coins =>
+                new[] { coins.PayerId, coins.PayeeId },
+            OrderWorkStarted started =>
+                OrderParticipants(world, started.OrderId),
+            OrderCompleted completed =>
+                OrderParticipants(world, completed.OrderId),
+            OrderDelivered delivered =>
+                OrderParticipants(world, delivered.OrderId),
+            FactShared shared =>
+                new[] { shared.SpeakerId, shared.ListenerId },
+            FactRevealed revealed => new[] { revealed.EntityId },
+            TrustChanged trust =>
+                new[] { trust.SubjectId, trust.OtherEntityId },
+            TradeCompleted trade =>
+                new[] { trade.BuyerId, trade.SellerId },
+            NeedIncreased need => new[] { need.EntityId },
+            ResourceConsumed consumed => new[] { consumed.EntityId },
+            ResourceAcquired acquired => new[] { acquired.EntityId },
+            ResourceLost lost => new[] { lost.EntityId },
+            ResourceTransferred transferred =>
+                new[] { transferred.SourceId, transferred.DestinationId },
+            PlayerCharacterRegistered player => new[] { player.EntityId },
+            _ => Array.Empty<EntityId>()
+        };
+
+    private static IReadOnlyList<EntityId> OrderParticipants(
+        WorldSnapshot world,
+        OrderId orderId) =>
+        world.GetOrder(orderId) is { } order
+            ? new[] { order.CustomerId, order.ArtisanId }
+            : Array.Empty<EntityId>();
 
     private static string RenderPlayerActionQueue(
         WorldEventLog eventLog,
