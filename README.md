@@ -7,6 +7,10 @@ TessitoreGM è un motore open source di simulazione per Game Master basato su mo
 Il progetto comprende un kernel di simulazione persistente e una prima
 interfaccia locale per il Game Master.
 
+## Requisiti
+
+- .NET 8 SDK
+
 ## Provare il Tavolo del GM
 
 Da PowerShell, nella cartella del repository:

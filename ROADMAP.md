@@ -365,8 +365,8 @@ d'uso reale li renderà necessari.
 - [ ] Un giocatore non può leggere conoscenze o cronache riservate
 - [x] Un giocatore non può alterare, ripetere o sostituire un tiro registrato
 - [x] Chiusura o riavvio non perde le azioni in attesa
-- [ ] Prova completa con due browser: uno GM e uno giocatore
-- [ ] Prova completa dalla rete locale con uno smartphone
+- [x] Prova completa con due browser: uno GM e uno giocatore
+- [x] Prova completa dalla rete locale con uno smartphone
 
 ### Definition of Done
 
