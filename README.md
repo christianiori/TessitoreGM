@@ -32,6 +32,8 @@ La dashboard mostra:
   un altro luogo tramite eventi persistenti;
 - conseguenze rapide nella scena per monete, risorse e conoscenze, limitate ai
   personaggi effettivamente presenti;
+- navigazione mobile fissa tra scena, azioni, presenti e registro, con gli
+  strumenti completi del GM raccolti in un pannello richiudibile;
 - posizione, denaro, scorte e bisogni degli NPC;
 - conoscenze personali;
 - controllo per avanzare il mondo di 1, 6 o 24 ore, applicando le regole

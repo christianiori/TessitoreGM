@@ -1003,6 +1003,10 @@ internal static class WorldDashboard
             eventLog,
             playerCharacters,
             actionToken));
+        var toolboxClass = pendingAdvance is null
+            ? "gm-toolbox"
+            : "gm-toolbox has-preview";
+        content.Append($"<details id=\"gm-toolbox\" class=\"{toolboxClass}\" open><summary><span>Strumenti completi del GM</span><small>Personaggi, tempo e conseguenze avanzate</small></summary><div class=\"gm-toolbox-content\">");
         content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Compagnia</p><h2>Personaggi giocanti</h2><p>Aggiungi un personaggio controllato dai giocatori. Il motore non prenderÃ  decisioni al suo posto.</p></div><form method=\"post\" action=\"/player-character\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"player-name\">Nome</label><input id=\"player-name\" name=\"name\" maxlength=\"80\" placeholder=\"Arianna\" required><button type=\"submit\">Aggiungi personaggio</button></form></section>");
@@ -1118,7 +1122,7 @@ internal static class WorldDashboard
         {
             content.Append($"<option value=\"{Encode(character.EntityId.ToString())}\">{Encode(character.Name)}</option>");
         }
-        content.Append("</select><label for=\"player-description\">Azione</label><textarea id=\"player-description\" name=\"description\" maxlength=\"500\" rows=\"3\" placeholder=\"Convince la guardia ad aprire il cancello.\" required></textarea><button type=\"submit\">Registra nella cronaca</button></form></section>");
+        content.Append("</select><label for=\"player-description\">Azione</label><textarea id=\"player-description\" name=\"description\" maxlength=\"500\" rows=\"3\" placeholder=\"Convince la guardia ad aprire il cancello.\" required></textarea><button type=\"submit\">Registra nella cronaca</button></form></section></div></details>");
         content.Append("<main><section class=\"world-strip\">");
         content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
         content.Append(Metric("Clima", WeatherLabel(world.Weather)));
@@ -1126,7 +1130,7 @@ internal static class WorldDashboard
         content.Append(Metric(
             focusedLocation is null ? "Personaggi attivi" : "Presenti nella scena",
             (displayedNpcs.Length + displayedPlayers.Length).ToString()));
-        content.Append("</section><section><div class=\"section-heading\"><p class=\"eyebrow\">Presenze</p><h2>");
+        content.Append("</section><section id=\"characters\"><div class=\"section-heading\"><p class=\"eyebrow\">Presenze</p><h2>");
         content.Append(focusedLocationDefinition is null
             ? "Personaggi"
             : $"Personaggi in {Encode(focusedLocationDefinition.Name)}");
@@ -1205,7 +1209,7 @@ internal static class WorldDashboard
             content.Append($"<a class=\"player-view-link\" href=\"/player/{Uri.EscapeDataString(character.EntityId.ToString())}\">Anteprima vista giocatore</a></article>");
         }
 
-        content.Append("</div></section><section class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro</p><h2>");
+        content.Append("</div></section><section id=\"world-log\" class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro</p><h2>");
         content.Append(focusedLocationDefinition is null
             ? "Ultimi avvenimenti"
             : $"Cronaca di {Encode(focusedLocationDefinition.Name)}");
@@ -1220,8 +1224,9 @@ internal static class WorldDashboard
             content.Append("<li><p>Nessun avvenimento registrato per questa scena.</p></li>");
         }
 
-        content.Append("</ol></section></main><footer><span>Salvataggio</span>");
+        content.Append("</ol></section></main><nav class=\"gm-mobile-nav\" aria-label=\"Navigazione del Tavolo del GM\"><a href=\"#scene-focus\">Scena</a><a href=\"#gm-actions\">Azioni</a><a href=\"#characters\">Presenti</a><a href=\"#world-log\">Registro</a></nav><footer><span>Salvataggio</span>");
         content.Append($"<code>{Encode(worldFile)}</code></footer>");
+        content.Append("<script>(()=>{const box=document.getElementById('gm-toolbox');if(box&&window.matchMedia('(max-width:800px)').matches&&!box.classList.contains('has-preview'))box.open=false;})();</script>");
         return Page("Tavolo del GM", content.ToString());
     }
 
@@ -1546,7 +1551,7 @@ internal static class WorldDashboard
             character => character.EntityId,
             character => character.Name);
         var content = new StringBuilder();
-        content.Append("<section class=\"gm-action-queue\"><div class=\"section-heading\"><p class=\"eyebrow\">Giocatori</p><h2>Azioni in attesa</h2></div>");
+        content.Append("<section id=\"gm-actions\" class=\"gm-action-queue\"><div class=\"section-heading\"><p class=\"eyebrow\">Giocatori</p><h2>Azioni in attesa</h2></div>");
         if (activeActions.Length == 0)
         {
             content.Append("<div class=\"player-panel\"><p>Nessuna azione attende una decisione.</p></div></section>");
