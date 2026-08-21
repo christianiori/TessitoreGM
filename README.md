@@ -60,9 +60,11 @@ normale, con vantaggio o svantaggio, e infine approvare o rifiutare l'azione
 scrivendone l'esito. Ogni richiesta produce un solo tiro generato sul server;
 risultato ed esito sopravvivono alla chiusura dell'applicazione.
 
-In questa prima versione la pagina usa ancora la protezione LAN generale del
-Tavolo. Il codice temporaneo personale per ogni PG è rinviato a un passaggio
-successivo.
+Il Game Master genera dalla scheda del PG un codice personale monouso di otto
+cifre. Il giocatore sceglie **Accedi al tuo personaggio** nella pagina iniziale
+e inserisce quel codice: la sessione risultante può aprire soltanto il PG
+autorizzato e non consente l'accesso al Tavolo del GM o alla cronaca globale.
+La generazione di un nuovo codice revoca il precedente accesso del PG.
 
 ### Usare il Tavolo dallo smartphone
 
@@ -74,9 +76,10 @@ dotnet run --project src/TessitoreGM.Gm -- village.json --lan
 ```
 
 Il terminale mostra l'indirizzo da aprire sul telefono e un codice temporaneo
-di otto cifre. Il codice cambia a ogni avvio, la sessione scade dopo dodici ore
-e cinque tentativi errati bloccano gli accessi per un minuto. Senza `--lan`, il
-Tavolo resta accessibile soltanto dal computer locale.
+di otto cifre riservato al Game Master. Il codice cambia a ogni avvio, la
+sessione scade dopo dodici ore e cinque tentativi errati bloccano gli accessi
+per un minuto. I giocatori usano invece il proprio codice monouso generato dal
+GM. Senza `--lan`, il Tavolo resta accessibile soltanto dal computer locale.
 
 Windows potrebbe chiedere una volta l'autorizzazione per la rete privata. Non
 abilitare l'accesso sulle reti pubbliche.

@@ -18,7 +18,24 @@ internal static class WorldDashboard
         (error
             ? "<p class=\"login-error\">Codice non valido o accesso temporaneamente bloccato.</p>"
             : string.Empty) +
-        "<form method=\"post\" action=\"/login\"><label for=\"access-code\">Codice di accesso</label><input id=\"access-code\" name=\"accessCode\" inputmode=\"numeric\" autocomplete=\"one-time-code\" pattern=\"[0-9]{8}\" maxlength=\"8\" required autofocus><button type=\"submit\">Accedi</button></form></section></main>");
+        "<form method=\"post\" action=\"/login\"><label for=\"access-code\">Codice di accesso GM</label><input id=\"access-code\" name=\"accessCode\" inputmode=\"numeric\" autocomplete=\"one-time-code\" pattern=\"[0-9]{8}\" maxlength=\"8\" required autofocus><button type=\"submit\">Accedi come GM</button></form><a class=\"login-switch\" href=\"/player-login\">Sei un giocatore? Accedi al tuo personaggio</a></section></main>");
+
+    public static string RenderPlayerLogin(bool error) => Page(
+        "Accesso del giocatore",
+        "<main class=\"login-shell\"><section class=\"login-card\"><p class=\"eyebrow\">TessitoreGM</p><h1>Entra in scena.</h1><p>Inserisci il codice monouso che il Game Master ha generato per il tuo personaggio.</p>" +
+        (error
+            ? "<p class=\"login-error\">Codice non valido, già utilizzato o accesso temporaneamente bloccato.</p>"
+            : string.Empty) +
+        "<form method=\"post\" action=\"/player-login\"><label for=\"player-access-code\">Codice del personaggio</label><input id=\"player-access-code\" name=\"accessCode\" inputmode=\"numeric\" autocomplete=\"one-time-code\" pattern=\"[0-9]{8}\" maxlength=\"8\" required autofocus><button type=\"submit\">Accedi al personaggio</button></form><a class=\"login-switch\" href=\"/login\">Torna all'accesso del GM</a></section></main>");
+
+    public static string RenderPlayerAccessCode(
+        string playerName,
+        string accessCode) => Page(
+        "Codice del giocatore",
+        "<main class=\"empty-state access-code-page\"><p class=\"eyebrow\">Accesso personale</p>" +
+        $"<h1>{Encode(playerName)}</h1><p>Comunica questo codice al giocatore. È monouso, resta valido fino all'accesso e sostituisce ogni precedente sessione del personaggio.</p>" +
+        $"<strong class=\"access-code\">{Encode(accessCode)}</strong>" +
+        "<p>Il giocatore deve aprire l'indirizzo del Tavolo, scegliere <strong>Accedi al tuo personaggio</strong> e inserire il codice.</p><a class=\"button\" href=\"/\">Torna al Tavolo del GM</a></main>");
 
     public static string ResolveWorldFile(
         string[] args,
@@ -665,6 +682,18 @@ internal static class WorldDashboard
         Save(worldFile, serializer, updatedLog);
     }
 
+    public static string PlayerCharacterName(
+        string worldFile,
+        string entityValue)
+    {
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var character = PlayerCharacters(eventLog.Events).FirstOrDefault(
+            candidate => candidate.EntityId.ToString() == entityValue);
+        return character?.Name ?? throw new ArgumentException(
+            "Personaggio giocante non valido.");
+    }
+
     public static void SubmitPlayerAction(
         string worldFile,
         string entityValue,
@@ -1091,7 +1120,11 @@ internal static class WorldDashboard
                 ? "<p>Nessuna informazione nota.</p>"
                 : $"<p>{string.Join(" · ", knownFacts.Select(fact => Encode(fact.ToString())))}</p>");
             content.Append("</div>");
-            content.Append($"<a class=\"player-view-link\" href=\"/player/{Uri.EscapeDataString(character.EntityId.ToString())}\">Apri vista giocatore</a></article>");
+            content.Append("<form class=\"player-access-form\" method=\"post\" action=\"/player-access\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
+            content.Append($"<input type=\"hidden\" name=\"entity\" value=\"{Encode(character.EntityId.ToString())}\">");
+            content.Append("<button class=\"secondary\" type=\"submit\">Genera codice giocatore</button></form>");
+            content.Append($"<a class=\"player-view-link\" href=\"/player/{Uri.EscapeDataString(character.EntityId.ToString())}\">Anteprima vista giocatore</a></article>");
         }
 
         content.Append("</div></section><section class=\"chronicle\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro</p><h2>Ultimi avvenimenti</h2></div><ol>");

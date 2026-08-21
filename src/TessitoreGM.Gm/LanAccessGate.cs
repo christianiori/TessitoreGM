@@ -7,7 +7,7 @@ namespace TessitoreGM.Gm;
 
 internal sealed class LanAccessGate
 {
-    private const string CookieName = "tessitoregm_session";
+    private const string CookieName = "tessitoregm_gm_session";
     private readonly TemporaryAccessCredential _credential = new();
 
     public LanAccessGate(bool enabled)

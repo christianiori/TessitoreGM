@@ -288,7 +288,7 @@ principali senza richiedere conoscenze tecniche del motore.
 
 ## Milestone 7 — Player Table
 
-**Stato: in corso — ciclo di gioco completato, accesso personale rinviato**
+**Stato: in corso — ciclo di gioco e accesso personale implementati, collaudo finale richiesto**
 
 Obiettivo: rendere la campagna giocabile fuori dal pannello di controllo del
 GM, mantenendo il GM come autorità e senza mostrare ai giocatori informazioni
@@ -297,8 +297,8 @@ che i loro personaggi non possiedono.
 ### 7.1 — Accesso e punto di vista del PG
 
 - [x] Pagina giocatore separata dal Tavolo del GM
-- [ ] Codice o collegamento temporaneo associato a un solo PG *(rinviato)*
-- [ ] Selezione del PG autorizzata dal GM *(rinviata)*
+- [x] Codice o collegamento temporaneo associato a un solo PG
+- [x] Selezione del PG autorizzata dal GM
 - [x] Scheda essenziale con nome, posizione, monete e risorse
 - [x] Mostrare soltanto le conoscenze possedute dal PG
 - [x] Mostrare personaggi presenti nello stesso luogo
@@ -360,9 +360,9 @@ d'uso reale li renderà necessari.
 
 ### 7.5 — Sicurezza e prova di accettazione
 
-- [ ] Un giocatore non può impersonare un altro PG
+- [x] Un giocatore non può impersonare un altro PG
 - [x] Un giocatore non può inviare eventi direttamente al motore
-- [ ] Un giocatore non può leggere conoscenze o cronache riservate
+- [x] Un giocatore non può leggere conoscenze o cronache riservate
 - [x] Un giocatore non può alterare, ripetere o sostituire un tiro registrato
 - [x] Chiusura o riavvio non perde le azioni in attesa
 - [x] Prova completa con due browser: uno GM e uno giocatore

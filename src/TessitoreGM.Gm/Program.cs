@@ -13,6 +13,7 @@ var port = portArgument is null
         : throw new ArgumentException(
             "La porta deve essere un numero compreso tra 1024 e 65535.");
 var accessGate = new LanAccessGate(lanEnabled);
+var playerAccessGate = new PlayerAccessGate();
 var activeWorldFile = WorldDashboard.ResolveWorldFile(args, launchDirectory);
 var campaignCatalog = new CampaignCatalog(
     Path.GetDirectoryName(activeWorldFile) ?? launchDirectory);
@@ -26,7 +27,9 @@ var app = builder.Build();
 app.Use(async (context, next) =>
 {
     if (accessGate.IsPublicPath(context.Request.Path) ||
-        accessGate.IsAuthorized(context))
+        playerAccessGate.IsPublicPath(context.Request.Path) ||
+        accessGate.IsAuthorized(context) ||
+        playerAccessGate.IsAuthorizedRequest(context))
     {
         await next();
         return;
@@ -34,6 +37,15 @@ app.Use(async (context, next) =>
 
     if (HttpMethods.IsGet(context.Request.Method))
     {
+        if (playerAccessGate.TryGetAuthorizedEntity(
+            context,
+            out var authorizedPlayer))
+        {
+            context.Response.Redirect(
+                $"/player/{Uri.EscapeDataString(authorizedPlayer.ToString())}");
+            return;
+        }
+
         context.Response.Redirect("/login");
         return;
     }
@@ -59,6 +71,28 @@ app.MapPost("/login", async (HttpContext context) =>
     context.Response.ContentType = "text/html; charset=utf-8";
     await context.Response.WriteAsync(
         WorldDashboard.RenderLogin(error: true));
+});
+
+app.MapGet("/player-login", () => Results.Content(
+    WorldDashboard.RenderPlayerLogin(error: false),
+    "text/html; charset=utf-8"));
+app.MapPost("/player-login", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (playerAccessGate.TrySignIn(
+        form["accessCode"].ToString(),
+        context.Response,
+        out var entityId))
+    {
+        context.Response.Redirect(
+            $"/player/{Uri.EscapeDataString(entityId.ToString())}");
+        return;
+    }
+
+    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.WriteAsync(
+        WorldDashboard.RenderPlayerLogin(error: true));
 });
 
 app.MapGet("/", () => Results.Content(
@@ -91,6 +125,7 @@ app.MapPost("/campaign/select", async (HttpContext context) =>
         activeWorldFile = campaignCatalog.Select(
             form["campaign"].ToString());
         pendingAdvance = null;
+        playerAccessGate.RevokeAll();
     }
     catch (ArgumentException exception)
     {
@@ -124,6 +159,7 @@ app.MapPost("/campaign/create", async (HttpContext context) =>
             form["name"].ToString(),
             templatePath);
         pendingAdvance = null;
+        playerAccessGate.RevokeAll();
     }
     catch (ArgumentException exception)
     {
@@ -317,6 +353,37 @@ app.MapPost("/player-character", async (HttpContext context) =>
     }
 
     return Results.Redirect("/");
+});
+app.MapPost("/player-access", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        var entityId = form["entity"].ToString();
+        var playerName = WorldDashboard.PlayerCharacterName(
+            activeWorldFile,
+            entityId);
+        var accessCode = playerAccessGate.IssueCode(entityId);
+        return Results.Content(
+            WorldDashboard.RenderPlayerAccessCode(
+                playerName,
+                accessCode),
+            "text/html; charset=utf-8");
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
 });
 app.MapPost("/coins/transfer", async (HttpContext context) =>
 {
@@ -516,7 +583,7 @@ Console.WriteLine($"Mondo iniziale: {activeWorldFile}");
 Console.WriteLine($"Apri sul PC: http://localhost:{port}");
 if (lanEnabled)
 {
-    Console.WriteLine($"Codice di accesso: {accessGate.AccessCode}");
+    Console.WriteLine($"Codice di accesso GM: {accessGate.AccessCode}");
     foreach (var address in LanAccessGate.LocalAddresses())
     {
         Console.WriteLine($"Apri sul telefono: http://{address}:{port}");
