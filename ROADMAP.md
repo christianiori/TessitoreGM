@@ -361,6 +361,9 @@ d'uso reale li renderà necessari.
 - [x] Personaggi presenti e cronaca filtrati sulla scena scelta
 - [x] Azione rapida per portare un personaggio nella scena
 - [x] Azione rapida per spostare un presente in un altro luogo
+- [x] Trasferimento rapido di monete tra personaggi presenti
+- [x] Acquisizione o perdita rapida di risorse nella scena
+- [x] Rivelazione rapida di conoscenze a un personaggio presente
 - [ ] Interfaccia mobile utilizzabile durante una sessione reale
 
 ### 7.5 — Sicurezza e prova di accettazione
@@ -424,9 +427,9 @@ da progettare insieme a scarsità e agricoltura.
 
 ## Prossimo passo
 
-Collaudare aggiornamento automatico, messa a fuoco e gestione rapida dei
-presenti durante una sessione reale. Poi rendere accessibili dalla scena le
-conseguenze più comuni, senza duplicare i controlli completi del Tavolo.
+Collaudare aggiornamento automatico, messa a fuoco, movimenti e conseguenze
+rapide durante una sessione reale. Poi rifinire la disposizione mobile del
+Tavolo del GM senza introdurre nuovi sistemi di simulazione.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.
