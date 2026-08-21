@@ -28,6 +28,8 @@ La dashboard mostra:
 - selezione e creazione delle campagne senza riavviare il server;
 - messa a fuoco di un luogo come scena corrente del GM, filtrando personaggi
   presenti e cronaca locale senza modificare lo stato del mondo;
+- azioni rapide per portare personaggi nella scena selezionata o spostarli in
+  un altro luogo tramite eventi persistenti;
 - posizione, denaro, scorte e bisogni degli NPC;
 - conoscenze personali;
 - controllo per avanzare il mondo di 1, 6 o 24 ore, applicando le regole

@@ -945,6 +945,10 @@ internal static class WorldDashboard
         var focusedLocationDefinition = simulation?.Locations?.FirstOrDefault(
             location => location.LocationId.ToString() == focusedScene);
         var focusedLocation = focusedLocationDefinition?.LocationId;
+        var allCharacters = CharacterOptions(
+            simulation,
+            playerCharacters,
+            entityNames);
         var displayedNpcs = (simulation?.Npcs ??
                 Array.Empty<NpcSimulationDefinition>())
             .Where(npc =>
@@ -974,6 +978,13 @@ internal static class WorldDashboard
                 Array.Empty<LocationPresentationDefinition>(),
             focusedLocationDefinition,
             displayedNpcs.Length + displayedPlayers.Length,
+            world,
+            actionToken));
+        content.Append(RenderSceneCastActions(
+            allCharacters,
+            simulation?.Locations ??
+                Array.Empty<LocationPresentationDefinition>(),
+            focusedLocationDefinition,
             world,
             actionToken));
         content.Append(RenderPlayerActionQueue(
@@ -1063,12 +1074,12 @@ internal static class WorldDashboard
         content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Conseguenze</p><h2>Trasferisci monete</h2><p>Registra un passaggio di denaro motivato tra due personaggi.</p></div><form method=\"post\" action=\"/coins/transfer\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"coin-payer\">Da</label><select id=\"coin-payer\" name=\"payer\">");
-        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        foreach (var entity in allCharacters)
         {
             content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
         }
         content.Append("</select><label for=\"coin-payee\">A</label><select id=\"coin-payee\" name=\"payee\">");
-        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        foreach (var entity in allCharacters)
         {
             content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
         }
@@ -1076,12 +1087,12 @@ internal static class WorldDashboard
         content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Conseguenze</p><h2>Gestisci una risorsa</h2><p>Registra un'acquisizione, una perdita o un trasferimento motivato.</p></div><form method=\"post\" action=\"/resources/change\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"resource-operation\">Operazione</label><select id=\"resource-operation\" name=\"operation\"><option value=\"acquire\">Acquisisce</option><option value=\"lose\">Perde</option><option value=\"transfer\">Trasferisce</option></select><label for=\"resource-entity\">Personaggio</label><select id=\"resource-entity\" name=\"entity\">");
-        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        foreach (var entity in allCharacters)
         {
             content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
         }
         content.Append("</select><label for=\"resource-destination\">Destinatario</label><select id=\"resource-destination\" name=\"destination\">");
-        foreach (var entity in CharacterOptions(simulation, playerCharacters, entityNames))
+        foreach (var entity in allCharacters)
         {
             content.Append($"<option value=\"{Encode(entity.Id.ToString())}\">{Encode(entity.Name)}</option>");
         }
@@ -1242,6 +1253,78 @@ internal static class WorldDashboard
         }
 
         content.Append("</select><button type=\"submit\">Metti a fuoco</button></form></section>");
+        return content.ToString();
+    }
+
+    private static string RenderSceneCastActions(
+        IReadOnlyList<(EntityId Id, string Name)> characters,
+        IReadOnlyList<LocationPresentationDefinition> locations,
+        LocationPresentationDefinition? focusedLocation,
+        WorldSnapshot world,
+        string actionToken)
+    {
+        if (focusedLocation is null)
+        {
+            return string.Empty;
+        }
+
+        var present = characters
+            .Where(character =>
+                world.GetLocation(character.Id) == focusedLocation.LocationId)
+            .ToArray();
+        var outside = characters
+            .Where(character =>
+                world.GetLocation(character.Id) != focusedLocation.LocationId)
+            .ToArray();
+        var destinations = locations
+            .Where(location =>
+                location.LocationId != focusedLocation.LocationId)
+            .OrderBy(location =>
+                location.Name,
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var content = new StringBuilder();
+        content.Append("<section class=\"scene-cast\"><div class=\"section-heading\"><p class=\"eyebrow\">Azioni rapide</p><h2>Organizza i presenti</h2></div><div class=\"scene-cast-grid\">");
+
+        if (outside.Length == 0)
+        {
+            content.Append("<div class=\"scene-cast-empty\"><h3>Porta in scena</h3><p>Tutti i personaggi sono già presenti.</p></div>");
+        }
+        else
+        {
+            content.Append("<form method=\"post\" action=\"/move\"><h3>Porta in scena</h3>");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"location\" value=\"{Encode(focusedLocation.LocationId.ToString())}\"><label for=\"scene-add-character\">Personaggio</label><select id=\"scene-add-character\" name=\"entity\">");
+            foreach (var character in outside)
+            {
+                content.Append($"<option value=\"{Encode(character.Id.ToString())}\">{Encode(character.Name)}</option>");
+            }
+
+            content.Append("</select><button type=\"submit\">Porta qui</button></form>");
+        }
+
+        if (present.Length == 0 || destinations.Length == 0)
+        {
+            content.Append("<div class=\"scene-cast-empty\"><h3>Sposta altrove</h3><p>Non ci sono spostamenti disponibili.</p></div>");
+        }
+        else
+        {
+            content.Append("<form method=\"post\" action=\"/move\"><h3>Sposta altrove</h3>");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label for=\"scene-remove-character\">Personaggio</label><select id=\"scene-remove-character\" name=\"entity\">");
+            foreach (var character in present)
+            {
+                content.Append($"<option value=\"{Encode(character.Id.ToString())}\">{Encode(character.Name)}</option>");
+            }
+
+            content.Append("</select><label for=\"scene-destination\">Destinazione</label><select id=\"scene-destination\" name=\"location\">");
+            foreach (var destination in destinations)
+            {
+                content.Append($"<option value=\"{Encode(destination.LocationId.ToString())}\">{Encode(destination.Name)}</option>");
+            }
+
+            content.Append("</select><button type=\"submit\" class=\"secondary\">Sposta</button></form>");
+        }
+
+        content.Append("</div></section>");
         return content.ToString();
     }
 
