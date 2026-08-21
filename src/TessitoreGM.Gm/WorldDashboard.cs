@@ -175,8 +175,9 @@ internal static class WorldDashboard
     {
         try
         {
+            var serializedWorld = File.ReadAllText(worldFile);
             var eventLog = new WorldEventJsonSerializer().Deserialize(
-                File.ReadAllText(worldFile));
+                serializedWorld);
             var world = Replay(eventLog);
             var simulation = eventLog.Simulation;
             var playerCharacters = PlayerCharacters(eventLog.Events);
@@ -249,10 +250,11 @@ internal static class WorldDashboard
                     locationNames,
                     resourceNames,
                     needNames));
+            var viewVersion = ContentVersion(serializedWorld);
             var content = new StringBuilder();
 
             content.Append("<header class=\"player-hero\"><div><p class=\"eyebrow\">Tavolo del giocatore</p>");
-            content.Append($"<h1>{Encode(character.Name)}</h1><p class=\"lede\">Ciò che il tuo personaggio può osservare e ricordare, adesso.</p></div><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></header>");
+            content.Append($"<h1>{Encode(character.Name)}</h1><p class=\"lede\">Ciò che il tuo personaggio può osservare e ricordare, adesso.</p></div><div class=\"player-live-controls\"><span class=\"live-status\"><i></i>Sincronizzazione attiva</span><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna ora</button></div></header>");
             content.Append("<main class=\"player-view\"><section class=\"world-strip player-summary\">");
             content.Append(Metric("Luogo", locationName));
             content.Append(Metric(
@@ -310,6 +312,9 @@ internal static class WorldDashboard
             }
             content.Append("</ol></section></main><footer><span>Campagna</span>");
             content.Append($"<code>{Encode(Path.GetFileName(worldFile))}</code></footer>");
+            content.Append(PlayerLiveUpdate(
+                character.EntityId,
+                viewVersion));
             return Page(character.Name, content.ToString());
         }
         catch (Exception exception) when (
@@ -320,6 +325,20 @@ internal static class WorldDashboard
                 "Personaggio non disponibile",
                 $"<main class=\"empty-state\"><p class=\"eyebrow\">Tavolo del giocatore</p><h1>Non riesco ad aprire questo personaggio.</h1><p>{Encode(exception.Message)}</p></main>");
         }
+    }
+
+    public static string PlayerViewVersion(
+        string worldFile,
+        string entityValue)
+    {
+        var serializedWorld = File.ReadAllText(worldFile);
+        var eventLog = new WorldEventJsonSerializer().Deserialize(
+            serializedWorld);
+        _ = PlayerCharacters(eventLog.Events).FirstOrDefault(character =>
+            character.EntityId.ToString() == entityValue)
+            ?? throw new ArgumentException(
+                "Il personaggio giocante richiesto non esiste.");
+        return ContentVersion(serializedWorld);
     }
 
     public static PendingWorldAdvance PreviewAdvance(
@@ -1467,6 +1486,20 @@ internal static class WorldDashboard
             WeatherCondition.Storm => "Tempesta",
             _ => condition.ToString()
         };
+    private static string PlayerLiveUpdate(
+        EntityId entityId,
+        string viewVersion)
+    {
+        var endpoint = "/player/" +
+            Uri.EscapeDataString(entityId.ToString()) +
+            "/version";
+        return "<aside id=\"player-update\" class=\"player-update\" hidden><p><strong>Il mondo è cambiato.</strong> Hai del testo non inviato, quindi la pagina non è stata aggiornata.</p><button id=\"apply-player-update\" type=\"button\">Mostra le novità</button></aside>" +
+            "<script>(()=>{const endpoint='" + endpoint +
+            "';const loaded='" + Encode(viewVersion) +
+            "';const draft=document.getElementById('proposed-action');const notice=document.getElementById('player-update');const apply=document.getElementById('apply-player-update');let checking=false;async function check(){if(checking||document.hidden)return;checking=true;try{const response=await fetch(endpoint,{cache:'no-store',headers:{Accept:'application/json'}});if(!response.ok)return;const state=await response.json();if(state.version===loaded)return;if(draft&&(!draft.value.trim()&&document.activeElement!==draft)){location.reload();return;}notice.hidden=false;}catch{}finally{checking=false;}}apply.addEventListener('click',()=>location.reload());window.setInterval(check,5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});})();</script>";
+    }
+    private static string ContentVersion(string content) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
     private static string Stat(string label, string value) =>
         $"<div><span>{Encode(label)}</span><strong>{Encode(value)}</strong></div>";
     private static string Page(string title, string content) =>

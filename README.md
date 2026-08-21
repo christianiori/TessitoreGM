@@ -62,6 +62,10 @@ normale, con vantaggio o svantaggio, e infine approvare o rifiutare l'azione
 scrivendone l'esito. Ogni richiesta produce un solo tiro generato sul server;
 risultato ed esito sopravvivono alla chiusura dell'applicazione.
 
+La vista controlla automaticamente ogni cinque secondi se il mondo è cambiato.
+Se il giocatore non sta scrivendo, mostra subito le novità; se esiste una bozza
+non inviata, la conserva e propone un aggiornamento manuale.
+
 Il Game Master genera dalla scheda del PG un codice personale monouso di otto
 cifre. Il giocatore sceglie **Accedi al tuo personaggio** nella pagina iniziale
 e inserisce quel codice: la sessione risultante può aprire soltanto il PG

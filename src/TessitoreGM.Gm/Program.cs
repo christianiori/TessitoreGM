@@ -111,6 +111,13 @@ app.MapGet("/player/{entityId}", (string entityId) => Results.Content(
         entityId,
         playerInteractionToken),
     "text/html; charset=utf-8"));
+app.MapGet("/player/{entityId}/version", (string entityId) =>
+    Results.Json(new
+    {
+        version = WorldDashboard.PlayerViewVersion(
+            activeWorldFile,
+            entityId)
+    }));
 app.MapPost("/campaign/select", async (HttpContext context) =>
 {
     var form = await context.Request.ReadFormAsync();

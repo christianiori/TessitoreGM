@@ -355,6 +355,7 @@ d'uso reale li renderà necessari.
 - [x] Eventi recenti osservabili dal PG
 - [x] Narrazione deterministica dei fatti visibili
 - [x] Aggiornamento manuale affidabile su PC e smartphone
+- [x] Aggiornamento automatico senza perdere un'azione in scrittura
 - [x] Stato chiaro dell'azione: in attesa, tiro richiesto, risolta o rifiutata
 - [ ] Interfaccia mobile utilizzabile durante una sessione reale
 
@@ -399,6 +400,10 @@ Internet.
 Questi sistemi vengono introdotti soltanto quando il piccolo mondo, le routine
 e le conseguenze persistenti funzionano già.
 
+Decisione di progetto: il clima resta per ora uno stato autonomo e narrativo.
+I suoi effetti su produzione, raccolti e scorte appartengono a una fase avanzata
+da progettare insieme a scarsità e agricoltura.
+
 ## Milestone 9 — Framework and 1.0
 
 **Stato: futuro**
@@ -415,9 +420,9 @@ e le conseguenze persistenti funzionano già.
 
 ## Prossimo passo
 
-Collaudare il clima avanzando il mondo di più giorni dal Tavolo del GM e
-verificando la stessa sequenza dopo il riavvio. Poi collegare pioggia e tempesta
-alla produzione delle risorse, introducendo la prima pressione di scarsità.
+Collaudare l'aggiornamento automatico della vista giocatore durante una sessione
+reale e poi introdurre strumenti pratici per organizzare e seguire la scena del
+GM, senza aggiungere ancora nuove pressioni economiche al mondo.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.
