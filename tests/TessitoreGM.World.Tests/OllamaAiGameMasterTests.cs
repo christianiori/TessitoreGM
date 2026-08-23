@@ -101,6 +101,21 @@ public sealed class OllamaAiGameMasterTests
             WeatherCondition.Clear,
             []),
         new AiGmMemoryDossier([], []),
+        new AiGmAuthorizedPerspective(
+            DateTimeOffset.Parse("2026-08-23T09:00:00Z"),
+            WeatherCondition.Clear,
+            new AiGmPerspectivePlayer(
+                new EntityId("player"),
+                "Ada",
+                0,
+                []),
+            new AiGmPerspectiveScene(
+                null,
+                null,
+                []),
+            [],
+            [],
+            []),
         AiGmInvariants.Rules);
 
     private sealed class StubHandler(
