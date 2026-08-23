@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using TessitoreGM.AiGm;
 using TessitoreGM.Gm;
 
 var launchDirectory = Directory.GetCurrentDirectory();
@@ -26,6 +27,8 @@ var activeWorldFile = explicitWorldFile
         AppContext.BaseDirectory);
 var campaignCatalog = new CampaignCatalog(
     Path.GetDirectoryName(activeWorldFile) ?? launchDirectory);
+var aiGmSettingsStore = new AiGmModeSettingsStore(
+    StandaloneWorkspace.ResolveAiGmSettingsFile(activeWorldFile));
 var actionToken = Guid.NewGuid().ToString("N");
 var playerInteractionToken = Guid.NewGuid().ToString("N");
 var worldLock = new SemaphoreSlim(1, 1);
@@ -111,7 +114,8 @@ app.MapGet("/", () => Results.Content(
         actionToken,
         campaignCatalog.Discover(),
         pendingAdvance,
-        focusedScene),
+        focusedScene,
+        aiGmSettingsStore.Get(activeWorldFile)),
     "text/html; charset=utf-8"));
 app.MapGet("/chronicle", () => Results.Content(
     WorldDashboard.RenderChronicle(activeWorldFile),
@@ -224,6 +228,36 @@ app.MapPost("/campaign/restore-backup", async (HttpContext context) =>
     }
 
     return Results.Redirect("/");
+});
+app.MapPost("/ai-gm/mode", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    var enabledValue = form["enabled"].ToString();
+    if (form["token"] != actionToken ||
+        enabledValue is not ("true" or "false"))
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        aiGmSettingsStore.SetEnabled(
+            activeWorldFile,
+            enabled: enabledValue == "true");
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/#ai-gm-mode");
 });
 app.MapPost("/scene/focus", async (HttpContext context) =>
 {

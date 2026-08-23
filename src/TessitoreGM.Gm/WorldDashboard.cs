@@ -77,7 +77,8 @@ internal static class WorldDashboard
         string actionToken,
         IReadOnlyList<CampaignEntry> campaigns,
         PendingWorldAdvance? pendingAdvance,
-        string? focusedScene)
+        string? focusedScene,
+        AiGmCampaignModeSettings aiGmSettings)
     {
         try
         {
@@ -87,7 +88,8 @@ internal static class WorldDashboard
                     actionToken,
                     campaigns,
                     pendingAdvance,
-                    focusedScene)
+                    focusedScene,
+                    aiGmSettings)
                 : RenderMissingWorld(
                     worldFile,
                     actionToken,
@@ -975,7 +977,8 @@ internal static class WorldDashboard
         string actionToken,
         IReadOnlyList<CampaignEntry> campaigns,
         PendingWorldAdvance? pendingAdvance,
-        string? focusedScene)
+        string? focusedScene,
+        AiGmCampaignModeSettings aiGmSettings)
     {
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             File.ReadAllText(worldFile));
@@ -1028,6 +1031,7 @@ internal static class WorldDashboard
             worldFile,
             actionToken,
             campaigns));
+        content.Append(RenderAiGmMode(aiGmSettings, actionToken));
         content.Append(RenderSceneFocus(
             simulation?.Locations ??
                 Array.Empty<LocationPresentationDefinition>(),
@@ -1589,6 +1593,41 @@ internal static class WorldDashboard
         world.GetOrder(orderId) is { } order
             ? new[] { order.CustomerId, order.ArtisanId }
             : Array.Empty<EntityId>();
+
+    private static string RenderAiGmMode(
+        AiGmCampaignModeSettings settings,
+        string actionToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var enabledLabel = settings.Enabled
+            ? "Modalità AI selezionata"
+            : "GM umano";
+        var providerLabel = settings.ProviderConfigured
+            ? $"{settings.ProviderId} · {settings.Model}"
+            : "Nessun fornitore collegato";
+        var explanation = settings.Enabled
+            ? settings.ProviderConfigured
+                ? "Le nuove azioni potranno essere affidate al Game Master AI."
+                : "La modalità è predisposta, ma le azioni restano al GM umano finché non viene collegato un fornitore."
+            : "Tessitore non invia azioni a servizi IA. Memoria e regole restano comunque nei salvataggi locali.";
+        var nextEnabled = settings.Enabled ? "false" : "true";
+        var buttonLabel = settings.Enabled
+            ? "Torna al GM umano"
+            : "Seleziona modalità AI";
+        var buttonClass = settings.Enabled ? "secondary" : string.Empty;
+
+        return "<section id=\"ai-gm-mode\" class=\"ai-mode-panel\">" +
+            "<div><p class=\"eyebrow\">Modalità di conduzione</p>" +
+            $"<h2>{Encode(enabledLabel)}</h2>" +
+            $"<p>{Encode(explanation)}</p>" +
+            $"<span class=\"ai-provider-status\">{Encode(providerLabel)}</span>" +
+            "</div><form method=\"post\" action=\"/ai-gm/mode\">" +
+            $"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">" +
+            $"<input type=\"hidden\" name=\"enabled\" value=\"{nextEnabled}\">" +
+            $"<button type=\"submit\" class=\"{buttonClass}\">{Encode(buttonLabel)}</button>" +
+            "</form></section>";
+    }
 
     private static string RenderAiGmConfirmationQueue(
         WorldEventLog eventLog,

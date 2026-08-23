@@ -50,6 +50,32 @@ internal static class StandaloneWorkspace
         return campaignPath;
     }
 
+    public static string ResolveAiGmSettingsFile(string campaignPath)
+    {
+        if (string.IsNullOrWhiteSpace(campaignPath))
+        {
+            throw new ArgumentException(
+                "The campaign path cannot be empty.",
+                nameof(campaignPath));
+        }
+
+        var campaignDirectory = new DirectoryInfo(
+            Path.GetDirectoryName(Path.GetFullPath(campaignPath))
+                ?? throw new ArgumentException(
+                    "The campaign has no parent directory.",
+                    nameof(campaignPath)));
+        var applicationDirectory = campaignDirectory.Name.Equals(
+            CampaignDirectoryName,
+            StringComparison.OrdinalIgnoreCase)
+                ? campaignDirectory.Parent ?? campaignDirectory
+                : campaignDirectory;
+
+        return Path.Combine(
+            applicationDirectory.FullName,
+            "Configurazione",
+            "ai-gm.json");
+    }
+
     private static string FindTemplate(
         string launchDirectory,
         string applicationDirectory)

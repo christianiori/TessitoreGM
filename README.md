@@ -46,6 +46,20 @@ permette al GM di ripristinarne uno. Anche il file problematico viene conservato
 prima del recupero. La pagina **Diagnostica** riporta leggibilità, ora del mondo,
 numero di eventi, copie disponibili e percorsi effettivamente utilizzati.
 
+### Modalità AI Game Master
+
+La modalità AI è opzionale, disattivata per impostazione predefinita e si
+seleziona separatamente per ogni campagna dal Tavolo del GM. Lo stato del mondo,
+le regole e la memoria restano nei file canonici di Tessitore: l'AI non può
+modificare direttamente i salvataggi e non decide mai le azioni dei giocatori.
+
+La selezione della modalità e i soli metadati di fornitore e modello vengono
+conservati fuori dalle campagne, in
+`Documenti\TessitoreGM\Configurazione\ai-gm.json`. Il file non contiene chiavi,
+token o altre credenziali. Finché non viene collegato un fornitore, selezionare
+la modalità AI non invia dati all'esterno e il GM umano continua a gestire le
+azioni.
+
 ## Provare il Tavolo del GM
 
 Da PowerShell, nella cartella del repository:

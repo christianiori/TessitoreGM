@@ -472,7 +472,11 @@ quella fase.
 - [x] Stabilire che l'AI non decide mai le azioni dei giocatori umani
   - [x] Ogni turno AI risponde a un'azione già dichiarata da un giocatore
   - [x] Nessun comando AI può creare o sostituire un'azione del giocatore
-- [ ] Configurazione del fornitore separata dai salvataggi della campagna
+- [x] Configurazione del fornitore separata dai salvataggi della campagna
+  - [x] Modalità AI disattivata per impostazione predefinita
+  - [x] Attivazione esplicita e indipendente per ogni campagna
+  - [x] Metadati di fornitore e modello conservati fuori dal salvataggio
+  - [x] Credenziali escluse dal formato di configurazione
 - [x] Contratto indipendente dal fornitore IA
 - [x] Contesto di turno limitato a regole, stato canonico, memoria e cronaca
 - [x] Proposte di conseguenza tipizzate: mai modifiche dirette ai file JSON
@@ -497,10 +501,10 @@ quella fase.
 
 ## Prossimo passo
 
-Mostrare nel Tavolo del GM la coda persistente delle conseguenze importanti e
-aggiungere l'attivazione esplicita della modalità AI per campagna. Solo dopo
-questi controlli verrà collegato un primo fornitore, senza affidargli memoria,
-regole o accesso diretto ai salvataggi.
+Collegare un primo adattatore IA al contratto indipendente dal fornitore. La
+chiave verrà letta soltanto dall'ambiente del processo; il modello riceverà il
+dossier ricostruito da Tessitore e restituirà esclusivamente un piano tipizzato,
+senza accesso diretto a memoria, regole o salvataggi.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.
