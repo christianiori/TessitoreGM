@@ -442,10 +442,19 @@ quella fase.
 ### 9.2 — Stabilità dei dati e diagnostica
 
 - [ ] Compatibilità e migrazione dei salvataggi
-- [ ] Backup automatici prima di ogni modifica persistente
-- [ ] Recupero guidato dopo un salvataggio non leggibile
+- [x] Backup automatici prima di ogni modifica persistente
+  - [x] Copia valida precedente conservata per ogni salvataggio
+  - [x] Scrittura temporanea verificata prima della sostituzione
+  - [x] Massimo di venti copie automatiche per campagna
+- [x] Recupero guidato dopo un salvataggio non leggibile
+  - [x] Selezione del backup dal Tavolo del GM
+  - [x] Conservazione del file problematico prima del ripristino
 - [ ] Strumenti di diagnostica della simulazione
+  - [x] Prima pagina diagnostica per salvataggio, eventi, backup e percorsi
+  - [ ] Analisi delle regole e degli eventi proposti
 - [ ] Messaggi di errore utilizzabili senza conoscenze tecniche
+  - [x] Pagina di recupero per campagne non leggibili
+  - [ ] Revisione sistematica degli altri errori operativi
 
 ### 9.3 — Framework estensibile
 
@@ -462,9 +471,10 @@ quella fase.
 
 ## Prossimo passo
 
-Realizzare il primo pacchetto Windows autonomo: aggiornamento alla versione .NET
-supportata, pubblicazione autosufficiente, avvio senza PowerShell e campagne
-salvate separatamente dai file dell'applicazione.
+Definire la compatibilità dei salvataggi e introdurre una migrazione esplicita
+tra versioni, senza modificare automaticamente un file che TessitoreGM non sa
+riconoscere. Il collaudo del pacchetto Windows resta raccolto per la fase finale
+di verifica.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

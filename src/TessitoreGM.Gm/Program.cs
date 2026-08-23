@@ -116,6 +116,9 @@ app.MapGet("/", () => Results.Content(
 app.MapGet("/chronicle", () => Results.Content(
     WorldDashboard.RenderChronicle(activeWorldFile),
     "text/html; charset=utf-8"));
+app.MapGet("/diagnostics", () => Results.Content(
+    WorldDashboard.RenderDiagnostics(activeWorldFile),
+    "text/html; charset=utf-8"));
 app.MapGet("/player/{entityId}", (string entityId) => Results.Content(
     WorldDashboard.RenderPlayer(
         activeWorldFile,
@@ -182,6 +185,36 @@ app.MapPost("/campaign/create", async (HttpContext context) =>
         playerAccessGate.RevokeAll();
     }
     catch (ArgumentException exception)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/");
+});
+app.MapPost("/campaign/restore-backup", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        new TessitoreGM.Events.WorldEventFileStore().RestoreBackup(
+            activeWorldFile,
+            form["backup"].ToString());
+        pendingAdvance = null;
+        focusedScene = null;
+        playerAccessGate.RevokeAll();
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or ArgumentException)
     {
         return Results.BadRequest(exception.Message);
     }

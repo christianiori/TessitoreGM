@@ -8,6 +8,7 @@ internal sealed class CampaignCatalog
 {
     private readonly string _directory;
     private readonly WorldEventJsonSerializer _serializer = new();
+    private readonly WorldEventFileStore _fileStore = new();
 
     public CampaignCatalog(string directory)
     {
@@ -46,9 +47,7 @@ internal sealed class CampaignCatalog
 
         var source = _serializer.Deserialize(File.ReadAllText(templatePath));
         var fresh = new WorldCampaignTemplate().CreateFresh(source);
-        var temporaryPath = path + ".tmp";
-        File.WriteAllText(temporaryPath, _serializer.Serialize(fresh));
-        File.Move(temporaryPath, path);
+        _fileStore.Save(path, fresh);
         return path;
     }
 

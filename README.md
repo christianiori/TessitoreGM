@@ -34,6 +34,18 @@ del programma non cancella quindi le campagne dell'utente. La finestra di
 TessitoreGM deve rimanere aperta durante l'uso; per arrestarlo è sufficiente
 chiuderla.
 
+### Backup, recupero e diagnostica
+
+Prima di modificare una campagna esistente, TessitoreGM conserva
+automaticamente la versione precedente nella cartella `Backups` accanto ai
+salvataggi. Mantiene le venti copie più recenti per ogni campagna e verifica sia
+il nuovo file sia la copia di sicurezza prima della sostituzione.
+
+Se una campagna non è più leggibile, il Tavolo mostra i backup disponibili e
+permette al GM di ripristinarne uno. Anche il file problematico viene conservato
+prima del recupero. La pagina **Diagnostica** riporta leggibilità, ora del mondo,
+numero di eventi, copie disponibili e percorsi effettivamente utilizzati.
+
 ## Provare il Tavolo del GM
 
 Da PowerShell, nella cartella del repository:

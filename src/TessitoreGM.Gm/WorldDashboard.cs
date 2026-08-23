@@ -96,12 +96,10 @@ internal static class WorldDashboard
             exception is IOException or InvalidDataException or
             InvalidOperationException or ArgumentException)
         {
-            return Page(
-                "Mondo non leggibile",
-                $"<main class=\"empty-state\"><p class=\"eyebrow\">" +
-                "TessitoreGM</p><h1>Non riesco ad aprire questo mondo.</h1>" +
-                $"<p>{Encode(exception.Message)}</p>" +
-                $"<code>{Encode(worldFile)}</code></main>");
+            return RenderUnreadableWorld(
+                worldFile,
+                actionToken,
+                exception);
         }
     }
 
@@ -168,6 +166,38 @@ internal static class WorldDashboard
                 "Cronaca non disponibile",
                 $"<main class=\"empty-state\"><p class=\"eyebrow\">Cronaca</p><h1>Non riesco a generarla.</h1><p>{Encode(exception.Message)}</p><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></main>");
         }
+    }
+
+    public static string RenderDiagnostics(string worldFile)
+    {
+        var content = new StringBuilder();
+        content.Append("<header class=\"hero chronicle-hero\"><div><p class=\"eyebrow\">Diagnostica</p><h1>Stato di TessitoreGM</h1><p class=\"lede\">Controlli leggibili del salvataggio attivo e delle copie di sicurezza.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></div></header><main>");
+        try
+        {
+            var store = new WorldEventFileStore();
+            var eventLog = store.Load(worldFile);
+            var world = Replay(eventLog);
+            var backups = store.ListBackups(worldFile);
+            content.Append("<section class=\"world-strip diagnostic-summary\">");
+            content.Append(Metric("Salvataggio", "Leggibile"));
+            content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
+            content.Append(Metric("Eventi", eventLog.Events.Count.ToString()));
+            content.Append(Metric("Backup", backups.Count.ToString()));
+            content.Append("</section><section class=\"player-panel diagnostic-detail\"><h2>Percorsi</h2>");
+            content.Append($"<p><strong>Campagna attiva</strong><code>{Encode(Path.GetFullPath(worldFile))}</code></p>");
+            content.Append($"<p><strong>Cartella backup</strong><code>{Encode(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(worldFile))!, "Backups"))}</code></p>");
+            content.Append($"<p><strong>Versione applicazione</strong><code>{Encode(typeof(WorldDashboard).Assembly.GetName().Version?.ToString() ?? "non disponibile")}</code></p></section>");
+        }
+        catch (Exception exception) when (
+            exception is IOException or InvalidDataException or
+            InvalidOperationException or ArgumentException)
+        {
+            content.Append("<section class=\"recovery-panel\"><p class=\"eyebrow\">Problema rilevato</p><h2>Il salvataggio non è leggibile</h2>");
+            content.Append($"<p>{Encode(exception.Message)}</p><code>{Encode(Path.GetFullPath(worldFile))}</code><p>Torna al Tavolo per scegliere un backup disponibile.</p></section>");
+        }
+
+        content.Append("</main>");
+        return Page("Diagnostica", content.ToString());
     }
 
     public static string RenderPlayer(
@@ -914,10 +944,7 @@ internal static class WorldDashboard
         WorldEventJsonSerializer serializer,
         WorldEventLog eventLog)
     {
-        var temporaryFile = worldFile + ".tmp";
-
-        File.WriteAllText(temporaryFile, serializer.Serialize(eventLog));
-        File.Move(temporaryFile, worldFile, overwrite: true);
+        new WorldEventFileStore(serializer).Save(worldFile, eventLog);
     }
 
     private static string RenderWorld(
@@ -973,7 +1000,7 @@ internal static class WorldDashboard
             new NarrationContext(entityNames, locationNames, resourceNames, needNames));
         var content = new StringBuilder();
 
-        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/chronicle\">Cronaca completa</a><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></div></header>");
+        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/chronicle\">Cronaca completa</a><a class=\"button secondary\" href=\"/diagnostics\">Diagnostica</a><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></div></header>");
         content.Append(CampaignControls(
             worldFile,
             actionToken,
@@ -1823,6 +1850,43 @@ internal static class WorldDashboard
         "<main class=\"empty-state\"><p class=\"eyebrow\">TessitoreGM</p><h1>Il tavolo è pronto.</h1><p>Seleziona una campagna disponibile oppure creane una nuova da un modello esistente.</p>" +
         CampaignControls(worldFile, actionToken, campaigns) +
         $"<p class=\"path\">File atteso: <code>{Encode(worldFile)}</code></p></main>");
+
+    private static string RenderUnreadableWorld(
+        string worldFile,
+        string actionToken,
+        Exception exception)
+    {
+        var content = new StringBuilder();
+        content.Append("<main class=\"empty-state recovery-state\"><p class=\"eyebrow\">TessitoreGM</p><h1>Questa campagna non si apre.</h1>");
+        content.Append($"<p>{Encode(exception.Message)}</p><code>{Encode(worldFile)}</code>");
+        IReadOnlyList<WorldEventBackup> backups;
+        try
+        {
+            backups = new WorldEventFileStore().ListBackups(worldFile);
+        }
+        catch (Exception backupException) when (
+            backupException is IOException or ArgumentException)
+        {
+            content.Append($"<p>Non riesco a leggere i backup: {Encode(backupException.Message)}</p></main>");
+            return Page("Mondo non leggibile", content.ToString());
+        }
+
+        if (backups.Count == 0)
+        {
+            content.Append("<p>Non esistono ancora backup automatici per questa campagna.</p></main>");
+            return Page("Mondo non leggibile", content.ToString());
+        }
+
+        content.Append("<section class=\"recovery-panel\"><h2>Ripristina un backup</h2><p>La versione attuale verrà conservata prima del recupero.</p><div class=\"recovery-list\">");
+        foreach (var backup in backups.Take(10))
+        {
+            content.Append("<form method=\"post\" action=\"/campaign/restore-backup\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"backup\" value=\"{Encode(backup.FileName)}\">");
+            content.Append($"<span>{Encode(backup.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy · HH:mm:ss"))}</span><button type=\"submit\" class=\"secondary\">Ripristina</button></form>");
+        }
+        content.Append("</div></section></main>");
+        return Page("Recupera campagna", content.ToString());
+    }
 
     private static string CampaignControls(
         string worldFile,

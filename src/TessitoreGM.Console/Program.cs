@@ -549,14 +549,7 @@ static WorldSnapshot CreateInitialWorld(WorldEventLog eventLog)
 
 static void SaveEventLog(string path, WorldEventLog eventLog)
 {
-    var eventDirectory = Path.GetDirectoryName(path);
-
-    if (!string.IsNullOrEmpty(eventDirectory))
-    {
-        Directory.CreateDirectory(eventDirectory);
-    }
-
-    File.WriteAllText(path, new WorldEventJsonSerializer().Serialize(eventLog));
+    new WorldEventFileStore().Save(path, eventLog);
 }
 
 static void DisplayWorld(
