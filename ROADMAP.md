@@ -364,12 +364,12 @@ d'uso reale li renderà necessari.
 - [x] Trasferimento rapido di monete tra personaggi presenti
 - [x] Acquisizione o perdita rapida di risorse nella scena
 - [x] Rivelazione rapida di conoscenze a un personaggio presente
-- [ ] Interfaccia mobile utilizzabile durante una sessione reale
+- [x] Interfaccia mobile utilizzabile durante una sessione reale
   - [x] Navigazione fissa tra scena, azioni, presenti e registro
   - [x] Strumenti completi raccolti in un pannello mobile richiudibile
   - [x] Anteprima delle conseguenze mantenuta aperta quando necessaria
   - [x] Moduli della scena disposti su una colonna con controlli tattili
-  - [ ] Collaudo durante una sessione reale
+  - [x] Collaudo durante una sessione reale
 
 ### 7.5 — Sicurezza e prova di accettazione
 
@@ -432,9 +432,10 @@ da progettare insieme a scarsità e agricoltura.
 
 ## Prossimo passo
 
-Collaudare da smartphone aggiornamento automatico, navigazione, messa a fuoco,
-movimenti e conseguenze rapide durante una sessione reale. Le correzioni
-successive saranno guidate da questa prova, senza nuovi sistemi di simulazione.
+Progettare e implementare il primo taglio di **Scarsità**: soglie configurabili
+sulle scorte, eventi persistenti di ingresso e uscita dalla scarsità, replay
+deterministico e avvisi leggibili dal GM e dai giocatori coinvolti. Prezzi
+dinamici ed effetti su agricoltura e produzione restano separati.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.
