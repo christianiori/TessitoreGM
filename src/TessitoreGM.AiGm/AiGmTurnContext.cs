@@ -9,7 +9,35 @@ public sealed record AiGmTurnContext(
     string PlayerAction,
     AiGmWorldState World,
     AiGmMemoryDossier Memory,
-    IReadOnlyList<string> Rules);
+    IReadOnlyList<string> Rules,
+    AiGmCampaignCatalog? Catalog = null);
+
+public sealed record AiGmCampaignCatalog(
+    IReadOnlyList<AiGmCatalogCharacter> Characters,
+    IReadOnlyList<AiGmCatalogLocation> Locations,
+    IReadOnlyList<AiGmCatalogResource> Resources,
+    IReadOnlyList<AiGmCatalogNeed> Needs,
+    IReadOnlyList<FactId> Facts);
+
+public sealed record AiGmCatalogCharacter(
+    EntityId EntityId,
+    string Name,
+    bool IsHumanPlayer,
+    string Role,
+    LocationId? CurrentLocationId,
+    string? CurrentLocationName);
+
+public sealed record AiGmCatalogLocation(
+    LocationId LocationId,
+    string Name);
+
+public sealed record AiGmCatalogResource(
+    ResourceId ResourceId,
+    string Name);
+
+public sealed record AiGmCatalogNeed(
+    NeedId NeedId,
+    string Name);
 
 public sealed record AiGmWorldState(
     DateTimeOffset CurrentTime,

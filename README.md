@@ -86,6 +86,13 @@ dettaglio narrato in una modifica meccanica del mondo. Ogni PG può avere una
 sola azione irrisolta: se Ollama non risponde, il GM può riprovare dal pulsante
 **Affida a Ollama** nella coda oppure risolverla manualmente.
 
+Il dossier contiene inoltre il catalogo canonico corrente della campagna:
+personaggi registrati con ruolo e posizione, luoghi, risorse, bisogni e fatti
+conosciuti dal motore. Questo permette a Ollama di usare identificatori validi
+anche quando, per esempio, propone di spostare un PNG verso un luogo diverso.
+Il catalogo è conoscenza del Game Master AI e non diventa automaticamente
+informazione disponibile al personaggio del giocatore.
+
 ## Provare il Tavolo del GM
 
 Da PowerShell, nella cartella del repository:

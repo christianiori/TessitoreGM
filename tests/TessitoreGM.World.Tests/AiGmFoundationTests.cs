@@ -40,6 +40,15 @@ public sealed class AiGmFoundationTests
         var playerMemory = Assert.Single(context.Memory.ActorMemories,
             memory => memory.EntityId == _playerId);
         Assert.DoesNotContain(secret, playerMemory.KnownFacts);
+
+        var catalog = Assert.IsType<AiGmCampaignCatalog>(context.Catalog);
+        Assert.Contains(catalog.Characters,
+            character => character.EntityId == _npcId);
+        Assert.Contains(catalog.Locations,
+            location => location.LocationId == _squareId);
+        Assert.Contains(catalog.Resources,
+            resource => resource.ResourceId == _breadId);
+        Assert.Contains(secret, catalog.Facts);
     }
 
     [Fact]
@@ -106,6 +115,9 @@ public sealed class AiGmFoundationTests
         Assert.DoesNotContain(
             context.Memory.ActorMemories,
             memory => memory.EntityId == outsideNpcId);
+        Assert.Contains(
+            context.Catalog!.Characters,
+            character => character.EntityId == outsideNpcId);
     }
 
     [Fact]

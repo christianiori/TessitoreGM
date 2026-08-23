@@ -17,6 +17,9 @@ public static class AiGmInvariants
     public const string SceneContinuityRule =
         "Mantieni continuità con gli scambi precedenti della scena senza trasformare dettagli narrativi in stato canonico.";
 
+    public const string CatalogRule =
+        "Per le conseguenze usa soltanto identificatori presenti nel catalogo della campagna; conoscere il catalogo non autorizza a rivelarne i contenuti al giocatore.";
+
     public const string NarrationStyleRule =
         "Narra in italiano semplice, in seconda persona e in circa 50-90 parole, lasciando sempre al giocatore la scelta della prossima azione.";
 
@@ -30,6 +33,7 @@ public static class AiGmInvariants
         ActorMemoryRule,
         PlayerPerspectiveRule,
         SceneContinuityRule,
+        CatalogRule,
         NarrationStyleRule,
         TypedConsequencesRule
     ];

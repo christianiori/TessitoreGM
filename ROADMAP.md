@@ -480,6 +480,8 @@ quella fase.
 - [x] Contratto indipendente dal fornitore IA
 - [x] Protocollo JSON chiuso per contesto e piani tipizzati
 - [x] Contesto di turno limitato a regole, stato canonico, memoria e cronaca
+  - [x] Catalogo corrente di personaggi, luoghi, risorse, bisogni e fatti
+  - [x] Separazione tra catalogo globale del GM e cast osservabile della scena
 - [x] Proposte di conseguenza tipizzate: mai modifiche dirette ai file JSON
 - [x] Validazione delle proposte da parte del motore di Tessitore
 - [x] Politica deterministica per distinguere conseguenze ordinarie e importanti
@@ -518,11 +520,11 @@ quella fase.
 
 ## Prossimo passo
 
-Integrare nel dossier i cataloghi completi degli identificatori utilizzabili
-nella scena e poi aggiungere richieste di tiro e difficoltà entro limiti
-configurabili. Il confine deterministico, la conferma delle conseguenze
-importanti e il divieto assoluto di decidere azioni dei giocatori restano
-invariati. L'adattatore OpenAI rimane il secondo fornitore previsto.
+Aggiungere richieste di tiro e difficoltà entro limiti configurabili, mantenendo
+il risultato generato e verificato da Tessitore anziché dal modello. Il confine
+deterministico, la conferma delle conseguenze importanti e il divieto assoluto
+di decidere azioni dei giocatori restano invariati. L'adattatore OpenAI rimane
+il secondo fornitore previsto.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

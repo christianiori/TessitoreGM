@@ -19,12 +19,21 @@ public sealed class AiGmJsonProtocolTests
                 WeatherCondition.Clear,
                 []),
             new AiGmMemoryDossier([], []),
-            AiGmInvariants.Rules);
+            AiGmInvariants.Rules,
+            new AiGmCampaignCatalog(
+                [],
+                [new AiGmCatalogLocation(
+                    new LocationId("inn"),
+                    "Locanda")],
+                [],
+                [],
+                []));
 
         var prompt = new AiGmJsonProtocol().CreatePrompt(context);
 
         Assert.Contains(AiGmInvariants.HumanActionRule, prompt.SystemInstructions);
         Assert.Contains(actionId.ToString(), prompt.ContextJson);
+        Assert.Contains("\"name\": \"Locanda\"", prompt.ContextJson);
         Assert.Contains("sola lettura", prompt.SystemInstructions);
         Assert.Contains("moveEntity", prompt.ResponseInstructions);
     }

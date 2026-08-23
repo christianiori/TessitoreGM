@@ -148,6 +148,23 @@ public sealed class AiGmContextBuilder
                 actionsById[turn.PlayerActionId].Description,
                 turn.Narration))
             .ToArray();
+        var catalogActorIds = allActorIds
+            .Concat(eventLog.Simulation?.Entities?.Select(
+                entity => entity.EntityId) ?? [])
+            .Concat(eventLog.InitialWorld.Balances
+                .Select(balance => balance.EntityId))
+            .Distinct()
+            .ToArray();
+        var catalog = BuildCatalog(
+            eventLog,
+            world,
+            catalogActorIds,
+            humanIds,
+            names,
+            locationNames,
+            resourceNames,
+            needNames,
+            actorMemories);
 
         return new AiGmTurnContext(
             persistedAction.Id,
@@ -159,7 +176,8 @@ public sealed class AiGmContextBuilder
                 canonicalChronicle,
                 actorMemories,
                 sceneHistory),
-            AiGmInvariants.Rules);
+            AiGmInvariants.Rules,
+            catalog);
     }
 
     private IReadOnlyList<AiGmRememberedEvent> Remember(
@@ -203,6 +221,109 @@ public sealed class AiGmContextBuilder
                 .Select(stock => stock.ResourceId))
             .Distinct()
             .ToArray();
+
+    private static AiGmCampaignCatalog BuildCatalog(
+        WorldEventLog eventLog,
+        WorldSnapshot world,
+        IReadOnlyList<EntityId> actorIds,
+        IReadOnlySet<EntityId> humanIds,
+        IReadOnlyDictionary<EntityId, string> names,
+        IReadOnlyDictionary<LocationId, string> locationNames,
+        IReadOnlyDictionary<ResourceId, string> resourceNames,
+        IReadOnlyDictionary<NeedId, string> needNames,
+        IReadOnlyList<AiGmActorMemory> actorMemories)
+    {
+        var locations = (eventLog.Simulation?.Locations?.Select(
+                location => location.LocationId) ?? [])
+            .Concat(eventLog.Events.OfType<EntityEnteredLocation>()
+                .Select(entered => entered.LocationId))
+            .Distinct()
+            .OrderBy(locationId => locationId.Value)
+            .Select(locationId => new AiGmCatalogLocation(
+                locationId,
+                locationNames.GetValueOrDefault(
+                    locationId,
+                    locationId.ToString())))
+            .ToArray();
+        var resources = KnownResources(eventLog)
+            .OrderBy(resourceId => resourceId.Value)
+            .Select(resourceId => new AiGmCatalogResource(
+                resourceId,
+                resourceNames.GetValueOrDefault(
+                    resourceId,
+                    resourceId.ToString())))
+            .ToArray();
+        var needs = (eventLog.Simulation?.Needs?.Select(
+                need => need.NeedId) ?? [])
+            .Concat(eventLog.Events.SelectMany(worldEvent => worldEvent switch
+            {
+                NeedIncreased increased => new[] { increased.NeedId },
+                ResourceConsumed consumed => new[] { consumed.NeedId },
+                _ => Array.Empty<NeedId>()
+            }))
+            .Distinct()
+            .OrderBy(needId => needId.Value)
+            .Select(needId => new AiGmCatalogNeed(
+                needId,
+                needNames.GetValueOrDefault(needId, needId.ToString())))
+            .ToArray();
+        var facts = KnownFacts(eventLog, actorMemories)
+            .OrderBy(factId => factId.Value)
+            .ToArray();
+        var characters = actorIds
+            .OrderBy(actorId => names.GetValueOrDefault(
+                actorId,
+                actorId.ToString()), StringComparer.OrdinalIgnoreCase)
+            .Select(actorId =>
+            {
+                var locationId = world.GetLocation(actorId);
+                return new AiGmCatalogCharacter(
+                    actorId,
+                    names.GetValueOrDefault(actorId, actorId.ToString()),
+                    humanIds.Contains(actorId),
+                    Role(eventLog, actorId, humanIds.Contains(actorId)),
+                    locationId,
+                    locationId is { } value
+                        ? locationNames.GetValueOrDefault(
+                            value,
+                            value.ToString())
+                        : null);
+            })
+            .ToArray();
+
+        return new AiGmCampaignCatalog(
+            characters,
+            locations,
+            resources,
+            needs,
+            facts);
+    }
+
+    private static IReadOnlySet<FactId> KnownFacts(
+        WorldEventLog eventLog,
+        IReadOnlyList<AiGmActorMemory> actorMemories)
+    {
+        var configured = (eventLog.Simulation?.Npcs ?? [])
+            .SelectMany(npc =>
+                (npc.InitialKnownFacts ?? [])
+                    .Concat((npc.KnowledgeConditionalLocations ?? [])
+                        .Select(rule => rule.RequiredFactId))
+                    .Concat((npc.FactSharings ?? [])
+                        .Select(rule => rule.FactId))
+                    .Concat((npc.TrustChangesAfterFactSharing ?? [])
+                        .Select(rule => rule.FactId)));
+        var persisted = eventLog.Events.SelectMany(worldEvent => worldEvent switch
+        {
+            FactShared shared => new[] { shared.FactId },
+            FactRevealed revealed => new[] { revealed.FactId },
+            _ => Array.Empty<FactId>()
+        });
+
+        return configured
+            .Concat(persisted)
+            .Concat(actorMemories.SelectMany(memory => memory.KnownFacts))
+            .ToHashSet();
+    }
 }
 
 public sealed record AiGmContextBuilderOptions(
