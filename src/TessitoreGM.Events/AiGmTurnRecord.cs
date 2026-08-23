@@ -33,7 +33,9 @@ public sealed record AiGmTurnRecord(
     string Narration,
     DateTimeOffset CreatedAt,
     AiGmTurnStatus Status,
-    IReadOnlyList<AiGmConsequenceRecord> Consequences);
+    IReadOnlyList<AiGmConsequenceRecord> Consequences,
+    LocationId? SceneLocationId = null,
+    IReadOnlyList<EntityId>? SceneActorIds = null);
 
 public sealed record AiGmConsequenceRecord(
     Guid Id,

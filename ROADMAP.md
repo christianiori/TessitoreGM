@@ -489,7 +489,12 @@ quella fase.
   - [x] Controlli della coda nel Tavolo del GM
 - [x] Registro persistente di proposte, approvazioni e rifiuti
 - [ ] Costruzione del contesto dalla prospettiva autorizzata del personaggio
-- [ ] Gestione narrativa delle scene e dei PNG
+- [x] Prima gestione narrativa continua delle scene e dei PNG
+  - [x] Identità del luogo e cast della scena persistiti per ogni turno AI
+  - [x] Ultimi scambi azione-risposta reinseriti nel dossier del turno seguente
+  - [x] Narrazioni rifiutate escluse dalla continuità successiva
+  - [x] Una sola azione irrisolta per ogni PG
+  - [x] Retry manuale con Ollama dopo un fallback sicuro
 - [ ] Richiesta di tiri e difficoltà entro limiti configurabili
 - [x] Primo collegamento a un fornitore IA scelto dal GM
   - [x] Adattatore locale Ollama senza chiavi API
@@ -502,6 +507,9 @@ quella fase.
   - [x] Nessuna modifica al mondo in caso di timeout o errore del fornitore
   - [x] Piano invalido rifiutato e azione lasciata al GM umano
 - [ ] Interfaccia di sessione ispirata ai GM virtuali conversazionali
+  - [x] Sequenza persistente di azioni umane e risposte narrative AI
+  - [ ] Presentazione dedicata della conversazione di scena
+  - [ ] Indicatore di elaborazione e risposta non bloccante
 
 ### 9.5 — Documentazione e release
 
@@ -510,11 +518,11 @@ quella fase.
 
 ## Prossimo passo
 
-Raffinare la gestione narrativa di scene e PNG sopra il primo adattatore
-locale Ollama, mantenendo invariati il confine deterministico, la conferma delle
-conseguenze importanti e il divieto assoluto di decidere azioni dei giocatori.
-L'adattatore OpenAI resta il secondo fornitore previsto; tiri e difficoltà
-proposti dall'IA verranno aggiunti dopo il primo ciclo narrativo stabile.
+Integrare nel dossier i cataloghi completi degli identificatori utilizzabili
+nella scena e poi aggiungere richieste di tiro e difficoltà entro limiti
+configurabili. Il confine deterministico, la conferma delle conseguenze
+importanti e il divieto assoluto di decidere azioni dei giocatori restano
+invariati. L'adattatore OpenAI rimane il secondo fornitore previsto.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

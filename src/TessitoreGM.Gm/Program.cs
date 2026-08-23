@@ -42,6 +42,62 @@ string? aiGmRuntimeNotice = null;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
+async Task RunConfiguredAiGmAsync(
+    TessitoreGM.Events.PlayerActionProposal proposal,
+    CancellationToken cancellationToken)
+{
+    var settings = aiGmSettingsStore.Get(activeWorldFile);
+    if (!settings.Enabled)
+    {
+        aiGmRuntimeNotice =
+            "La modalità AI non è attiva. L'azione resta al GM umano.";
+        return;
+    }
+    if (!settings.ProviderConfigured)
+    {
+        aiGmRuntimeNotice =
+            "Configura Ollama prima di affidargli le azioni.";
+        return;
+    }
+    if (!settings.ProviderId!.Equals(
+        "ollama",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        aiGmRuntimeNotice =
+            $"Il fornitore '{settings.ProviderId}' non è ancora disponibile. " +
+            "L'azione resta al GM umano.";
+        return;
+    }
+
+    try
+    {
+        var eventStore = new TessitoreGM.Events.WorldEventFileStore();
+        var eventLog = eventStore.Load(activeWorldFile);
+        var gameMaster = new OllamaAiGameMaster(
+            ollamaHttpClient,
+            settings.Model!);
+        var result = await new AiGmTurnExecutor(gameMaster)
+            .ExecuteAsync(
+                eventLog,
+                proposal,
+                cancellationToken);
+        aiGmRuntimeNotice = result.Message;
+        if (result.WorldChanged)
+        {
+            eventStore.Save(activeWorldFile, result.EventLog);
+        }
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        aiGmRuntimeNotice =
+            "Ollama non ha potuto completare il turno: " +
+            exception.Message +
+            " L'azione resta al GM umano.";
+    }
+}
+
 app.Use(async (context, next) =>
 {
     if (accessGate.IsPublicPath(context.Request.Path) ||
@@ -619,56 +675,12 @@ app.MapPost("/player/{entityId}/actions", async (
             activeWorldFile,
             entityId,
             form["description"].ToString());
-
-        var settings = aiGmSettingsStore.Get(activeWorldFile);
-        if (settings.Enabled && settings.ProviderConfigured)
-        {
-            if (settings.ProviderId!.Equals(
-                "ollama",
-                StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    var eventStore = new TessitoreGM.Events.WorldEventFileStore();
-                    var eventLog = eventStore.Load(activeWorldFile);
-                    var gameMaster = new OllamaAiGameMaster(
-                        ollamaHttpClient,
-                        settings.Model!);
-                    var result = await new AiGmTurnExecutor(gameMaster)
-                        .ExecuteAsync(
-                            eventLog,
-                            proposal,
-                            context.RequestAborted);
-                    aiGmRuntimeNotice = result.Message;
-                    if (result.WorldChanged)
-                    {
-                        eventStore.Save(activeWorldFile, result.EventLog);
-                    }
-                }
-                catch (Exception exception) when (
-                    exception is IOException or InvalidDataException or
-                    InvalidOperationException or ArgumentException)
-                {
-                    aiGmRuntimeNotice =
-                        "Ollama non ha potuto completare il turno: " +
-                        exception.Message +
-                        " L'azione resta al GM umano.";
-                }
-            }
-            else
-            {
-                aiGmRuntimeNotice =
-                    $"Il fornitore '{settings.ProviderId}' non è ancora disponibile. " +
-                    "L'azione resta al GM umano.";
-            }
-        }
-        else if (settings.Enabled)
-        {
-            aiGmRuntimeNotice =
-                "Configura Ollama prima di affidargli le azioni.";
-        }
+        await RunConfiguredAiGmAsync(
+            proposal,
+            context.RequestAborted);
     }
-    catch (ArgumentException exception)
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException)
     {
         return Results.BadRequest(exception.Message);
     }
@@ -677,6 +689,51 @@ app.MapPost("/player/{entityId}/actions", async (
         worldLock.Release();
     }
     return Results.Redirect($"/player/{Uri.EscapeDataString(entityId)}");
+});
+app.MapPost("/ai-gm/actions/retry", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken ||
+        !Guid.TryParse(form["actionId"].ToString(), out var actionId))
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        var eventLog = new TessitoreGM.Events.WorldEventFileStore()
+            .Load(activeWorldFile);
+        if ((eventLog.AiGmTurns ?? []).Any(turn =>
+            turn.PlayerActionId == actionId))
+        {
+            throw new InvalidOperationException(
+                "Questa azione ha già un turno del Game Master AI.");
+        }
+        var action = (eventLog.PlayerActions ?? [])
+            .SingleOrDefault(candidate =>
+                candidate.Id == actionId &&
+                candidate.Status ==
+                    TessitoreGM.Events.PlayerActionStatus.Pending)
+            ?? throw new InvalidOperationException(
+                "L'azione non è più disponibile per Ollama.");
+
+        await RunConfiguredAiGmAsync(
+            action,
+            context.RequestAborted);
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/#gm-actions");
 });
 app.MapPost("/player-actions/resolve", async (HttpContext context) =>
 {

@@ -275,6 +275,10 @@ internal static class WorldDashboard
                     Array.Empty<AiGmTurnRecord>())
                 .GroupBy(turn => turn.PlayerActionId)
                 .ToDictionary(group => group.Key, group => group.Last());
+            var hasOutstandingAction = ownActions.Any(action =>
+                action.Status is PlayerActionStatus.Pending or
+                    PlayerActionStatus.RollRequested or
+                    PlayerActionStatus.Rolled);
             var needNames = simulation?.Needs?.ToDictionary(
                 need => need.NeedId,
                 need => need.Name) ?? new Dictionary<NeedId, string>();
@@ -304,10 +308,19 @@ internal static class WorldDashboard
             content.Append(Metric("Clima", WeatherLabel(world.Weather)));
             content.Append(Metric("Ora del mondo", world.CurrentTime.ToString(
                 "dd MMM yyyy · HH:mm")));
-            content.Append("</section><section class=\"player-action-box\"><div class=\"section-heading\"><p class=\"eyebrow\">La tua azione</p><h2>Cosa vuoi fare?</h2></div><form method=\"post\" action=\"/player/");
-            content.Append(Uri.EscapeDataString(character.EntityId.ToString()));
-            content.Append("/actions\">");
-            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(playerInteractionToken)}\"><label for=\"proposed-action\">Descrivi l'intenzione del personaggio</label><textarea id=\"proposed-action\" name=\"description\" maxlength=\"500\" rows=\"4\" placeholder=\"Cerco tracce vicino al granaio.\" required></textarea><button type=\"submit\">Invia al GM</button></form></section>");
+            content.Append("</section><section class=\"player-action-box\"><div class=\"section-heading\"><p class=\"eyebrow\">La tua azione</p><h2>Cosa vuoi fare?</h2></div>");
+            if (hasOutstandingAction)
+            {
+                content.Append("<p class=\"player-action-wait\">La tua azione precedente è ancora in corso. Potrai dichiararne un'altra dopo la risposta del Game Master.</p>");
+            }
+            else
+            {
+                content.Append("<form method=\"post\" action=\"/player/");
+                content.Append(Uri.EscapeDataString(character.EntityId.ToString()));
+                content.Append("/actions\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(playerInteractionToken)}\"><label for=\"proposed-action\">Descrivi l'intenzione del personaggio</label><textarea id=\"proposed-action\" name=\"description\" maxlength=\"500\" rows=\"4\" placeholder=\"Cerco tracce vicino al granaio.\" required></textarea><button type=\"submit\">Invia al GM</button></form>");
+            }
+            content.Append("</section>");
             content.Append("<section><div class=\"section-heading\"><p class=\"eyebrow\">Richieste</p><h2>Le tue azioni</h2></div><div class=\"player-action-list\">");
             if (ownActions.Length == 0)
             {
@@ -789,6 +802,15 @@ internal static class WorldDashboard
             candidate => candidate.EntityId.ToString() == entityValue)
             ?? throw new ArgumentException(
                 "Personaggio giocante non valido.");
+        if ((eventLog.PlayerActions ?? []).Any(action =>
+            action.PlayerCharacterId == character.EntityId &&
+            action.Status is PlayerActionStatus.Pending or
+                PlayerActionStatus.RollRequested or
+                PlayerActionStatus.Rolled))
+        {
+            throw new InvalidOperationException(
+                "Questo personaggio ha già un'azione in attesa di risoluzione.");
+        }
         var world = Replay(eventLog);
         var proposal = new PlayerActionProposal(
             Guid.NewGuid(),
@@ -1089,7 +1111,8 @@ internal static class WorldDashboard
         content.Append(RenderPlayerActionQueue(
             eventLog,
             playerCharacters,
-            actionToken));
+            actionToken,
+            aiGmSettings));
         var toolboxClass = pendingAdvance is null
             ? "gm-toolbox"
             : "gm-toolbox has-preview";
@@ -1769,7 +1792,8 @@ internal static class WorldDashboard
     private static string RenderPlayerActionQueue(
         WorldEventLog eventLog,
         IReadOnlyList<PlayerCharacterRegistered> playerCharacters,
-        string actionToken)
+        string actionToken,
+        AiGmCampaignModeSettings aiGmSettings)
     {
         var aiManagedActions = (eventLog.AiGmTurns ??
                 Array.Empty<AiGmTurnRecord>())
@@ -1806,6 +1830,20 @@ internal static class WorldDashboard
             if (action.Roll is not null)
             {
                 content.Append($"<div class=\"roll-summary\">{Encode(RollSummary(action.Roll, includeSecretDifficulty: true))}</div>");
+            }
+            var canRetryWithOllama = action.Status ==
+                    PlayerActionStatus.Pending &&
+                aiGmSettings.Enabled &&
+                aiGmSettings.ProviderConfigured &&
+                aiGmSettings.ProviderId!.Equals(
+                    "ollama",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !(eventLog.AiGmTurns ?? []).Any(turn =>
+                    turn.PlayerActionId == action.Id);
+            if (canRetryWithOllama)
+            {
+                content.Append("<form class=\"ai-retry-form\" method=\"post\" action=\"/ai-gm/actions/retry\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><button type=\"submit\" class=\"secondary\">Affida a Ollama</button></form>");
             }
             content.Append("</div>");
             if (action.Status == PlayerActionStatus.Pending)

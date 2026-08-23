@@ -36,6 +36,9 @@ public sealed class AiGmPersistenceTests
             Assert.Single(updated.PlayerActions!).Status);
         var turn = Assert.Single(updated.AiGmTurns!);
         Assert.Equal(AiGmTurnStatus.Completed, turn.Status);
+        Assert.Equal(_innId, turn.SceneLocationId);
+        Assert.Contains(_playerId, turn.SceneActorIds!);
+        Assert.Contains(_npcId, turn.SceneActorIds!);
         Assert.Equal(
             AiGmConsequenceStatus.Applied,
             Assert.Single(turn.Consequences).Status);
@@ -60,6 +63,9 @@ public sealed class AiGmPersistenceTests
         var reloaded = new WorldEventJsonSerializer().Deserialize(
             new WorldEventJsonSerializer().Serialize(proposed));
 
+        var reloadedTurn = Assert.Single(reloaded.AiGmTurns!);
+        Assert.Equal(_innId, reloadedTurn.SceneLocationId);
+        Assert.Contains(_npcId, reloadedTurn.SceneActorIds!);
         Assert.Equal(1, Replay(reloaded).GetResourceQuantity(
             _playerId,
             _breadId));

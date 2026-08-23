@@ -21,7 +21,8 @@ public sealed class AiGmContextBuilder
     {
         _options = options ?? new AiGmContextBuilderOptions();
         if (_options.MaximumCanonicalEvents <= 0 ||
-            _options.MaximumObservedEventsPerActor <= 0)
+            _options.MaximumObservedEventsPerActor <= 0 ||
+            _options.MaximumSceneExchanges <= 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(options),
@@ -127,6 +128,26 @@ public sealed class AiGmContextBuilder
                         _options.MaximumObservedEventsPerActor),
                     narrationContext));
         }).ToArray();
+        var actionsById = (eventLog.PlayerActions ?? [])
+            .GroupBy(action => action.Id)
+            .ToDictionary(group => group.Key, group => group.Last());
+        var sceneHistory = (eventLog.AiGmTurns ?? [])
+            .Where(turn =>
+                turn.PlayerCharacterId == player.EntityId &&
+                turn.Status == AiGmTurnStatus.Completed &&
+                turn.Consequences.All(consequence =>
+                    consequence.Status == AiGmConsequenceStatus.Applied) &&
+                (turn.SceneLocationId is null ||
+                    turn.SceneLocationId == playerLocation) &&
+                actionsById.ContainsKey(turn.PlayerActionId))
+            .OrderBy(turn => turn.CreatedAt)
+            .TakeLast(_options.MaximumSceneExchanges)
+            .Select(turn => new AiGmSceneExchange(
+                turn.PlayerActionId,
+                turn.CreatedAt,
+                actionsById[turn.PlayerActionId].Description,
+                turn.Narration))
+            .ToArray();
 
         return new AiGmTurnContext(
             persistedAction.Id,
@@ -134,7 +155,10 @@ public sealed class AiGmContextBuilder
             player.Name,
             persistedAction.Description,
             new AiGmWorldState(world.CurrentTime, world.Weather, actors),
-            new AiGmMemoryDossier(canonicalChronicle, actorMemories),
+            new AiGmMemoryDossier(
+                canonicalChronicle,
+                actorMemories,
+                sceneHistory),
             AiGmInvariants.Rules);
     }
 
@@ -183,4 +207,5 @@ public sealed class AiGmContextBuilder
 
 public sealed record AiGmContextBuilderOptions(
     int MaximumCanonicalEvents = 80,
-    int MaximumObservedEventsPerActor = 40);
+    int MaximumObservedEventsPerActor = 40,
+    int MaximumSceneExchanges = 12);

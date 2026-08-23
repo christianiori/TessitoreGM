@@ -80,6 +80,12 @@ limitato agli attori della scena e agli eventi recenti utili. I file canonici
 restano completi. Un adattatore OpenAI opzionale è previsto come passo
 successivo, senza sostituire il funzionamento locale.
 
+Gli scambi narrativi completati nella stessa scena vengono reinseriti nei turni
+successivi, così PNG e dialoghi mantengono continuità senza trasformare ogni
+dettaglio narrato in una modifica meccanica del mondo. Ogni PG può avere una
+sola azione irrisolta: se Ollama non risponde, il GM può riprovare dal pulsante
+**Affida a Ollama** nella coda oppure risolverla manualmente.
+
 ## Provare il Tavolo del GM
 
 Da PowerShell, nella cartella del repository:

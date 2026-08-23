@@ -14,6 +14,12 @@ public static class AiGmInvariants
     public const string PlayerPerspectiveRule =
         "Narra al giocatore soltanto ciò che il suo personaggio può percepire; non rivelare cronaca o memorie riservate.";
 
+    public const string SceneContinuityRule =
+        "Mantieni continuità con gli scambi precedenti della scena senza trasformare dettagli narrativi in stato canonico.";
+
+    public const string NarrationStyleRule =
+        "Narra in italiano semplice, in seconda persona e in circa 50-90 parole, lasciando sempre al giocatore la scelta della prossima azione.";
+
     public const string TypedConsequencesRule =
         "Proponi conseguenze soltanto tramite i comandi tipizzati consentiti.";
 
@@ -23,6 +29,8 @@ public static class AiGmInvariants
         CanonicalMemoryRule,
         ActorMemoryRule,
         PlayerPerspectiveRule,
+        SceneContinuityRule,
+        NarrationStyleRule,
         TypedConsequencesRule
     ];
 }

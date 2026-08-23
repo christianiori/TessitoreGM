@@ -33,7 +33,14 @@ public sealed record AiGmResourceState(
 
 public sealed record AiGmMemoryDossier(
     IReadOnlyList<AiGmRememberedEvent> CanonicalChronicle,
-    IReadOnlyList<AiGmActorMemory> ActorMemories);
+    IReadOnlyList<AiGmActorMemory> ActorMemories,
+    IReadOnlyList<AiGmSceneExchange>? SceneHistory = null);
+
+public sealed record AiGmSceneExchange(
+    Guid PlayerActionId,
+    DateTimeOffset OccurredAt,
+    string PlayerAction,
+    string Narration);
 
 public sealed record AiGmActorMemory(
     EntityId EntityId,

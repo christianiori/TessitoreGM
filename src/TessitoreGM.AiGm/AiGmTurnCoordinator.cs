@@ -121,7 +121,10 @@ public sealed class AiGmTurnCoordinator
             plan.Narration,
             world.CurrentTime,
             turnStatus,
-            records);
+            records,
+            context.World.Actors.First(actor =>
+                actor.EntityId == context.PlayerCharacterId).LocationId,
+            context.World.Actors.Select(actor => actor.EntityId).ToArray());
 
         updatedLog = updatedLog with
         {

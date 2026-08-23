@@ -109,6 +109,50 @@ public sealed class AiGmFoundationTests
     }
 
     [Fact]
+    public void Build_ContinuesCompletedNarrationFromTheSameScene()
+    {
+        var previousAction = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Chiedo all'oste se ha visto la chiave.",
+            At(9, 0),
+            PlayerActionStatus.Approved,
+            "Risolta dal Game Master AI.",
+            At(9, 0));
+        var currentAction = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Gli domando chi altro potrebbe averla presa.",
+            At(9, 5));
+        var baseLog = CreateEventLog(currentAction);
+        var eventLog = baseLog with
+        {
+            PlayerActions = [previousAction, currentAction],
+            AiGmTurns =
+            [
+                new AiGmTurnRecord(
+                    Guid.NewGuid(),
+                    previousAction.Id,
+                    _playerId,
+                    "L'oste abbassa la voce: la chiave era sul bancone.",
+                    At(9, 0),
+                    AiGmTurnStatus.Completed,
+                    [],
+                    _innId,
+                    [_playerId, _npcId])
+            ]
+        };
+
+        var context = new AiGmContextBuilder().Build(
+            eventLog,
+            currentAction);
+
+        var exchange = Assert.Single(context.Memory.SceneHistory!);
+        Assert.Equal(previousAction.Description, exchange.PlayerAction);
+        Assert.Contains("sul bancone", exchange.Narration);
+    }
+
+    [Fact]
     public void Policy_PlayerLossRequiresConfirmation_ButNpcMovementIsRoutine()
     {
         var policy = new AiGmConsequencePolicy([_playerId]);
