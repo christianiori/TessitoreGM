@@ -139,4 +139,22 @@ public sealed class AiGmJsonProtocolTests
         Assert.Throws<InvalidDataException>(() =>
             new AiGmJsonProtocol().DeserializePlan(json));
     }
+
+    [Fact]
+    public void DeserializePlan_ReportsTheInvalidField()
+    {
+        const string json = """
+        {
+          "playerActionId": "non-un-guid",
+          "narration": "L'oste risponde.",
+          "roll": null,
+          "consequences": []
+        }
+        """;
+
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            new AiGmJsonProtocol().DeserializePlan(json));
+
+        Assert.Contains("playerActionId", exception.Message);
+    }
 }

@@ -64,8 +64,12 @@ public sealed class AiGmJsonProtocol
         }
         catch (JsonException exception)
         {
+            var field = string.IsNullOrWhiteSpace(exception.Path)
+                ? string.Empty
+                : $" Campo: {exception.Path}.";
             throw new InvalidDataException(
-                "La risposta del Game Master AI non rispetta il protocollo JSON.",
+                "La risposta del Game Master AI non rispetta il protocollo JSON." +
+                field,
                 exception);
         }
 

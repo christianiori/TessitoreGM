@@ -86,12 +86,13 @@ public sealed class AiGmTurnExecutor
                 eventLog,
                 message);
         }
-        catch (InvalidDataException)
+        catch (InvalidDataException exception)
         {
             return Unchanged(
                 AiGmTurnExecutionStatus.InvalidPlan,
                 eventLog,
                 "La risposta del Game Master AI non rispetta il protocollo di Tessitore. " +
+                $"Dettaglio: {exception.Message} " +
                 "L'azione resta al GM umano.");
         }
 

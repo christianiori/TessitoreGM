@@ -93,6 +93,7 @@ public sealed class AiGmTurnExecutorTests
         Assert.False(result.WorldChanged);
         Assert.Same(eventLog, result.EventLog);
         Assert.Null(result.EventLog.AiGmTurns);
+        Assert.Contains("JSON non valido", result.Message);
     }
 
     private (WorldEventLog EventLog, PlayerActionProposal Action) CreateTurn()
