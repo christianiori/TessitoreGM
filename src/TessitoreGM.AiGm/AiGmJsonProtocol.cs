@@ -221,6 +221,9 @@ Scrivi narration dalla prospettiva authorizedPerspective. Non trasformare inform
 presenti soltanto nel catalogo, nella cronaca canonica o nelle memorie di altri attori
 in conoscenza del giocatore. Un nuovo fatto canonico comunicato nel turno richiede
 anche revealFact verso il personaggio giocante.
+Non usare mai il nome del personaggio giocante come soggetto della narrazione e non
+iniziare frasi con "Tu" o "Ti". Descrivi ciò che fanno i PNG e ciò che il PG può
+percepire, senza aggiungere movimenti, parole, pensieri, intenzioni o decisioni del PG.
 """;
 
     public const string ResponseSchemaJson = """

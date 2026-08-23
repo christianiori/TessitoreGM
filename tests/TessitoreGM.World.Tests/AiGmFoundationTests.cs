@@ -260,6 +260,56 @@ public sealed class AiGmFoundationTests
         Assert.Contains(result.Errors, error => error.Contains("azione"));
     }
 
+    [Theory]
+    [InlineData("Ada si avvicina all'oste e inizia a imitarlo.")]
+    [InlineData("Ti avvicini all'oste e pensi a cosa domandargli.")]
+    public void TurnPlanValidator_RejectsNarrationThatActsForThePlayer(
+        string narration)
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Rimango fermo e osservo la locanda.",
+            At(9, 0));
+        var eventLog = CreateEventLog(action);
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+        var validator = new AiGmTurnPlanValidator(
+            new AiGmProposalValidator(eventLog, Replay(eventLog)));
+
+        var result = validator.Validate(
+            context,
+            new AiGmTurnPlan(action.Id, narration, null, []));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(
+            result.Errors,
+            error => error.Contains("giocatore umano"));
+    }
+
+    [Fact]
+    public void TurnPlanValidator_AcceptsExternalWorldReaction()
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Rimango fermo e osservo la locanda.",
+            At(9, 0));
+        var eventLog = CreateEventLog(action);
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+        var validator = new AiGmTurnPlanValidator(
+            new AiGmProposalValidator(eventLog, Replay(eventLog)));
+
+        var result = validator.Validate(
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "L'oste alza lo sguardo verso di te e continua a pulire il bancone.",
+                null,
+                []));
+
+        Assert.True(result.IsValid);
+    }
+
     private WorldEventLog CreateEventLog(
         PlayerActionProposal action,
         params IWorldEvent[] additionalEvents)

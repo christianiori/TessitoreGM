@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace TessitoreGM.AiGm;
 
 public sealed record AiGmTurnPlanValidation(
@@ -7,6 +9,15 @@ public sealed record AiGmTurnPlanValidation(
 public sealed class AiGmTurnPlanValidator
 {
     private const int MaximumNarrationLength = 4000;
+    private static readonly Regex[] ForbiddenPlayerAgencyPatterns =
+    [
+        new(@"\bti\s+(?:avvicini|allontani|muovi|metti|chiedi)\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant),
+        new(@"\b(?:decidi|scegli|inizi|provi|cerchi|pensi|dici|chiedi|rispondi|accetti|rifiuti|prendi|lasci|entri|esci|segui|attacchi|usi)\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant),
+        new(@"\b(?:hai|avevi)\s+(?:deciso|scelto|iniziato|provato|cercato|pensato|detto|chiesto|risposto|accettato|rifiutato|preso|lasciato|seguito|attaccato|usato)\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+    ];
     private readonly AiGmProposalValidator _proposalValidator;
 
     public AiGmTurnPlanValidator(AiGmProposalValidator proposalValidator)
@@ -38,6 +49,11 @@ public sealed class AiGmTurnPlanValidator
         {
             errors.Add("La narrazione supera la lunghezza consentita.");
         }
+        else if (AttributesAgencyToPlayer(context, plan.Narration))
+        {
+            errors.Add(
+                "La narrazione attribuisce azioni, decisioni o pensieri al giocatore umano.");
+        }
 
         if (plan.Roll is { } roll)
         {
@@ -62,5 +78,24 @@ public sealed class AiGmTurnPlanValidator
         }
 
         return new AiGmTurnPlanValidation(errors.Count == 0, errors);
+    }
+
+    private static bool AttributesAgencyToPlayer(
+        AiGmTurnContext context,
+        string narration)
+    {
+        var playerNamePattern =
+            $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(context.PlayerCharacterName)}" +
+            @"(?![\p{L}\p{N}])";
+        if (Regex.IsMatch(
+            narration,
+            playerNamePattern,
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            return true;
+        }
+
+        return ForbiddenPlayerAgencyPatterns.Any(pattern =>
+            pattern.IsMatch(narration));
     }
 }

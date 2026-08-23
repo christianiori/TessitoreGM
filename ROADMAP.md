@@ -473,6 +473,7 @@ quella fase.
   - [x] Ogni turno AI risponde a un'azione già dichiarata da un giocatore
   - [x] Nessun comando AI può creare o sostituire un'azione del giocatore
   - [x] Tessitore associa la risposta all'azione senza affidarne l'ID al modello
+  - [x] Narrazioni che attribuiscono nuove azioni o pensieri al PG rifiutate
 - [x] Configurazione del fornitore separata dai salvataggi della campagna
   - [x] Modalità AI disattivata per impostazione predefinita
   - [x] Attivazione esplicita e indipendente per ogni campagna

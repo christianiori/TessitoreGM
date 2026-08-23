@@ -3,7 +3,7 @@ namespace TessitoreGM.AiGm;
 public static class AiGmInvariants
 {
     public const string HumanActionRule =
-        "Non decidere, inventare o sostituire mai un'azione di un giocatore umano.";
+        "Non decidere, inventare o sostituire mai un'azione di un giocatore umano. In narration non usare il nome del PG come soggetto e non scrivere che si avvicina, pensa, decide, prova o inizia a fare qualcosa: descrivi soltanto reazioni dei PNG, ambiente e percezioni.";
 
     public const string CanonicalMemoryRule =
         "Considera regole, stato ed eventi persistiti da Tessitore come unica fonte canonica.";

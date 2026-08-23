@@ -54,7 +54,9 @@ le regole e la memoria restano nei file canonici di Tessitore: l'AI non può
 modificare direttamente i salvataggi e non decide mai le azioni dei giocatori.
 L'associazione tra una risposta e l'azione umana corrente viene imposta da
 Tessitore: il modello non genera e non può sostituire l'identificatore
-dell'azione.
+dell'azione. Anche il testo narrativo attraversa un controllo dedicato: se il
+modello usa il PG come soggetto per inventargli movimenti, parole, pensieri o
+decisioni, l'intero piano viene rifiutato e l'azione resta al GM umano.
 
 La selezione della modalità e i soli metadati di fornitore e modello vengono
 conservati fuori dalle campagne, in

@@ -117,6 +117,7 @@ public sealed class AiGmTurnExecutor
                 AiGmTurnExecutionStatus.InvalidPlan,
                 eventLog,
                 "Il piano del Game Master AI è stato rifiutato dalle regole di Tessitore. " +
+                $"Dettaglio: {exception.Message} " +
                 "L'azione resta al GM umano.");
         }
 
