@@ -490,7 +490,11 @@ quella fase.
   - [x] Approvazione e rifiuto atomici con nuova validazione
   - [x] Controlli della coda nel Tavolo del GM
 - [x] Registro persistente di proposte, approvazioni e rifiuti
-- [ ] Costruzione del contesto dalla prospettiva autorizzata del personaggio
+- [x] Costruzione del contesto dalla prospettiva autorizzata del personaggio
+  - [x] Stato personale, scena, cast visibile e conoscenze separati dal dossier GM
+  - [x] Eventi osservati e scambi già ricevuti ricostruiti dal salvataggio
+  - [x] Catalogo globale, cronaca canonica e memorie altrui marcati come privati
+  - [x] Nuovi fatti narrati collegati a una rivelazione persistente confermabile
 - [x] Prima gestione narrativa continua delle scene e dei PNG
   - [x] Identità del luogo e cast della scena persistiti per ogni turno AI
   - [x] Ultimi scambi azione-risposta reinseriti nel dossier del turno seguente

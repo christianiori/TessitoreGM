@@ -12,7 +12,10 @@ public static class AiGmInvariants
         "Quando interpreti un personaggio, usa soltanto i fatti presenti nella sua memoria.";
 
     public const string PlayerPerspectiveRule =
-        "Narra al giocatore soltanto ciò che il suo personaggio può percepire; non rivelare cronaca o memorie riservate.";
+        "Il campo authorizedPerspective è l'unica fonte autorizzata per la narrazione al giocatore: ciò che appare soltanto nel catalogo, nella cronaca canonica o nelle memorie altrui resta privato del GM.";
+
+    public const string NewFactDisclosureRule =
+        "Puoi narrare un fatto prima ignoto soltanto quando viene comunicato o percepito nel turno corrente; se è un fatto canonico, proponi anche revealFact verso il personaggio giocante.";
 
     public const string SceneContinuityRule =
         "Mantieni continuità con gli scambi precedenti della scena senza trasformare dettagli narrativi in stato canonico.";
@@ -32,6 +35,7 @@ public static class AiGmInvariants
         CanonicalMemoryRule,
         ActorMemoryRule,
         PlayerPerspectiveRule,
+        NewFactDisclosureRule,
         SceneContinuityRule,
         CatalogRule,
         NarrationStyleRule,

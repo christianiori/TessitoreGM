@@ -75,10 +75,14 @@ Se Ollama è spento, il modello non è installato o la risposta non supera i
 controlli, l'azione rimane nella normale coda del GM umano senza modificare il
 mondo.
 
-Il dossier fornito al modello è ricostruito a ogni turno dai salvataggi e
-limitato agli attori della scena e agli eventi recenti utili. I file canonici
-restano completi. Un adattatore OpenAI opzionale è previsto come passo
-successivo, senza sostituire il funzionamento locale.
+Il dossier fornito al modello è ricostruito a ogni turno dai salvataggi. Lo
+spazio di lavoro privato del GM contiene stato canonico, memorie degli attori,
+cronaca recente e catalogo della campagna. Una sezione separata
+`authorizedPerspective` contiene invece soltanto ciò che il PG può usare come
+punto di vista narrativo: il proprio stato, il luogo e i personaggi visibili,
+le conoscenze personali, gli eventi osservati e gli scambi già ricevuti nella
+scena. Un adattatore OpenAI opzionale è previsto come passo successivo, senza
+sostituire il funzionamento locale.
 
 Gli scambi narrativi completati nella stessa scena vengono reinseriti nei turni
 successivi, così PNG e dialoghi mantengono continuità senza trasformare ogni
@@ -91,7 +95,11 @@ personaggi registrati con ruolo e posizione, luoghi, risorse, bisogni e fatti
 conosciuti dal motore. Questo permette a Ollama di usare identificatori validi
 anche quando, per esempio, propone di spostare un PNG verso un luogo diverso.
 Il catalogo è conoscenza del Game Master AI e non diventa automaticamente
-informazione disponibile al personaggio del giocatore.
+informazione disponibile al personaggio del giocatore. Le istruzioni del
+protocollo impongono di costruire la risposta narrativa soltanto dalla
+prospettiva autorizzata. Se nel turno un PNG comunica un nuovo fatto canonico,
+il piano deve anche proporne la rivelazione persistente al PG; la rivelazione è
+una conseguenza importante e attende quindi la conferma del GM.
 
 ## Provare il Tavolo del GM
 

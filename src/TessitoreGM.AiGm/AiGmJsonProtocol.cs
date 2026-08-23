@@ -34,7 +34,10 @@ public sealed class AiGmJsonProtocol
             (rule, index) => $"{index + 1}. {rule}"));
         var systemInstructions =
             "Sei il Game Master di TessitoreGM. Rispondi soltanto all'azione " +
-            "umana già registrata nel dossier. Lo stato fornito è in sola lettura.\n" +
+            "umana già registrata nel dossier. Lo stato fornito è in sola lettura. " +
+            "Usa world, memory e catalog come spazio di lavoro privato del GM; " +
+            "per il testo narration considera authorizedPerspective una lista " +
+            "chiusa di ciò che il giocatore può già percepire o ricordare.\n" +
             rules;
 
         return new AiGmProviderPrompt(
@@ -203,6 +206,10 @@ Restituisci un solo oggetto JSON, senza markdown o testo esterno:
   ]
 }
 Usa soltanto identificatori presenti nel dossier. Usa null per i campi non necessari.
+Scrivi narration dalla prospettiva authorizedPerspective. Non trasformare informazioni
+presenti soltanto nel catalogo, nella cronaca canonica o nelle memorie di altri attori
+in conoscenza del giocatore. Un nuovo fatto canonico comunicato nel turno richiede
+anche revealFact verso il personaggio giocante.
 """;
 
     public const string ResponseSchemaJson = """

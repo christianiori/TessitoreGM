@@ -19,6 +19,21 @@ public sealed class AiGmJsonProtocolTests
                 WeatherCondition.Clear,
                 []),
             new AiGmMemoryDossier([], []),
+            new AiGmAuthorizedPerspective(
+                DateTimeOffset.Parse("2026-08-23T09:00:00Z"),
+                WeatherCondition.Clear,
+                new AiGmPerspectivePlayer(
+                    new EntityId("player"),
+                    "Ada",
+                    10,
+                    []),
+                new AiGmPerspectiveScene(
+                    new LocationId("inn"),
+                    "Locanda",
+                    []),
+                [],
+                [],
+                []),
             AiGmInvariants.Rules,
             new AiGmCampaignCatalog(
                 [],
@@ -34,8 +49,16 @@ public sealed class AiGmJsonProtocolTests
         Assert.Contains(AiGmInvariants.HumanActionRule, prompt.SystemInstructions);
         Assert.Contains(actionId.ToString(), prompt.ContextJson);
         Assert.Contains("\"name\": \"Locanda\"", prompt.ContextJson);
+        Assert.Contains("\"authorizedPerspective\"", prompt.ContextJson);
+        Assert.Contains(
+            "lista chiusa",
+            prompt.SystemInstructions);
         Assert.Contains("sola lettura", prompt.SystemInstructions);
         Assert.Contains("moveEntity", prompt.ResponseInstructions);
+        Assert.Contains("revealFact", prompt.ResponseInstructions);
+        Assert.Contains(
+            "prospettiva authorizedPerspective",
+            prompt.ResponseInstructions);
     }
 
     [Fact]

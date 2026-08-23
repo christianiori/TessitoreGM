@@ -9,8 +9,37 @@ public sealed record AiGmTurnContext(
     string PlayerAction,
     AiGmWorldState World,
     AiGmMemoryDossier Memory,
+    AiGmAuthorizedPerspective AuthorizedPerspective,
     IReadOnlyList<string> Rules,
     AiGmCampaignCatalog? Catalog = null);
+
+/// <summary>
+/// Strict narration allowlist reconstructed for the acting player character.
+/// Information elsewhere in the dossier belongs to the private GM workspace.
+/// </summary>
+public sealed record AiGmAuthorizedPerspective(
+    DateTimeOffset CurrentTime,
+    WeatherCondition Weather,
+    AiGmPerspectivePlayer Player,
+    AiGmPerspectiveScene Scene,
+    IReadOnlyList<FactId> KnownFacts,
+    IReadOnlyList<AiGmRememberedEvent> ObservedEvents,
+    IReadOnlyList<AiGmSceneExchange> SceneHistory);
+
+public sealed record AiGmPerspectivePlayer(
+    EntityId EntityId,
+    string Name,
+    int Coins,
+    IReadOnlyList<AiGmResourceState> Resources);
+
+public sealed record AiGmPerspectiveScene(
+    LocationId? LocationId,
+    string? LocationName,
+    IReadOnlyList<AiGmVisibleCharacter> VisibleCharacters);
+
+public sealed record AiGmVisibleCharacter(
+    EntityId EntityId,
+    string Name);
 
 public sealed record AiGmCampaignCatalog(
     IReadOnlyList<AiGmCatalogCharacter> Characters,

@@ -116,9 +116,15 @@ public sealed class AiGmContextBuilder
         var canonicalChronicle = Remember(
             eventLog.Events.TakeLast(_options.MaximumCanonicalEvents),
             narrationContext);
+        var replayedMemories = actorIds.ToDictionary(
+            actorId => actorId,
+            actorId => _memoryEngine.Replay(
+                actorId,
+                initialWorld,
+                eventLog.Events));
         var actorMemories = actorIds.Select(actorId =>
         {
-            var memory = _memoryEngine.Replay(actorId, initialWorld, eventLog.Events);
+            var memory = replayedMemories[actorId];
             return new AiGmActorMemory(
                 actorId,
                 names.GetValueOrDefault(actorId, actorId.ToString()),
@@ -148,6 +154,34 @@ public sealed class AiGmContextBuilder
                 actionsById[turn.PlayerActionId].Description,
                 turn.Narration))
             .ToArray();
+        var playerActor = actors.Single(actor =>
+            actor.EntityId == player.EntityId);
+        var playerMemory = replayedMemories[player.EntityId];
+        var authorizedPerspective = new AiGmAuthorizedPerspective(
+            world.CurrentTime,
+            world.Weather,
+            new AiGmPerspectivePlayer(
+                player.EntityId,
+                player.Name,
+                playerActor.Coins,
+                playerActor.Resources),
+            new AiGmPerspectiveScene(
+                playerActor.LocationId,
+                playerActor.LocationName,
+                actors
+                    .Where(actor => actor.EntityId != player.EntityId)
+                    .Select(actor => new AiGmVisibleCharacter(
+                        actor.EntityId,
+                        actor.Name))
+                    .ToArray()),
+            playerMemory.KnownFacts
+                .OrderBy(fact => fact.Value)
+                .ToArray(),
+            Remember(
+                playerMemory.ObservedEvents.TakeLast(
+                    _options.MaximumObservedEventsPerActor),
+                narrationContext),
+            sceneHistory);
         var catalogActorIds = allActorIds
             .Concat(eventLog.Simulation?.Entities?.Select(
                 entity => entity.EntityId) ?? [])
@@ -176,6 +210,7 @@ public sealed class AiGmContextBuilder
                 canonicalChronicle,
                 actorMemories,
                 sceneHistory),
+            authorizedPerspective,
             AiGmInvariants.Rules,
             catalog);
     }

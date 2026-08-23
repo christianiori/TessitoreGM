@@ -21,9 +21,11 @@ public sealed class AiGmFoundationTests
             "Chiedo all'oste che cosa ricorda della chiave.",
             At(9, 5));
         var secret = new FactId("secret-key");
+        var knownRumor = new FactId("known-rumor");
         var eventLog = CreateEventLog(
             action,
-            new FactRevealed(_npcId, secret, At(9, 0)));
+            new FactRevealed(_npcId, secret, At(9, 0)),
+            new FactRevealed(_playerId, knownRumor, At(9, 1)));
 
         var context = new AiGmContextBuilder().Build(eventLog, action);
 
@@ -40,6 +42,27 @@ public sealed class AiGmFoundationTests
         var playerMemory = Assert.Single(context.Memory.ActorMemories,
             memory => memory.EntityId == _playerId);
         Assert.DoesNotContain(secret, playerMemory.KnownFacts);
+
+        Assert.Equal(_playerId, context.AuthorizedPerspective.Player.EntityId);
+        Assert.Equal(10, context.AuthorizedPerspective.Player.Coins);
+        Assert.Contains(
+            context.AuthorizedPerspective.Player.Resources,
+            resource =>
+                resource.ResourceId == _breadId &&
+                resource.Quantity == 1);
+        Assert.Equal(_innId, context.AuthorizedPerspective.Scene.LocationId);
+        Assert.Contains(
+            context.AuthorizedPerspective.Scene.VisibleCharacters,
+            character => character.EntityId == _npcId);
+        Assert.DoesNotContain(
+            secret,
+            context.AuthorizedPerspective.KnownFacts);
+        Assert.Contains(
+            knownRumor,
+            context.AuthorizedPerspective.KnownFacts);
+        Assert.Single(
+            context.AuthorizedPerspective.ObservedEvents,
+            remembered => remembered.EventType == nameof(FactRevealed));
 
         var catalog = Assert.IsType<AiGmCampaignCatalog>(context.Catalog);
         Assert.Contains(catalog.Characters,
@@ -118,6 +141,9 @@ public sealed class AiGmFoundationTests
         Assert.Contains(
             context.Catalog!.Characters,
             character => character.EntityId == outsideNpcId);
+        Assert.DoesNotContain(
+            context.AuthorizedPerspective.Scene.VisibleCharacters,
+            character => character.EntityId == outsideNpcId);
     }
 
     [Fact]
@@ -162,6 +188,9 @@ public sealed class AiGmFoundationTests
         var exchange = Assert.Single(context.Memory.SceneHistory!);
         Assert.Equal(previousAction.Description, exchange.PlayerAction);
         Assert.Contains("sul bancone", exchange.Narration);
+        Assert.Equal(
+            context.Memory.SceneHistory,
+            context.AuthorizedPerspective.SceneHistory);
     }
 
     [Fact]
