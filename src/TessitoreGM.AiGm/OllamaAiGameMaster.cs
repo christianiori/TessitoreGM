@@ -122,7 +122,9 @@ public sealed class OllamaAiGameMaster : IAiGameMaster
                     "Ollama non ha restituito un piano narrativo.");
             }
 
-            return _protocol.DeserializePlan(content);
+            return _protocol.DeserializePlan(
+                content,
+                context.PlayerActionId);
         }
     }
 

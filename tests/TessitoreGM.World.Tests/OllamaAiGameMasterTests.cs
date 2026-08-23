@@ -20,7 +20,6 @@ public sealed class OllamaAiGameMasterTests
             requestBody = await request.Content!.ReadAsStringAsync();
             var plan = $$"""
             {
-              "playerActionId": "{{context.PlayerActionId}}",
               "narration": "L'oste ascolta e indica la porta.",
               "roll": null,
               "consequences": []
@@ -58,6 +57,11 @@ public sealed class OllamaAiGameMasterTests
                 .GetProperty("format")
                 .GetProperty("type")
                 .GetString());
+        Assert.False(
+            requestJson.RootElement
+                .GetProperty("format")
+                .GetProperty("properties")
+                .TryGetProperty("playerActionId", out _));
         Assert.Contains(
             context.PlayerActionId.ToString(),
             requestBody);

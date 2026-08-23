@@ -52,6 +52,9 @@ La modalità AI è opzionale, disattivata per impostazione predefinita e si
 seleziona separatamente per ogni campagna dal Tavolo del GM. Lo stato del mondo,
 le regole e la memoria restano nei file canonici di Tessitore: l'AI non può
 modificare direttamente i salvataggi e non decide mai le azioni dei giocatori.
+L'associazione tra una risposta e l'azione umana corrente viene imposta da
+Tessitore: il modello non genera e non può sostituire l'identificatore
+dell'azione.
 
 La selezione della modalità e i soli metadati di fornitore e modello vengono
 conservati fuori dalle campagne, in

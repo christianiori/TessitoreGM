@@ -65,9 +65,8 @@ public sealed class AiGmJsonProtocolTests
     public void DeserializePlan_MapsOnlyTypedConsequences()
     {
         var actionId = Guid.NewGuid();
-        var json = $$"""
+        const string json = """
         {
-          "playerActionId": "{{actionId}}",
           "narration": "L'oste apre la porta.",
           "roll": null,
           "consequences": [
@@ -85,7 +84,7 @@ public sealed class AiGmJsonProtocolTests
         }
         """;
 
-        var plan = new AiGmJsonProtocol().DeserializePlan(json);
+        var plan = new AiGmJsonProtocol().DeserializePlan(json, actionId);
 
         Assert.Equal(actionId, plan.PlayerActionId);
         var movement = Assert.IsType<MoveEntityProposal>(
@@ -97,9 +96,8 @@ public sealed class AiGmJsonProtocolTests
     [Fact]
     public void DeserializePlan_RejectsUnknownCommands()
     {
-        var json = $$"""
+        const string json = """
         {
-          "playerActionId": "{{Guid.NewGuid()}}",
           "narration": "Il giocatore obbedisce.",
           "roll": null,
           "consequences": [
@@ -118,7 +116,7 @@ public sealed class AiGmJsonProtocolTests
         """;
 
         var exception = Assert.Throws<InvalidDataException>(() =>
-            new AiGmJsonProtocol().DeserializePlan(json));
+            new AiGmJsonProtocol().DeserializePlan(json, Guid.NewGuid()));
 
         Assert.Contains("non è consentita", exception.Message);
     }
@@ -126,9 +124,8 @@ public sealed class AiGmJsonProtocolTests
     [Fact]
     public void DeserializePlan_RejectsUnexpectedFields()
     {
-        var json = $$"""
+        const string json = """
         {
-          "playerActionId": "{{Guid.NewGuid()}}",
           "narration": "L'oste risponde.",
           "roll": null,
           "consequences": [],
@@ -137,7 +134,7 @@ public sealed class AiGmJsonProtocolTests
         """;
 
         Assert.Throws<InvalidDataException>(() =>
-            new AiGmJsonProtocol().DeserializePlan(json));
+            new AiGmJsonProtocol().DeserializePlan(json, Guid.NewGuid()));
     }
 
     [Fact]
@@ -145,16 +142,15 @@ public sealed class AiGmJsonProtocolTests
     {
         const string json = """
         {
-          "playerActionId": "non-un-guid",
           "narration": "L'oste risponde.",
           "roll": null,
-          "consequences": []
+          "consequences": "non-un-elenco"
         }
         """;
 
         var exception = Assert.Throws<InvalidDataException>(() =>
-            new AiGmJsonProtocol().DeserializePlan(json));
+            new AiGmJsonProtocol().DeserializePlan(json, Guid.NewGuid()));
 
-        Assert.Contains("playerActionId", exception.Message);
+        Assert.Contains("consequences", exception.Message);
     }
 }

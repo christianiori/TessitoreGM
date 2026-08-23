@@ -46,8 +46,17 @@ public sealed class AiGmJsonProtocol
             ResponseInstructions);
     }
 
-    public AiGmTurnPlan DeserializePlan(string json)
+    public AiGmTurnPlan DeserializePlan(
+        string json,
+        Guid playerActionId)
     {
+        if (playerActionId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "The player action id cannot be empty.",
+                nameof(playerActionId));
+        }
+
         if (string.IsNullOrWhiteSpace(json) ||
             json.Length > MaximumResponseCharacters)
         {
@@ -73,11 +82,10 @@ public sealed class AiGmJsonProtocol
                 exception);
         }
 
-        if (document.PlayerActionId == Guid.Empty ||
-            string.IsNullOrWhiteSpace(document.Narration))
+        if (string.IsNullOrWhiteSpace(document.Narration))
         {
             throw new InvalidDataException(
-                "La risposta del Game Master AI non identifica l'azione o la narrazione.");
+                "La risposta del Game Master AI non contiene una narrazione.");
         }
 
         var consequences = document.Consequences ?? [];
@@ -88,7 +96,7 @@ public sealed class AiGmJsonProtocol
         }
 
         return new AiGmTurnPlan(
-            document.PlayerActionId,
+            playerActionId,
             document.Narration.Trim(),
             ToRoll(document.Roll),
             consequences.Select(ToProposal).ToArray());
@@ -193,7 +201,6 @@ public sealed class AiGmJsonProtocol
     public const string ResponseInstructions = """
 Restituisci un solo oggetto JSON, senza markdown o testo esterno:
 {
-  "playerActionId": "guid dell'azione ricevuta",
   "narration": "esito narrato senza decidere nuove azioni del giocatore",
   "roll": null,
   "consequences": [
@@ -220,7 +227,6 @@ anche revealFact verso il personaggio giocante.
 {
   "type": "object",
   "properties": {
-    "playerActionId": { "type": "string" },
     "narration": { "type": "string" },
     "roll": { "type": "null" },
     "consequences": {
@@ -263,13 +269,12 @@ anche revealFact verso il personaggio giocante.
       }
     }
   },
-  "required": ["playerActionId", "narration", "roll", "consequences"],
+  "required": ["narration", "roll", "consequences"],
   "additionalProperties": false
 }
 """;
 
     private sealed record PlanDocument(
-        Guid PlayerActionId,
         string? Narration,
         RollDocument? Roll,
         IReadOnlyList<ConsequenceDocument>? Consequences);
