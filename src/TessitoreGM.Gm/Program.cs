@@ -1,8 +1,13 @@
+using System.Diagnostics;
 using TessitoreGM.Gm;
 
 var launchDirectory = Directory.GetCurrentDirectory();
+var explicitWorldFile = args.Any(argument =>
+    !argument.StartsWith("--", StringComparison.Ordinal));
 var lanEnabled = args.Any(argument =>
     argument.Equals("--lan", StringComparison.OrdinalIgnoreCase));
+var browserEnabled = !explicitWorldFile && !args.Any(argument =>
+    argument.Equals("--no-browser", StringComparison.OrdinalIgnoreCase));
 var portArgument = args.FirstOrDefault(argument =>
     argument.StartsWith("--port=", StringComparison.OrdinalIgnoreCase));
 var port = portArgument is null
@@ -14,7 +19,11 @@ var port = portArgument is null
             "La porta deve essere un numero compreso tra 1024 e 65535.");
 var accessGate = new LanAccessGate(lanEnabled);
 var playerAccessGate = new PlayerAccessGate();
-var activeWorldFile = WorldDashboard.ResolveWorldFile(args, launchDirectory);
+var activeWorldFile = explicitWorldFile
+    ? WorldDashboard.ResolveWorldFile(args, launchDirectory)
+    : StandaloneWorkspace.PrepareDefaultCampaign(
+        launchDirectory,
+        AppContext.BaseDirectory);
 var campaignCatalog = new CampaignCatalog(
     Path.GetDirectoryName(activeWorldFile) ?? launchDirectory);
 var actionToken = Guid.NewGuid().ToString("N");
@@ -620,6 +629,26 @@ if (lanEnabled)
     {
         Console.WriteLine($"Apri sul telefono: http://{address}:{port}");
     }
+}
+if (browserEnabled)
+{
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(
+                $"http://localhost:{port}")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch (Exception exception) when (
+            exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            Console.WriteLine(
+                $"Apri manualmente http://localhost:{port} ({exception.Message})");
+        }
+    });
 }
 app.Run(lanEnabled
     ? $"http://0.0.0.0:{port}"

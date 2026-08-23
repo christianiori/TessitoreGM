@@ -288,7 +288,7 @@ principali senza richiedere conoscenze tecniche del motore.
 
 ## Milestone 7 — Player Table
 
-**Stato: in corso — ciclo di gioco e accesso personale implementati, collaudo finale richiesto**
+**Stato: completato**
 
 Obiettivo: rendere la campagna giocabile fuori dal pannello di controllo del
 GM, mantenendo il GM come autorità e senza mostrare ai giocatori informazioni
@@ -394,7 +394,7 @@ Internet.
 
 ## Milestone 8 — World Pressure
 
-**Stato: in corso — fondazione climatica implementata, collaudo richiesto**
+**Stato: rinviato — fondazione climatica conservata, nuove pressioni congelate**
 
 - [x] Clima
   - [x] Stato climatico persistente nel mondo
@@ -416,26 +416,55 @@ Decisione di progetto: il clima resta per ora uno stato autonomo e narrativo.
 I suoi effetti su produzione, raccolti e scorte appartengono a una fase avanzata
 da progettare insieme a scarsità e agricoltura.
 
+Scarsità, agricoltura, crimine, fazioni e politica non vengono sviluppati finché
+TessitoreGM non è stato consolidato come applicazione autonoma, distribuibile e
+recuperabile in caso di errore. Anche il collaudo esteso del clima è rinviato a
+quella fase.
+
 ## Milestone 9 — Framework and 1.0
 
-**Stato: futuro**
+**Stato: in corso — priorità a stabilità e uso autonomo**
+
+### 9.1 — Distribuzione locale autonoma
+
+- [x] Portare tutti i progetti a una versione .NET supportata
+- [ ] Produrre un pacchetto Windows autosufficiente che non richieda SDK o Git
+  - [x] Script ripetibile di pubblicazione self-contained `win-x64`
+  - [ ] Collaudo del pacchetto estratto su Windows
+- [ ] Avviare il Tavolo del GM senza comandi PowerShell
+  - [x] Avvio locale e LAN tramite collegamenti a doppio clic
+  - [x] Apertura automatica del browser
+  - [ ] Collaudo dell'avvio a doppio clic
+- [x] Separare programma e campagne dell'utente
+- [x] Fornire una campagna dimostrativa al primo avvio
+- [x] Rendere ripetibile e documentata la creazione del pacchetto
+
+### 9.2 — Stabilità dei dati e diagnostica
+
+- [ ] Compatibilità e migrazione dei salvataggi
+- [ ] Backup automatici prima di ogni modifica persistente
+- [ ] Recupero guidato dopo un salvataggio non leggibile
+- [ ] Strumenti di diagnostica della simulazione
+- [ ] Messaggi di errore utilizzabili senza conoscenze tecniche
+
+### 9.3 — Framework estensibile
 
 - [ ] API pubbliche e stabili
 - [ ] Plugin
 - [ ] Editor del mondo
+
+### 9.4 — Documentazione e release
+
 - [ ] Documentazione per utenti e sviluppatori
-- [ ] Compatibilità e migrazione dei salvataggi
-- [ ] Strumenti di diagnostica della simulazione
+- [ ] Prima release stabile
 - [ ] Narratore basato su IA come componente opzionale
 - [ ] Hosting remoto opzionale con HTTPS, account, persistenza e backup
-- [ ] Prima release stabile
 
 ## Prossimo passo
 
-Progettare e implementare il primo taglio di **Scarsità**: soglie configurabili
-sulle scorte, eventi persistenti di ingresso e uscita dalla scarsità, replay
-deterministico e avvisi leggibili dal GM e dai giocatori coinvolti. Prezzi
-dinamici ed effetti su agricoltura e produzione restano separati.
+Realizzare il primo pacchetto Windows autonomo: aggiornamento alla versione .NET
+supportata, pubblicazione autosufficiente, avvio senza PowerShell e campagne
+salvate separatamente dai file dell'applicazione.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

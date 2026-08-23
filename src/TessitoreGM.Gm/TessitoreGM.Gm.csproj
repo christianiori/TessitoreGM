@@ -8,7 +8,20 @@
   </ItemGroup>
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>TessitoreGM</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="..\..\village.json" Link="village.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\packaging\windows\Avvia TessitoreGM.cmd" Link="Avvia TessitoreGM.cmd">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\packaging\windows\Avvia TessitoreGM in rete locale.cmd" Link="Avvia TessitoreGM in rete locale.cmd">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

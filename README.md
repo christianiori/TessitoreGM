@@ -11,6 +11,29 @@ interfaccia locale per il Game Master.
 
 - .NET 8 SDK
 
+## Creare il pacchetto Windows autonomo
+
+Il pacchetto destinato all'uso normale include il runtime .NET e non richiede
+Git, Visual Studio o il .NET SDK sul computer che lo esegue. Da PowerShell,
+nella cartella del repository, crearlo con:
+
+```powershell
+.\scripts\publish-windows.ps1
+```
+
+Il file risultante è `artifacts\TessitoreGM-win-x64.zip`. Dopo averlo estratto,
+si può avviare con un doppio clic su:
+
+- `Avvia TessitoreGM.cmd` per usarlo soltanto sul PC;
+- `Avvia TessitoreGM in rete locale.cmd` per collegare anche smartphone e altri
+  dispositivi della rete privata.
+
+Il browser si apre automaticamente. Al primo avvio viene creata una campagna
+dimostrativa in `Documenti\TessitoreGM\Campagne`: aggiornare o sostituire i file
+del programma non cancella quindi le campagne dell'utente. La finestra di
+TessitoreGM deve rimanere aperta durante l'uso; per arrestarlo è sufficiente
+chiuderla.
+
 ## Provare il Tavolo del GM
 
 Da PowerShell, nella cartella del repository:
