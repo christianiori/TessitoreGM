@@ -78,7 +78,8 @@ internal static class WorldDashboard
         IReadOnlyList<CampaignEntry> campaigns,
         PendingWorldAdvance? pendingAdvance,
         string? focusedScene,
-        AiGmCampaignModeSettings aiGmSettings)
+        AiGmCampaignModeSettings aiGmSettings,
+        string? aiGmRuntimeNotice = null)
     {
         try
         {
@@ -89,7 +90,8 @@ internal static class WorldDashboard
                     campaigns,
                     pendingAdvance,
                     focusedScene,
-                    aiGmSettings)
+                    aiGmSettings,
+                    aiGmRuntimeNotice)
                 : RenderMissingWorld(
                     worldFile,
                     actionToken,
@@ -269,6 +271,10 @@ internal static class WorldDashboard
                 .OrderByDescending(action => action.SubmittedAt)
                 .Take(10)
                 .ToArray();
+            var aiTurnsByAction = (eventLog.AiGmTurns ??
+                    Array.Empty<AiGmTurnRecord>())
+                .GroupBy(turn => turn.PlayerActionId)
+                .ToDictionary(group => group.Key, group => group.Last());
             var needNames = simulation?.Needs?.ToDictionary(
                 need => need.NeedId,
                 need => need.Name) ?? new Dictionary<NeedId, string>();
@@ -321,6 +327,22 @@ internal static class WorldDashboard
                 if (!string.IsNullOrWhiteSpace(action.Resolution))
                 {
                     content.Append($"<div class=\"action-resolution\"><strong>Esito del GM</strong><p>{Encode(action.Resolution)}</p></div>");
+                }
+                if (aiTurnsByAction.GetValueOrDefault(action.Id) is { } aiTurn)
+                {
+                    if (aiTurn.Status == AiGmTurnStatus.PendingConfirmation)
+                    {
+                        content.Append("<div class=\"action-resolution ai-player-narration\"><strong>Game Master AI</strong><p>È necessaria la conferma del GM per una conseguenza importante.</p></div>");
+                    }
+                    else if (aiTurn.Consequences.All(consequence =>
+                        consequence.Status == AiGmConsequenceStatus.Applied))
+                    {
+                        content.Append($"<div class=\"action-resolution ai-player-narration\"><strong>Game Master AI</strong><p>{Encode(aiTurn.Narration)}</p></div>");
+                    }
+                    else
+                    {
+                        content.Append("<div class=\"action-resolution ai-player-narration\"><strong>Game Master AI</strong><p>Il turno è concluso; il GM ha modificato una conseguenza proposta.</p></div>");
+                    }
                 }
                 content.Append("</article>");
             }
@@ -749,7 +771,7 @@ internal static class WorldDashboard
             "Personaggio giocante non valido.");
     }
 
-    public static void SubmitPlayerAction(
+    public static PlayerActionProposal SubmitPlayerAction(
         string worldFile,
         string entityValue,
         string descriptionValue)
@@ -781,6 +803,7 @@ internal static class WorldDashboard
                 .ToArray()
         };
         Save(worldFile, serializer, updatedLog);
+        return proposal;
     }
 
     public static void ResolvePlayerAction(
@@ -978,7 +1001,8 @@ internal static class WorldDashboard
         IReadOnlyList<CampaignEntry> campaigns,
         PendingWorldAdvance? pendingAdvance,
         string? focusedScene,
-        AiGmCampaignModeSettings aiGmSettings)
+        AiGmCampaignModeSettings aiGmSettings,
+        string? aiGmRuntimeNotice)
     {
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             File.ReadAllText(worldFile));
@@ -1031,7 +1055,10 @@ internal static class WorldDashboard
             worldFile,
             actionToken,
             campaigns));
-        content.Append(RenderAiGmMode(aiGmSettings, actionToken));
+        content.Append(RenderAiGmMode(
+            aiGmSettings,
+            actionToken,
+            aiGmRuntimeNotice));
         content.Append(RenderSceneFocus(
             simulation?.Locations ??
                 Array.Empty<LocationPresentationDefinition>(),
@@ -1596,20 +1623,27 @@ internal static class WorldDashboard
 
     private static string RenderAiGmMode(
         AiGmCampaignModeSettings settings,
-        string actionToken)
+        string actionToken,
+        string? runtimeNotice)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
         var enabledLabel = settings.Enabled
             ? "Modalità AI selezionata"
             : "GM umano";
-        var providerLabel = settings.ProviderConfigured
-            ? $"{settings.ProviderId} · {settings.Model}"
-            : "Nessun fornitore collegato";
+        var ollamaConfigured = settings.ProviderConfigured &&
+            settings.ProviderId!.Equals(
+                "ollama",
+                StringComparison.OrdinalIgnoreCase);
+        var providerLabel = ollamaConfigured
+            ? $"Ollama locale · {settings.Model}"
+            : settings.ProviderConfigured
+                ? $"{settings.ProviderId} · {settings.Model}"
+                : "Ollama non ancora configurato";
         var explanation = settings.Enabled
-            ? settings.ProviderConfigured
-                ? "Le nuove azioni potranno essere affidate al Game Master AI."
-                : "La modalità è predisposta, ma le azioni restano al GM umano finché non viene collegato un fornitore."
+            ? ollamaConfigured
+                ? "Ogni nuova azione umana viene affidata a Ollama. Le conseguenze importanti attendono comunque la tua conferma."
+                : "La modalità è predisposta, ma le azioni restano al GM umano finché Ollama non viene configurato."
             : "Tessitore non invia azioni a servizi IA. Memoria e regole restano comunque nei salvataggi locali.";
         var nextEnabled = settings.Enabled ? "false" : "true";
         var buttonLabel = settings.Enabled
@@ -1617,16 +1651,29 @@ internal static class WorldDashboard
             : "Seleziona modalità AI";
         var buttonClass = settings.Enabled ? "secondary" : string.Empty;
 
+        var model = ollamaConfigured
+            ? settings.Model!
+            : "qwen2.5:7b";
+        var notice = string.IsNullOrWhiteSpace(runtimeNotice)
+            ? string.Empty
+            : $"<p class=\"ai-runtime-notice\">{Encode(runtimeNotice)}</p>";
+
         return "<section id=\"ai-gm-mode\" class=\"ai-mode-panel\">" +
             "<div><p class=\"eyebrow\">Modalità di conduzione</p>" +
             $"<h2>{Encode(enabledLabel)}</h2>" +
             $"<p>{Encode(explanation)}</p>" +
             $"<span class=\"ai-provider-status\">{Encode(providerLabel)}</span>" +
-            "</div><form method=\"post\" action=\"/ai-gm/mode\">" +
+            notice +
+            "</div><div class=\"ai-mode-actions\"><form class=\"ai-model-form\" method=\"post\" action=\"/ai-gm/ollama\">" +
+            $"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">" +
+            "<label for=\"ollama-model\">Modello Ollama installato</label>" +
+            $"<input id=\"ollama-model\" name=\"model\" value=\"{Encode(model)}\" maxlength=\"100\" required>" +
+            "<button type=\"submit\" class=\"secondary\">Configura</button></form>" +
+            "<form method=\"post\" action=\"/ai-gm/mode\">" +
             $"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">" +
             $"<input type=\"hidden\" name=\"enabled\" value=\"{nextEnabled}\">" +
             $"<button type=\"submit\" class=\"{buttonClass}\">{Encode(buttonLabel)}</button>" +
-            "</form></section>";
+            "</form></div></section>";
     }
 
     private static string RenderAiGmConfirmationQueue(

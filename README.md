@@ -56,9 +56,29 @@ modificare direttamente i salvataggi e non decide mai le azioni dei giocatori.
 La selezione della modalità e i soli metadati di fornitore e modello vengono
 conservati fuori dalle campagne, in
 `Documenti\TessitoreGM\Configurazione\ai-gm.json`. Il file non contiene chiavi,
-token o altre credenziali. Finché non viene collegato un fornitore, selezionare
-la modalità AI non invia dati all'esterno e il GM umano continua a gestire le
-azioni.
+token o altre credenziali.
+
+Il primo motore supportato è **Ollama**, eseguito sullo stesso PC di Tessitore:
+non richiede una chiave API e il dossier della campagna non viene inviato a un
+servizio cloud. Dopo aver installato Ollama, preparare il modello consigliato
+da PowerShell:
+
+```powershell
+ollama pull qwen2.5:7b
+```
+
+Su un portatile con poca memoria si può iniziare con `qwen2.5:3b`. Lasciare
+Ollama in esecuzione, aprire il Tavolo del GM, confermare il nome del modello
+nel pannello **Modalità di conduzione** e selezionare **Modalità AI**. Da quel
+momento ogni nuova azione dichiarata da un giocatore viene risolta localmente.
+Se Ollama è spento, il modello non è installato o la risposta non supera i
+controlli, l'azione rimane nella normale coda del GM umano senza modificare il
+mondo.
+
+Il dossier fornito al modello è ricostruito a ogni turno dai salvataggi e
+limitato agli attori della scena e agli eventi recenti utili. I file canonici
+restano completi. Un adattatore OpenAI opzionale è previsto come passo
+successivo, senza sostituire il funzionamento locale.
 
 ## Provare il Tavolo del GM
 

@@ -11,6 +11,9 @@ public static class AiGmInvariants
     public const string ActorMemoryRule =
         "Quando interpreti un personaggio, usa soltanto i fatti presenti nella sua memoria.";
 
+    public const string PlayerPerspectiveRule =
+        "Narra al giocatore soltanto ciò che il suo personaggio può percepire; non rivelare cronaca o memorie riservate.";
+
     public const string TypedConsequencesRule =
         "Proponi conseguenze soltanto tramite i comandi tipizzati consentiti.";
 
@@ -19,6 +22,7 @@ public static class AiGmInvariants
         HumanActionRule,
         CanonicalMemoryRule,
         ActorMemoryRule,
+        PlayerPerspectiveRule,
         TypedConsequencesRule
     ];
 }

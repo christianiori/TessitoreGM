@@ -15,6 +15,19 @@ public sealed class AiGmContextBuilder
     private readonly WorldEventProcessor _processor = new();
     private readonly MemoryEngine _memoryEngine = new();
     private readonly DeterministicNarrator _narrator = new();
+    private readonly AiGmContextBuilderOptions _options;
+
+    public AiGmContextBuilder(AiGmContextBuilderOptions? options = null)
+    {
+        _options = options ?? new AiGmContextBuilderOptions();
+        if (_options.MaximumCanonicalEvents <= 0 ||
+            _options.MaximumObservedEventsPerActor <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                "AI GM memory windows must be positive.");
+        }
+    }
 
     public AiGmTurnContext Build(
         WorldEventLog eventLog,
@@ -63,9 +76,15 @@ public sealed class AiGmContextBuilder
             resourceNames,
             needNames);
 
-        var actorIds = players.Select(candidate => candidate.EntityId)
+        var allActorIds = players.Select(candidate => candidate.EntityId)
             .Concat(eventLog.Simulation?.Npcs.Select(npc => npc.EntityId) ?? [])
             .Distinct()
+            .ToArray();
+        var playerLocation = world.GetLocation(player.EntityId);
+        var actorIds = allActorIds.Where(actorId =>
+                actorId == player.EntityId ||
+                (playerLocation is not null &&
+                    world.GetLocation(actorId) == playerLocation))
             .ToArray();
         var humanIds = players.Select(candidate => candidate.EntityId).ToHashSet();
         var resources = KnownResources(eventLog);
@@ -94,7 +113,7 @@ public sealed class AiGmContextBuilder
         }).ToArray();
 
         var canonicalChronicle = Remember(
-            eventLog.Events,
+            eventLog.Events.TakeLast(_options.MaximumCanonicalEvents),
             narrationContext);
         var actorMemories = actorIds.Select(actorId =>
         {
@@ -103,7 +122,10 @@ public sealed class AiGmContextBuilder
                 actorId,
                 names.GetValueOrDefault(actorId, actorId.ToString()),
                 memory.KnownFacts.OrderBy(fact => fact.Value).ToArray(),
-                Remember(memory.ObservedEvents, narrationContext));
+                Remember(
+                    memory.ObservedEvents.TakeLast(
+                        _options.MaximumObservedEventsPerActor),
+                    narrationContext));
         }).ToArray();
 
         return new AiGmTurnContext(
@@ -158,3 +180,7 @@ public sealed class AiGmContextBuilder
             .Distinct()
             .ToArray();
 }
+
+public sealed record AiGmContextBuilderOptions(
+    int MaximumCanonicalEvents = 80,
+    int MaximumObservedEventsPerActor = 40);

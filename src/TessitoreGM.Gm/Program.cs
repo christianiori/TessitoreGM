@@ -29,11 +29,16 @@ var campaignCatalog = new CampaignCatalog(
     Path.GetDirectoryName(activeWorldFile) ?? launchDirectory);
 var aiGmSettingsStore = new AiGmModeSettingsStore(
     StandaloneWorkspace.ResolveAiGmSettingsFile(activeWorldFile));
+var ollamaHttpClient = new HttpClient
+{
+    Timeout = TimeSpan.FromMinutes(2)
+};
 var actionToken = Guid.NewGuid().ToString("N");
 var playerInteractionToken = Guid.NewGuid().ToString("N");
 var worldLock = new SemaphoreSlim(1, 1);
 PendingWorldAdvance? pendingAdvance = null;
 string? focusedScene = null;
+string? aiGmRuntimeNotice = null;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
@@ -115,7 +120,8 @@ app.MapGet("/", () => Results.Content(
         campaignCatalog.Discover(),
         pendingAdvance,
         focusedScene,
-        aiGmSettingsStore.Get(activeWorldFile)),
+        aiGmSettingsStore.Get(activeWorldFile),
+        aiGmRuntimeNotice),
     "text/html; charset=utf-8"));
 app.MapGet("/chronicle", () => Results.Content(
     WorldDashboard.RenderChronicle(activeWorldFile),
@@ -151,6 +157,7 @@ app.MapPost("/campaign/select", async (HttpContext context) =>
             form["campaign"].ToString());
         pendingAdvance = null;
         focusedScene = null;
+        aiGmRuntimeNotice = null;
         playerAccessGate.RevokeAll();
     }
     catch (ArgumentException exception)
@@ -186,6 +193,7 @@ app.MapPost("/campaign/create", async (HttpContext context) =>
             templatePath);
         pendingAdvance = null;
         focusedScene = null;
+        aiGmRuntimeNotice = null;
         playerAccessGate.RevokeAll();
     }
     catch (ArgumentException exception)
@@ -215,6 +223,7 @@ app.MapPost("/campaign/restore-backup", async (HttpContext context) =>
             form["backup"].ToString());
         pendingAdvance = null;
         focusedScene = null;
+        aiGmRuntimeNotice = null;
         playerAccessGate.RevokeAll();
     }
     catch (Exception exception) when (
@@ -245,6 +254,41 @@ app.MapPost("/ai-gm/mode", async (HttpContext context) =>
         aiGmSettingsStore.SetEnabled(
             activeWorldFile,
             enabled: enabledValue == "true");
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/#ai-gm-mode");
+});
+app.MapPost("/ai-gm/ollama", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        var model = form["model"].ToString();
+        _ = new OllamaAiGameMaster(
+            ollamaHttpClient,
+            model);
+        var settings = aiGmSettingsStore.SetProvider(
+            activeWorldFile,
+            "ollama",
+            model);
+        aiGmRuntimeNotice =
+            $"Modello {settings.Model} salvato; Ollama verrà verificato alla prossima azione.";
     }
     catch (Exception exception) when (
         exception is IOException or InvalidDataException or
@@ -571,10 +615,58 @@ app.MapPost("/player/{entityId}/actions", async (
     await worldLock.WaitAsync();
     try
     {
-        WorldDashboard.SubmitPlayerAction(
+        var proposal = WorldDashboard.SubmitPlayerAction(
             activeWorldFile,
             entityId,
             form["description"].ToString());
+
+        var settings = aiGmSettingsStore.Get(activeWorldFile);
+        if (settings.Enabled && settings.ProviderConfigured)
+        {
+            if (settings.ProviderId!.Equals(
+                "ollama",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var eventStore = new TessitoreGM.Events.WorldEventFileStore();
+                    var eventLog = eventStore.Load(activeWorldFile);
+                    var gameMaster = new OllamaAiGameMaster(
+                        ollamaHttpClient,
+                        settings.Model!);
+                    var result = await new AiGmTurnExecutor(gameMaster)
+                        .ExecuteAsync(
+                            eventLog,
+                            proposal,
+                            context.RequestAborted);
+                    aiGmRuntimeNotice = result.Message;
+                    if (result.WorldChanged)
+                    {
+                        eventStore.Save(activeWorldFile, result.EventLog);
+                    }
+                }
+                catch (Exception exception) when (
+                    exception is IOException or InvalidDataException or
+                    InvalidOperationException or ArgumentException)
+                {
+                    aiGmRuntimeNotice =
+                        "Ollama non ha potuto completare il turno: " +
+                        exception.Message +
+                        " L'azione resta al GM umano.";
+                }
+            }
+            else
+            {
+                aiGmRuntimeNotice =
+                    $"Il fornitore '{settings.ProviderId}' non è ancora disponibile. " +
+                    "L'azione resta al GM umano.";
+            }
+        }
+        else if (settings.Enabled)
+        {
+            aiGmRuntimeNotice =
+                "Configura Ollama prima di affidargli le azioni.";
+        }
     }
     catch (ArgumentException exception)
     {
@@ -745,6 +837,7 @@ if (browserEnabled)
         }
     });
 }
+app.Lifetime.ApplicationStopping.Register(ollamaHttpClient.Dispose);
 app.Run(lanEnabled
     ? $"http://0.0.0.0:{port}"
     : $"http://127.0.0.1:{port}");

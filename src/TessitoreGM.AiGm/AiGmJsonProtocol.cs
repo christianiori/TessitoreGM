@@ -202,7 +202,59 @@ Restituisci un solo oggetto JSON, senza markdown o testo esterno:
     }
   ]
 }
-Usa soltanto identificatori presenti nel dossier. Ometti i campi non necessari.
+Usa soltanto identificatori presenti nel dossier. Usa null per i campi non necessari.
+""";
+
+    public const string ResponseSchemaJson = """
+{
+  "type": "object",
+  "properties": {
+    "playerActionId": { "type": "string" },
+    "narration": { "type": "string" },
+    "roll": { "type": "null" },
+    "consequences": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "moveEntity",
+              "transferCoins",
+              "acquireResource",
+              "loseResource",
+              "transferResource",
+              "revealFact",
+              "changeTrust"
+            ]
+          },
+          "entityId": { "type": ["string", "null"] },
+          "otherEntityId": { "type": ["string", "null"] },
+          "locationId": { "type": ["string", "null"] },
+          "resourceId": { "type": ["string", "null"] },
+          "factId": { "type": ["string", "null"] },
+          "amount": { "type": ["integer", "null"] },
+          "reason": { "type": "string" }
+        },
+        "required": [
+          "kind",
+          "entityId",
+          "otherEntityId",
+          "locationId",
+          "resourceId",
+          "factId",
+          "amount",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["playerActionId", "narration", "roll", "consequences"],
+  "additionalProperties": false
+}
 """;
 
     private sealed record PlanDocument(

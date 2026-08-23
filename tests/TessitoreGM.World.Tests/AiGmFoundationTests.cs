@@ -63,6 +63,52 @@ public sealed class AiGmFoundationTests
     }
 
     [Fact]
+    public void Build_IncludesOnlyActorsInThePlayersCurrentScene()
+    {
+        var outsideNpcId = new EntityId("smith");
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Parlo con l'oste.",
+            At(9, 5));
+        var baseLog = CreateEventLog(action);
+        var simulation = baseLog.Simulation!;
+        var eventLog = baseLog with
+        {
+            Events = baseLog.Events
+                .Append(new EntityEnteredLocation(
+                    outsideNpcId,
+                    _squareId,
+                    At(8, 3)))
+                .ToArray(),
+            Simulation = simulation with
+            {
+                Npcs = simulation.Npcs
+                    .Append(new NpcSimulationDefinition(
+                        outsideNpcId,
+                        "Fabbro",
+                        [],
+                        []))
+                    .ToArray(),
+                Entities = simulation.Entities!
+                    .Append(new EntityPresentationDefinition(
+                        outsideNpcId,
+                        "Fabbro"))
+                    .ToArray()
+            }
+        };
+
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+
+        Assert.DoesNotContain(
+            context.World.Actors,
+            actor => actor.EntityId == outsideNpcId);
+        Assert.DoesNotContain(
+            context.Memory.ActorMemories,
+            memory => memory.EntityId == outsideNpcId);
+    }
+
+    [Fact]
     public void Policy_PlayerLossRequiresConfirmation_ButNpcMovementIsRoutine()
     {
         var policy = new AiGmConsequencePolicy([_playerId]);

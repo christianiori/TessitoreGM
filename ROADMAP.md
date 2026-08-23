@@ -491,7 +491,13 @@ quella fase.
 - [ ] Costruzione del contesto dalla prospettiva autorizzata del personaggio
 - [ ] Gestione narrativa delle scene e dei PNG
 - [ ] Richiesta di tiri e difficoltà entro limiti configurabili
-- [ ] Collegamento a un fornitore IA scelto dal GM
+- [x] Primo collegamento a un fornitore IA scelto dal GM
+  - [x] Adattatore locale Ollama senza chiavi API
+  - [x] Risposte JSON strutturate secondo il protocollo chiuso di Tessitore
+  - [x] Dossier compatto per ridurre memoria e contesto richiesti al portatile
+  - [x] Configurazione del modello dal Tavolo del GM
+  - [x] Esecuzione automatica dopo una nuova azione umana persistita
+  - [ ] Adattatore OpenAI opzionale
 - [x] Fallback sicuro quando il servizio IA non è disponibile
   - [x] Nessuna modifica al mondo in caso di timeout o errore del fornitore
   - [x] Piano invalido rifiutato e azione lasciata al GM umano
@@ -504,10 +510,11 @@ quella fase.
 
 ## Prossimo passo
 
-Collegare un primo adattatore IA al contratto indipendente dal fornitore. La
-chiave verrà letta soltanto dall'ambiente del processo; il modello riceverà il
-dossier ricostruito da Tessitore e restituirà esclusivamente un piano tipizzato,
-senza accesso diretto a memoria, regole o salvataggi.
+Raffinare la gestione narrativa di scene e PNG sopra il primo adattatore
+locale Ollama, mantenendo invariati il confine deterministico, la conferma delle
+conseguenze importanti e il divieto assoluto di decidere azioni dei giocatori.
+L'adattatore OpenAI resta il secondo fornitore previsto; tiri e difficoltà
+proposti dall'IA verranno aggiunti dopo il primo ciclo narrativo stabile.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.
