@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
+    <ProjectReference Include="..\TessitoreGM.AiGm\TessitoreGM.AiGm.csproj" />
     <ProjectReference Include="..\TessitoreGM.Core\TessitoreGM.Core.csproj" />
     <ProjectReference Include="..\TessitoreGM.Events\TessitoreGM.Events.csproj" />
     <ProjectReference Include="..\TessitoreGM.Narration\TessitoreGM.Narration.csproj" />

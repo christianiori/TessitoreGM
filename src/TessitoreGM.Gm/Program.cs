@@ -579,6 +579,34 @@ app.MapPost("/player-actions/resolve", async (HttpContext context) =>
     }
     return Results.Redirect("/");
 });
+app.MapPost("/ai-gm/consequences/resolve", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.ResolveAiGmConsequence(
+            activeWorldFile,
+            form["consequenceId"].ToString(),
+            form["decision"].ToString(),
+            form["resolution"].ToString());
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException or
+        InvalidDataException or IOException)
+    {
+        return Results.BadRequest(exception.Message);
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+    return Results.Redirect("/#ai-confirmations");
+});
 app.MapPost("/player-actions/request-roll", async (
     HttpContext context) =>
 {

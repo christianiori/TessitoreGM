@@ -481,7 +481,7 @@ quella fase.
 - [x] Applicazione automatica delle conseguenze ordinarie valide
 - [x] Coda persistente di conferma per le conseguenze importanti
   - [x] Approvazione e rifiuto atomici con nuova validazione
-  - [ ] Controlli della coda nel Tavolo del GM
+  - [x] Controlli della coda nel Tavolo del GM
 - [x] Registro persistente di proposte, approvazioni e rifiuti
 - [ ] Costruzione del contesto dalla prospettiva autorizzata del personaggio
 - [ ] Gestione narrativa delle scene e dei PNG

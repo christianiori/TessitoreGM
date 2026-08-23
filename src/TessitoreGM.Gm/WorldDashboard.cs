@@ -2,6 +2,7 @@ using System.Net;
 using System.Globalization;
 using System.Text;
 using System.Security.Cryptography;
+using TessitoreGM.AiGm;
 using TessitoreGM.Core;
 using TessitoreGM.Events;
 using TessitoreGM.Narration;
@@ -845,6 +846,28 @@ internal static class WorldDashboard
         });
     }
 
+    public static void ResolveAiGmConsequence(
+        string worldFile,
+        string consequenceValue,
+        string decision,
+        string resolution)
+    {
+        if (!Guid.TryParse(consequenceValue, out var consequenceId) ||
+            decision is not ("approve" or "reject"))
+        {
+            throw new ArgumentException("Decisione AI non valida.");
+        }
+
+        var serializer = new WorldEventJsonSerializer();
+        var eventLog = serializer.Deserialize(File.ReadAllText(worldFile));
+        var updatedLog = new AiGmTurnCoordinator().ResolveConsequence(
+            eventLog,
+            consequenceId,
+            approve: decision == "approve",
+            resolution: resolution);
+        Save(worldFile, serializer, updatedLog);
+    }
+
     public static void RequestD20Roll(
         string worldFile,
         string actionValue,
@@ -1025,6 +1048,12 @@ internal static class WorldDashboard
             availableFacts,
             focusedLocationDefinition,
             world,
+            actionToken));
+        content.Append(RenderAiGmConfirmationQueue(
+            eventLog,
+            entityNames,
+            locationNames,
+            resourceNames,
             actionToken));
         content.Append(RenderPlayerActionQueue(
             eventLog,
@@ -1561,17 +1590,113 @@ internal static class WorldDashboard
             ? new[] { order.CustomerId, order.ArtisanId }
             : Array.Empty<EntityId>();
 
+    private static string RenderAiGmConfirmationQueue(
+        WorldEventLog eventLog,
+        IReadOnlyDictionary<EntityId, string> entityNames,
+        IReadOnlyDictionary<LocationId, string> locationNames,
+        IReadOnlyDictionary<ResourceId, string> resourceNames,
+        string actionToken)
+    {
+        var pending = new AiGmTurnCoordinator()
+            .PendingConsequences(eventLog);
+        if (pending.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var actions = (eventLog.PlayerActions ??
+                Array.Empty<PlayerActionProposal>())
+            .ToDictionary(action => action.Id);
+        var content = new StringBuilder();
+        content.Append("<section id=\"ai-confirmations\" class=\"ai-confirmation-queue\"><div class=\"section-heading\"><p class=\"eyebrow\">Game Master AI</p><h2>Conseguenze importanti</h2><p>Queste modifiche sono salvate, ma non sono ancora attive nel mondo.</p></div><div class=\"ai-consequence-list\">");
+
+        foreach (var item in pending)
+        {
+            var playerName = entityNames.GetValueOrDefault(
+                item.PlayerCharacterId,
+                item.PlayerCharacterId.ToString());
+            var playerAction = actions.GetValueOrDefault(item.PlayerActionId);
+            content.Append("<article class=\"ai-consequence-item\"><div class=\"ai-consequence-copy\">");
+            content.Append($"<span class=\"action-status\">{Encode(playerName)} · Conferma richiesta</span>");
+            if (playerAction is not null)
+            {
+                content.Append($"<p><strong>Azione del giocatore:</strong> {Encode(playerAction.Description)}</p>");
+            }
+            content.Append($"<p class=\"ai-narration\">{Encode(item.Narration)}</p>");
+            content.Append($"<div class=\"ai-proposed-change\"><strong>{Encode(DescribeAiConsequence(item.Consequence, entityNames, locationNames, resourceNames))}</strong><small>{Encode(item.Consequence.AssessmentReason)}</small></div></div>");
+            content.Append("<form method=\"post\" action=\"/ai-gm/consequences/resolve\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"consequenceId\" value=\"{item.Consequence.Id}\">");
+            content.Append("<label>Nota facoltativa<textarea name=\"resolution\" maxlength=\"500\" rows=\"2\" placeholder=\"Motivo della decisione\"></textarea></label><div class=\"resolution-buttons\"><button name=\"decision\" value=\"approve\" type=\"submit\">Approva</button><button name=\"decision\" value=\"reject\" type=\"submit\" class=\"secondary\">Rifiuta</button></div></form></article>");
+        }
+
+        content.Append("</div></section>");
+        return content.ToString();
+    }
+
+    private static string DescribeAiConsequence(
+        AiGmConsequenceRecord consequence,
+        IReadOnlyDictionary<EntityId, string> entityNames,
+        IReadOnlyDictionary<LocationId, string> locationNames,
+        IReadOnlyDictionary<ResourceId, string> resourceNames)
+    {
+        string Entity(EntityId? id) => id is { } value
+            ? entityNames.GetValueOrDefault(value, value.ToString())
+            : "entità sconosciuta";
+        string Location(LocationId? id) => id is { } value
+            ? locationNames.GetValueOrDefault(value, value.ToString())
+            : "luogo sconosciuto";
+        string Resource(ResourceId? id) => id is { } value
+            ? resourceNames.GetValueOrDefault(value, value.ToString())
+            : "risorsa sconosciuta";
+
+        return consequence.Kind switch
+        {
+            AiGmConsequenceKind.MoveEntity =>
+                $"Sposta {Entity(consequence.EntityId)} in " +
+                $"{Location(consequence.LocationId)}.",
+            AiGmConsequenceKind.TransferCoins =>
+                $"Trasferisce {consequence.Amount} monete da " +
+                $"{Entity(consequence.EntityId)} a " +
+                $"{Entity(consequence.OtherEntityId)}.",
+            AiGmConsequenceKind.AcquireResource =>
+                $"{Entity(consequence.EntityId)} acquisisce " +
+                $"{consequence.Amount} × {Resource(consequence.ResourceId)}.",
+            AiGmConsequenceKind.LoseResource =>
+                $"{Entity(consequence.EntityId)} perde " +
+                $"{consequence.Amount} × {Resource(consequence.ResourceId)}.",
+            AiGmConsequenceKind.TransferResource =>
+                $"Trasferisce {consequence.Amount} × " +
+                $"{Resource(consequence.ResourceId)} da " +
+                $"{Entity(consequence.EntityId)} a " +
+                $"{Entity(consequence.OtherEntityId)}.",
+            AiGmConsequenceKind.RevealFact =>
+                $"Rivela {consequence.FactId} a " +
+                $"{Entity(consequence.EntityId)}.",
+            AiGmConsequenceKind.ChangeTrust =>
+                $"Modifica di {consequence.Amount:+#;-#;0} la fiducia di " +
+                $"{Entity(consequence.EntityId)} verso " +
+                $"{Entity(consequence.OtherEntityId)}.",
+            _ => "Conseguenza non riconosciuta."
+        };
+    }
+
     private static string RenderPlayerActionQueue(
         WorldEventLog eventLog,
         IReadOnlyList<PlayerCharacterRegistered> playerCharacters,
         string actionToken)
     {
+        var aiManagedActions = (eventLog.AiGmTurns ??
+                Array.Empty<AiGmTurnRecord>())
+            .Where(turn => turn.Status == AiGmTurnStatus.PendingConfirmation)
+            .Select(turn => turn.PlayerActionId)
+            .ToHashSet();
         var activeActions = (eventLog.PlayerActions ??
                 Array.Empty<PlayerActionProposal>())
             .Where(action => action.Status is
                 PlayerActionStatus.Pending or
                 PlayerActionStatus.RollRequested or
                 PlayerActionStatus.Rolled)
+            .Where(action => !aiManagedActions.Contains(action.Id))
             .OrderBy(action => action.SubmittedAt)
             .ToArray();
         var names = playerCharacters.ToDictionary(
