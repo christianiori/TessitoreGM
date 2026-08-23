@@ -478,9 +478,11 @@ quella fase.
 - [x] Proposte di conseguenza tipizzate: mai modifiche dirette ai file JSON
 - [x] Validazione delle proposte da parte del motore di Tessitore
 - [x] Politica deterministica per distinguere conseguenze ordinarie e importanti
-- [ ] Applicazione automatica delle conseguenze ordinarie valide
-- [ ] Coda persistente di conferma per le conseguenze importanti
-- [ ] Registro persistente di proposte, approvazioni e rifiuti
+- [x] Applicazione automatica delle conseguenze ordinarie valide
+- [x] Coda persistente di conferma per le conseguenze importanti
+  - [x] Approvazione e rifiuto atomici con nuova validazione
+  - [ ] Controlli della coda nel Tavolo del GM
+- [x] Registro persistente di proposte, approvazioni e rifiuti
 - [ ] Costruzione del contesto dalla prospettiva autorizzata del personaggio
 - [ ] Gestione narrativa delle scene e dei PNG
 - [ ] Richiesta di tiri e difficoltà entro limiti configurabili
@@ -495,11 +497,10 @@ quella fase.
 
 ## Prossimo passo
 
-Collegare il nucleo AI GM al flusso delle azioni dei giocatori: conservare nei
-salvataggi il piano e il suo esito, applicare automaticamente le conseguenze
-ordinarie convalidate e mettere quelle importanti in una coda di conferma. La
-scelta e il collegamento del modello arriveranno soltanto dopo questa
-fondazione.
+Mostrare nel Tavolo del GM la coda persistente delle conseguenze importanti e
+aggiungere l'attivazione esplicita della modalità AI per campagna. Solo dopo
+questi controlli verrà collegato un primo fornitore, senza affidargli memoria,
+regole o accesso diretto ai salvataggi.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

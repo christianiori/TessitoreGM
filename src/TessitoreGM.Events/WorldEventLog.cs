@@ -6,7 +6,8 @@ public sealed record WorldEventLog(
     WorldInitialState InitialWorld,
     IReadOnlyList<IWorldEvent> Events,
     WorldSimulationDefinition? Simulation = null,
-    IReadOnlyList<PlayerActionProposal>? PlayerActions = null);
+    IReadOnlyList<PlayerActionProposal>? PlayerActions = null,
+    IReadOnlyList<AiGmTurnRecord>? AiGmTurns = null);
 
 public enum PlayerActionStatus
 {

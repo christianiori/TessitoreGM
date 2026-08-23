@@ -25,6 +25,7 @@ public sealed class WorldEventJsonSerializer
         ValidateWeather(eventLog.InitialWorld.Weather);
         ValidateSimulation(eventLog.Simulation);
         ValidatePlayerActions(eventLog.PlayerActions);
+        ValidateAiGmTurns(eventLog.AiGmTurns, eventLog.PlayerActions);
 
         var persistedEvents = eventLog.Events.Select(worldEvent =>
         {
@@ -44,7 +45,8 @@ public sealed class WorldEventJsonSerializer
                 eventLog.InitialWorld,
                 persistedEvents,
                 eventLog.Simulation,
-                eventLog.PlayerActions),
+                eventLog.PlayerActions,
+                eventLog.AiGmTurns),
             JsonOptions);
     }
 
@@ -88,13 +90,116 @@ public sealed class WorldEventJsonSerializer
         ValidateWeather(document.InitialWorld.Weather);
         ValidateSimulation(document.Simulation);
         ValidatePlayerActions(document.PlayerActions);
+        ValidateAiGmTurns(document.AiGmTurns, document.PlayerActions);
 
         return new WorldEventLog(
             document.InitialWorld,
             document.Events.Select(DeserializeEvent).ToArray(),
             document.Simulation,
-            document.PlayerActions);
+            document.PlayerActions,
+            document.AiGmTurns);
     }
+
+    private static void ValidateAiGmTurns(
+        IReadOnlyList<AiGmTurnRecord>? turns,
+        IReadOnlyList<PlayerActionProposal>? playerActions)
+    {
+        if (turns is null)
+        {
+            return;
+        }
+
+        var actionMap = (playerActions ?? [])
+            .ToDictionary(action => action.Id);
+        var consequences = turns.SelectMany(turn => turn.Consequences ?? [])
+            .ToArray();
+        if (turns.Select(turn => turn.Id).Distinct().Count() != turns.Count ||
+            turns.Select(turn => turn.PlayerActionId).Distinct().Count() !=
+                turns.Count ||
+            consequences.Select(consequence => consequence.Id)
+                .Distinct().Count() != consequences.Length ||
+            turns.Any(turn =>
+                turn.Id == Guid.Empty ||
+                turn.PlayerActionId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(turn.Narration) ||
+                turn.Narration.Length > 4000 ||
+                turn.Consequences is null ||
+                !Enum.IsDefined(turn.Status) ||
+                !actionMap.TryGetValue(turn.PlayerActionId, out var action) ||
+                action.PlayerCharacterId != turn.PlayerCharacterId ||
+                TurnStatus(turn.Consequences) != turn.Status) ||
+            consequences.Any(consequence => !IsValid(consequence)))
+        {
+            throw new InvalidDataException("The AI GM turn history is invalid.");
+        }
+    }
+
+    private static AiGmTurnStatus TurnStatus(
+        IReadOnlyList<AiGmConsequenceRecord> consequences) =>
+        consequences.Any(consequence =>
+            consequence.Status == AiGmConsequenceStatus.PendingConfirmation)
+                ? AiGmTurnStatus.PendingConfirmation
+                : AiGmTurnStatus.Completed;
+
+    private static bool IsValid(AiGmConsequenceRecord consequence)
+    {
+        if (consequence.Id == Guid.Empty ||
+            !Enum.IsDefined(consequence.Kind) ||
+            !Enum.IsDefined(consequence.Status) ||
+            string.IsNullOrWhiteSpace(consequence.AssessmentReason) ||
+            consequence.AssessmentReason.Length > 500 ||
+            string.IsNullOrWhiteSpace(consequence.Reason) ||
+            consequence.Reason.Length > 500 ||
+            consequence.Resolution?.Length > 500 ||
+            ((consequence.Status == AiGmConsequenceStatus.Applied ||
+                consequence.Status == AiGmConsequenceStatus.Rejected) &&
+                consequence.ResolvedAt is null) ||
+            (!consequence.RequiresConfirmation &&
+                consequence.Status != AiGmConsequenceStatus.Applied) ||
+            (consequence.Status == AiGmConsequenceStatus.PendingConfirmation &&
+                (!consequence.RequiresConfirmation ||
+                 consequence.ResolvedAt is not null)) ||
+            (consequence.Status == AiGmConsequenceStatus.Rejected &&
+                (!consequence.RequiresConfirmation ||
+                 consequence.ResolvedAt is null)))
+        {
+            return false;
+        }
+
+        return consequence.Kind switch
+        {
+            AiGmConsequenceKind.MoveEntity =>
+                consequence.EntityId is not null &&
+                consequence.LocationId is not null,
+            AiGmConsequenceKind.TransferCoins =>
+                HasTwoEntitiesAndPositiveAmount(consequence),
+            AiGmConsequenceKind.AcquireResource or
+            AiGmConsequenceKind.LoseResource =>
+                consequence.EntityId is not null &&
+                consequence.ResourceId is not null &&
+                consequence.Amount > 0,
+            AiGmConsequenceKind.TransferResource =>
+                HasTwoEntitiesAndPositiveAmount(consequence) &&
+                consequence.ResourceId is not null,
+            AiGmConsequenceKind.RevealFact =>
+                consequence.EntityId is not null &&
+                consequence.FactId is not null,
+            AiGmConsequenceKind.ChangeTrust =>
+                consequence.EntityId is not null &&
+                consequence.OtherEntityId is not null &&
+                consequence.EntityId != consequence.OtherEntityId &&
+                consequence.Amount is >= -100 and <= 100 &&
+                consequence.Amount != 0,
+            _ => false
+        };
+    }
+
+    private static bool HasTwoEntitiesAndPositiveAmount(
+        AiGmConsequenceRecord consequence) =>
+        consequence.EntityId is not null &&
+        consequence.OtherEntityId is not null &&
+        consequence.EntityId != consequence.OtherEntityId &&
+        consequence.Amount > 0;
 
     private static void ValidatePlayerActions(
         IReadOnlyList<PlayerActionProposal>? playerActions)
@@ -354,7 +459,8 @@ public sealed class WorldEventJsonSerializer
         WorldInitialState InitialWorld,
         IReadOnlyList<PersistedEvent> Events,
         WorldSimulationDefinition? Simulation = null,
-        IReadOnlyList<PlayerActionProposal>? PlayerActions = null);
+        IReadOnlyList<PlayerActionProposal>? PlayerActions = null,
+        IReadOnlyList<AiGmTurnRecord>? AiGmTurns = null);
 
     private sealed record PersistedEvent(
         string Type,
