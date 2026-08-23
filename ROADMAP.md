@@ -478,6 +478,7 @@ quella fase.
   - [x] Metadati di fornitore e modello conservati fuori dal salvataggio
   - [x] Credenziali escluse dal formato di configurazione
 - [x] Contratto indipendente dal fornitore IA
+- [x] Protocollo JSON chiuso per contesto e piani tipizzati
 - [x] Contesto di turno limitato a regole, stato canonico, memoria e cronaca
 - [x] Proposte di conseguenza tipizzate: mai modifiche dirette ai file JSON
 - [x] Validazione delle proposte da parte del motore di Tessitore
@@ -491,7 +492,9 @@ quella fase.
 - [ ] Gestione narrativa delle scene e dei PNG
 - [ ] Richiesta di tiri e difficoltà entro limiti configurabili
 - [ ] Collegamento a un fornitore IA scelto dal GM
-- [ ] Fallback sicuro quando il servizio IA non è disponibile
+- [x] Fallback sicuro quando il servizio IA non è disponibile
+  - [x] Nessuna modifica al mondo in caso di timeout o errore del fornitore
+  - [x] Piano invalido rifiutato e azione lasciata al GM umano
 - [ ] Interfaccia di sessione ispirata ai GM virtuali conversazionali
 
 ### 9.5 — Documentazione e release
