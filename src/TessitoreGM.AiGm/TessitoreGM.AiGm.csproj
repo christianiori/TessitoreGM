@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TessitoreGM.Core\TessitoreGM.Core.csproj" />
+    <ProjectReference Include="..\TessitoreGM.Events\TessitoreGM.Events.csproj" />
+    <ProjectReference Include="..\TessitoreGM.Memory\TessitoreGM.Memory.csproj" />
+    <ProjectReference Include="..\TessitoreGM.Narration\TessitoreGM.Narration.csproj" />
+    <ProjectReference Include="..\TessitoreGM.World\TessitoreGM.World.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

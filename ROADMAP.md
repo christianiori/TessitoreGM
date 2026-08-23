@@ -462,19 +462,44 @@ quella fase.
 - [ ] Plugin
 - [ ] Editor del mondo
 
-### 9.4 — Documentazione e release
+### 9.4 — Modalità AI Game Master
+
+- [x] Usare la memoria persistente di Tessitore come fondamento della modalità
+  - [x] Ricostruire a ogni turno il dossier dai file canonici della campagna
+  - [x] Tenere separate la cronaca completa e la memoria osservata da ogni attore
+  - [x] Non considerare mai la memoria della conversazione IA come stato di gioco
+- [x] Definire una modalità alternativa e opzionale al GM umano
+- [x] Stabilire che l'AI non decide mai le azioni dei giocatori umani
+  - [x] Ogni turno AI risponde a un'azione già dichiarata da un giocatore
+  - [x] Nessun comando AI può creare o sostituire un'azione del giocatore
+- [ ] Configurazione del fornitore separata dai salvataggi della campagna
+- [x] Contratto indipendente dal fornitore IA
+- [x] Contesto di turno limitato a regole, stato canonico, memoria e cronaca
+- [x] Proposte di conseguenza tipizzate: mai modifiche dirette ai file JSON
+- [x] Validazione delle proposte da parte del motore di Tessitore
+- [x] Politica deterministica per distinguere conseguenze ordinarie e importanti
+- [ ] Applicazione automatica delle conseguenze ordinarie valide
+- [ ] Coda persistente di conferma per le conseguenze importanti
+- [ ] Registro persistente di proposte, approvazioni e rifiuti
+- [ ] Costruzione del contesto dalla prospettiva autorizzata del personaggio
+- [ ] Gestione narrativa delle scene e dei PNG
+- [ ] Richiesta di tiri e difficoltà entro limiti configurabili
+- [ ] Collegamento a un fornitore IA scelto dal GM
+- [ ] Fallback sicuro quando il servizio IA non è disponibile
+- [ ] Interfaccia di sessione ispirata ai GM virtuali conversazionali
+
+### 9.5 — Documentazione e release
 
 - [ ] Documentazione per utenti e sviluppatori
 - [ ] Prima release stabile
-- [ ] Narratore basato su IA come componente opzionale
-- [ ] Hosting remoto opzionale con HTTPS, account, persistenza e backup
 
 ## Prossimo passo
 
-Definire la compatibilità dei salvataggi e introdurre una migrazione esplicita
-tra versioni, senza modificare automaticamente un file che TessitoreGM non sa
-riconoscere. Il collaudo del pacchetto Windows resta raccolto per la fase finale
-di verifica.
+Collegare il nucleo AI GM al flusso delle azioni dei giocatori: conservare nei
+salvataggi il piano e il suo esito, applicare automaticamente le conseguenze
+ordinarie convalidate e mettere quelle importanti in una coda di conferma. La
+scelta e il collegamento del modello arriveranno soltanto dopo questa
+fondazione.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.
