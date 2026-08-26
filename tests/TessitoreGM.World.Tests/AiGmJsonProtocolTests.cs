@@ -1,3 +1,4 @@
+using System.Text.Json;
 using TessitoreGM.AiGm;
 using TessitoreGM.Core;
 using TessitoreGM.Events;
@@ -56,10 +57,41 @@ public sealed class AiGmJsonProtocolTests
             prompt.SystemInstructions);
         Assert.Contains("sola lettura", prompt.SystemInstructions);
         Assert.Contains("moveEntity", prompt.ResponseInstructions);
+        Assert.Contains(
+            "entityId (chi cambia opinione)",
+            prompt.ResponseInstructions);
         Assert.Contains("revealFact", prompt.ResponseInstructions);
+        Assert.Contains(
+            "Una normale azione sociale non crea oggetti",
+            prompt.ResponseInstructions);
+        Assert.Contains(
+            "davvero difficile, rischiosa o pericolosa",
+            prompt.ResponseInstructions);
         Assert.Contains(
             "prospettiva authorizedPerspective",
             prompt.ResponseInstructions);
+    }
+
+    [Fact]
+    public void ResponseSchema_UsesDistinctShapesForTypedConsequences()
+    {
+        using var schema = JsonDocument.Parse(
+            AiGmJsonProtocol.ResponseSchemaJson);
+        var alternatives = schema.RootElement
+            .GetProperty("properties")
+            .GetProperty("consequences")
+            .GetProperty("items")
+            .GetProperty("oneOf");
+
+        Assert.Equal(6, alternatives.GetArrayLength());
+        Assert.Contains(alternatives.EnumerateArray(), alternative =>
+            alternative.GetProperty("properties")
+                .GetProperty("kind")
+                .TryGetProperty("const", out var kind) &&
+            kind.GetString() == "changeTrust" &&
+            alternative.GetProperty("required")
+                .EnumerateArray()
+                .Any(field => field.GetString() == "entityId"));
     }
 
     [Fact]

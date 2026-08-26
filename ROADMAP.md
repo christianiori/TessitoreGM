@@ -430,11 +430,12 @@ quella fase.
 - [x] Portare tutti i progetti a una versione .NET supportata
 - [ ] Produrre un pacchetto Windows autosufficiente che non richieda SDK o Git
   - [x] Script ripetibile di pubblicazione self-contained `win-x64`
-  - [ ] Collaudo del pacchetto estratto su Windows
+  - [x] Collaudo automatico del pacchetto estratto su Windows
+  - [ ] Collaudo manuale su un computer privo di SDK e Git
 - [ ] Avviare il Tavolo del GM senza comandi PowerShell
   - [x] Avvio locale e LAN tramite collegamenti a doppio clic
   - [x] Apertura automatica del browser
-  - [ ] Collaudo dell'avvio a doppio clic
+  - [x] Collaudo dell'avvio a doppio clic
 - [x] Separare programma e campagne dell'utente
 - [x] Fornire una campagna dimostrativa al primo avvio
 - [x] Rendere ripetibile e documentata la creazione del pacchetto
@@ -502,7 +503,13 @@ quella fase.
   - [x] Ultimi scambi azione-risposta reinseriti nel dossier del turno seguente
   - [x] Narrazioni rifiutate escluse dalla continuità successiva
   - [x] Una sola azione irrisolta per ogni PG
-  - [x] Retry manuale con Ollama dopo un fallback sicuro
+  - [x] Analisi strutturata di categoria, bersaglio, luogo e rischio dell'azione
+  - [x] Distinzione tra bersagli presenti e personaggi fuori scena
+  - [x] Controllo deterministico di pertinenza rispetto ad azione e scena
+  - [x] Rimozione sicura di conseguenze economiche prive di fondamento
+  - [x] Retry automatico con spiegazione degli errori al fornitore
+  - [x] Fallback narrativo sicuro soltanto dopo il tentativo di correzione
+  - [x] Narrazione concisa limitata a fatti e comportamenti osservabili
 - [x] Richiesta di tiri e difficoltà entro limiti configurabili
   - [x] Nessuna conseguenza applicata prima del risultato
   - [x] Dadi generati una sola volta dal server di Tessitore
@@ -517,7 +524,12 @@ quella fase.
   - [ ] Adattatore OpenAI opzionale
 - [x] Fallback sicuro quando il servizio IA non è disponibile
   - [x] Nessuna modifica al mondo in caso di timeout o errore del fornitore
-  - [x] Piano invalido rifiutato e azione lasciata al GM umano
+  - [x] Piano quasi valido corretto o ripulito senza interrompere il turno
+  - [x] Piano irrimediabilmente invalido rifiutato e azione lasciata al GM umano
+- [ ] Qualità ed evaluation della modalità AI
+  - [ ] Batteria di scenari rappresentativi invece di correzioni linguistiche isolate
+  - [ ] Misurazione di pertinenza, continuità, prospettiva e uso dei tiri
+  - [ ] Revisione generale della comprensione delle domande e degli intenti
 - [ ] Interfaccia di sessione ispirata ai GM virtuali conversazionali
   - [x] Sequenza persistente di azioni umane e risposte narrative AI
   - [ ] Presentazione dedicata della conversazione di scena
@@ -530,10 +542,12 @@ quella fase.
 
 ## Prossimo passo
 
-Rifinire la presentazione dedicata della conversazione di scena. Il confine
-deterministico, la conferma delle conseguenze importanti e il divieto assoluto
-di decidere azioni dei giocatori restano invariati. L'adattatore OpenAI rimane
-il secondo fornitore previsto.
+Completare il collaudo della distribuzione Windows autonoma: verificare il
+pacchetto estratto, l'avvio a doppio clic e la campagna dimostrativa senza SDK o
+Git. Subito dopo vengono migrazione dei salvataggi e diagnostica. La qualità
+della modalità AI verrà raffinata tramite una batteria di scenari, non con
+correzioni linguistiche isolate. La presentazione dedicata della conversazione
+di scena e l'adattatore OpenAI restano passi successivi.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

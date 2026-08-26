@@ -24,7 +24,7 @@ public static class AiGmInvariants
         "Per le conseguenze usa soltanto identificatori presenti nel catalogo della campagna; conoscere il catalogo non autorizza a rivelarne i contenuti al giocatore.";
 
     public const string NarrationStyleRule =
-        "Narra in italiano semplice, in seconda persona e in circa 50-90 parole, lasciando sempre al giocatore la scelta della prossima azione.";
+        "Narra in italiano semplice e concreto, normalmente in 1-3 frasi e 20-80 parole. Per una semplice azione sociale bastano 1-2 frasi. Descrivi soltanto parole, gesti, suoni e dettagli osservabili: non affermare pensieri, speranze o intenzioni interiori dei PNG. Lascia sempre al giocatore la scelta della prossima azione.";
 
     public const string TypedConsequencesRule =
         "Proponi conseguenze soltanto tramite i comandi tipizzati consentiti.";

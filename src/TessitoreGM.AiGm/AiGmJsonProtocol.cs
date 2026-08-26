@@ -37,7 +37,9 @@ public sealed class AiGmJsonProtocol
             "umana già registrata nel dossier. Lo stato fornito è in sola lettura. " +
             "Usa world, memory e catalog come spazio di lavoro privato del GM; " +
             "per il testo narration considera authorizedPerspective una lista " +
-            "chiusa di ciò che il giocatore può già percepire o ricordare.\n" +
+            "chiusa di ciò che il giocatore può già percepire o ricordare. " +
+            "actionFrame identifica categoria, luogo e bersagli dell'azione: " +
+            "la risposta deve restare centrata su questi dati.\n" +
             rules;
 
         return new AiGmProviderPrompt(
@@ -205,20 +207,32 @@ Restituisci un solo oggetto JSON, senza markdown o testo esterno:
   "roll": null,
   "consequences": [
     {
-      "kind": "moveEntity | transferCoins | acquireResource | loseResource | transferResource | revealFact | changeTrust",
-      "entityId": "id principale",
-      "otherEntityId": "id secondario quando richiesto",
-      "locationId": "luogo quando richiesto",
-      "resourceId": "risorsa quando richiesta",
-      "factId": "fatto quando richiesto",
-      "amount": 1,
-      "reason": "motivazione aderente a stato e memoria"
+      "kind": "uno dei tipi consentiti",
+      "campi": "soltanto quelli previsti per quel tipo"
     }
   ]
 }
 Usa soltanto identificatori presenti nel dossier. Usa null per i campi non necessari.
-Se rollResult è null, richiedi un tiro soltanto quando l'azione ha un esito davvero
-incerto. In tal caso sostituisci roll con un oggetto contenente esattamente modifier,
+Le forme ammesse per una conseguenza sono esattamente queste:
+- moveEntity: kind, entityId, locationId, reason.
+- transferCoins: kind, entityId (pagatore), otherEntityId (destinatario), amount, reason.
+- acquireResource o loseResource: kind, entityId, resourceId, amount, reason.
+- transferResource: kind, entityId (sorgente), otherEntityId (destinatario), resourceId, amount, reason.
+- revealFact: kind, entityId (chi apprende), factId, reason.
+- changeTrust: kind, entityId (chi cambia opinione), otherEntityId, amount, reason.
+Non aggiungere gli altri campi alla conseguenza. Se nessuna conseguenza canonica è
+necessaria, restituisci consequences come array vuoto.
+Non modificare monete o risorse del personaggio giocante se la sua azione non esprime
+un intento economico o materiale, come comprare, vendere, pagare, prendere, cedere,
+raccogliere o chiedere una ricompensa. Una normale azione sociale non crea oggetti,
+denaro o premi: in quel caso narra soltanto la reazione e lascia consequences vuoto.
+Se actionFrame contiene un bersaglio, centra la risposta su quel personaggio. Se il
+bersaglio ha isVisible falso, non inventare un incontro o una reazione a distanza:
+spiega semplicemente che non è presente nella scena corrente.
+Se rollResult è null, non richiedere tiri per azioni ordinarie, sicure o prive di una
+conseguenza significativa in caso di fallimento. Richiedi un tiro soltanto quando
+l'azione è davvero difficile, rischiosa o pericolosa e il suo esito è incerto. In tal
+caso sostituisci roll con un oggetto contenente esattamente modifier,
 difficulty, difficultyVisible, mode e reason; usa modificatore da -10 a 10,
 difficoltà da 5 a 30 e mode Normal, Advantage o Disadvantage. consequences deve
 essere vuoto e narration introduce soltanto la situazione incerta.
@@ -264,39 +278,79 @@ percepire, senza aggiungere movimenti, parole, pensieri, intenzioni o decisioni 
       "type": "array",
       "maxItems": 20,
       "items": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "moveEntity",
-              "transferCoins",
-              "acquireResource",
-              "loseResource",
-              "transferResource",
-              "revealFact",
-              "changeTrust"
-            ]
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": { "const": "moveEntity" },
+              "entityId": { "type": "string" },
+              "locationId": { "type": "string" },
+              "reason": { "type": "string" }
+            },
+            "required": ["kind", "entityId", "locationId", "reason"],
+            "additionalProperties": false
           },
-          "entityId": { "type": ["string", "null"] },
-          "otherEntityId": { "type": ["string", "null"] },
-          "locationId": { "type": ["string", "null"] },
-          "resourceId": { "type": ["string", "null"] },
-          "factId": { "type": ["string", "null"] },
-          "amount": { "type": ["integer", "null"] },
-          "reason": { "type": "string" }
-        },
-        "required": [
-          "kind",
-          "entityId",
-          "otherEntityId",
-          "locationId",
-          "resourceId",
-          "factId",
-          "amount",
-          "reason"
-        ],
-        "additionalProperties": false
+          {
+            "type": "object",
+            "properties": {
+              "kind": { "const": "transferCoins" },
+              "entityId": { "type": "string" },
+              "otherEntityId": { "type": "string" },
+              "amount": { "type": "integer" },
+              "reason": { "type": "string" }
+            },
+            "required": ["kind", "entityId", "otherEntityId", "amount", "reason"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": { "enum": ["acquireResource", "loseResource"] },
+              "entityId": { "type": "string" },
+              "resourceId": { "type": "string" },
+              "amount": { "type": "integer" },
+              "reason": { "type": "string" }
+            },
+            "required": ["kind", "entityId", "resourceId", "amount", "reason"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": { "const": "transferResource" },
+              "entityId": { "type": "string" },
+              "otherEntityId": { "type": "string" },
+              "resourceId": { "type": "string" },
+              "amount": { "type": "integer" },
+              "reason": { "type": "string" }
+            },
+            "required": ["kind", "entityId", "otherEntityId", "resourceId", "amount", "reason"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": { "const": "revealFact" },
+              "entityId": { "type": "string" },
+              "factId": { "type": "string" },
+              "reason": { "type": "string" }
+            },
+            "required": ["kind", "entityId", "factId", "reason"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": { "const": "changeTrust" },
+              "entityId": { "type": "string" },
+              "otherEntityId": { "type": "string" },
+              "amount": { "type": "integer" },
+              "reason": { "type": "string" }
+            },
+            "required": ["kind", "entityId", "otherEntityId", "amount", "reason"],
+            "additionalProperties": false
+          }
+        ]
       }
     }
   },

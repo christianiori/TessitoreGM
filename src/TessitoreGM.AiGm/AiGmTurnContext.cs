@@ -13,7 +13,31 @@ public sealed record AiGmTurnContext(
     AiGmAuthorizedPerspective AuthorizedPerspective,
     IReadOnlyList<string> Rules,
     AiGmCampaignCatalog? Catalog = null,
-    AiGmResolvedRoll? RollResult = null);
+    AiGmResolvedRoll? RollResult = null,
+    AiGmActionFrame? ActionFrame = null);
+
+public enum AiGmActionKind
+{
+    Other,
+    Social,
+    Movement,
+    Exploration,
+    Economy,
+    Conflict
+}
+
+public sealed record AiGmActionFrame(
+    AiGmActionKind Kind,
+    IReadOnlyList<AiGmActionTarget> Targets,
+    LocationId? CurrentLocationId,
+    string? CurrentLocationName,
+    bool IsLikelyRisky,
+    bool AllowsPlayerEconomy);
+
+public sealed record AiGmActionTarget(
+    EntityId EntityId,
+    string Name,
+    bool IsVisible);
 
 public sealed record AiGmResolvedRoll(
     int Modifier,

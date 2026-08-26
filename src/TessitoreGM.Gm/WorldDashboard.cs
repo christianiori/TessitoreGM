@@ -1760,7 +1760,7 @@ internal static class WorldDashboard
                 content.Append($"<p><strong>Azione del giocatore:</strong> {Encode(playerAction.Description)}</p>");
             }
             content.Append($"<p class=\"ai-narration\">{Encode(item.Narration)}</p>");
-            content.Append($"<div class=\"ai-proposed-change\"><strong>{Encode(DescribeAiConsequence(item.Consequence, entityNames, locationNames, resourceNames))}</strong><small>{Encode(item.Consequence.AssessmentReason)}</small></div></div>");
+            content.Append($"<div class=\"ai-proposed-change\"><strong>{Encode(DescribeAiConsequence(item.Consequence, entityNames, locationNames, resourceNames))}</strong> <small>{Encode(item.Consequence.AssessmentReason)}</small></div></div>");
             content.Append("<form method=\"post\" action=\"/ai-gm/consequences/resolve\">");
             content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"consequenceId\" value=\"{item.Consequence.Id}\">");
             content.Append("<label>Nota facoltativa<textarea name=\"resolution\" maxlength=\"500\" rows=\"2\" placeholder=\"Motivo della decisione\"></textarea></label><div class=\"resolution-buttons\"><button name=\"decision\" value=\"approve\" type=\"submit\">Approva</button><button name=\"decision\" value=\"reject\" type=\"submit\" class=\"secondary\">Rifiuta</button></div></form></article>");

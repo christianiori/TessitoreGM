@@ -72,6 +72,38 @@ public sealed class AiGmFoundationTests
         Assert.Contains(catalog.Resources,
             resource => resource.ResourceId == _breadId);
         Assert.Contains(secret, catalog.Facts);
+        var frame = Assert.IsType<AiGmActionFrame>(context.ActionFrame);
+        Assert.Equal(AiGmActionKind.Social, frame.Kind);
+        var target = Assert.Single(frame.Targets);
+        Assert.Equal(_npcId, target.EntityId);
+        Assert.True(target.IsVisible);
+    }
+
+    [Fact]
+    public void ActionAnalyzer_RecognizesNamedTargetOutsideCurrentScene()
+    {
+        var targetId = new EntityId("farmer");
+        var frame = new AiGmActionAnalyzer().Analyze(
+            "Faccio una battuta a Brina.",
+            new AiGmPerspectiveScene(_innId, "Locanda", []),
+            new AiGmCampaignCatalog(
+                [new AiGmCatalogCharacter(
+                    targetId,
+                    "Brina la contadina",
+                    false,
+                    "Contadina",
+                    new LocationId("farm"),
+                    "Cascina")],
+                [],
+                [],
+                [],
+                []),
+            _playerId);
+
+        Assert.Equal(AiGmActionKind.Social, frame.Kind);
+        var target = Assert.Single(frame.Targets);
+        Assert.Equal(targetId, target.EntityId);
+        Assert.False(target.IsVisible);
     }
 
     [Fact]
@@ -296,6 +328,8 @@ public sealed class AiGmFoundationTests
 
     [Theory]
     [InlineData("Ada si avvicina all'oste e inizia a imitarlo.")]
+    [InlineData("Ada decide di seguire l'oste fuori dalla locanda.")]
+    [InlineData("Ada pensa che l'oste stia mentendo.")]
     [InlineData("Ti avvicini all'oste e pensi a cosa domandargli.")]
     public void TurnPlanValidator_RejectsNarrationThatActsForThePlayer(
         string narration)
@@ -340,6 +374,114 @@ public sealed class AiGmFoundationTests
                 "L'oste alza lo sguardo verso di te e continua a pulire il bancone.",
                 null,
                 []));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [InlineData("L'oste osserva Ada con crescente sospetto.")]
+    [InlineData("Brina si allontana da Ada e stringe il sacco al petto.")]
+    [InlineData("Il rumore alle spalle di Ada si interrompe di colpo.")]
+    public void TurnPlanValidator_AcceptsPlayerNameWhenNotSentenceSubject(
+        string narration)
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Rimango fermo e osservo la locanda.",
+            At(9, 0));
+        var eventLog = CreateEventLog(action);
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+        var validator = new AiGmTurnPlanValidator(
+            new AiGmProposalValidator(eventLog, Replay(eventLog)));
+
+        var result = validator.Validate(
+            context,
+            new AiGmTurnPlan(action.Id, narration, null, []));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void TurnPlanValidator_ReportsTheAgencyFragment()
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Rimango fermo e osservo la locanda.",
+            At(9, 0));
+        var eventLog = CreateEventLog(action);
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+        var validator = new AiGmTurnPlanValidator(
+            new AiGmProposalValidator(eventLog, Replay(eventLog)));
+
+        var result = validator.Validate(
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "Ada decide di uscire dalla locanda.",
+                null,
+                []));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Contains("Ada decide", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void TurnPlanValidator_RejectsPlayerResourceRewardWithoutMaterialIntent()
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Cerco di distrarre l'oste.",
+            At(9, 0));
+        var eventLog = CreateEventLog(action);
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+        var validator = new AiGmTurnPlanValidator(
+            new AiGmProposalValidator(eventLog, Replay(eventLog)));
+
+        var result = validator.Validate(
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "L'oste si volta verso il rumore.",
+                null,
+                [new AcquireResourceProposal(
+                    _playerId,
+                    new ResourceId("grain"),
+                    5,
+                    "L'oste consegna del grano.")]));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Contains("intento economico", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void TurnPlanValidator_AcceptsPlayerResourceChangeWithMaterialIntent()
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Cerco di comprare del pane dall'oste.",
+            At(9, 0));
+        var eventLog = CreateEventLog(action);
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+        var validator = new AiGmTurnPlanValidator(
+            new AiGmProposalValidator(eventLog, Replay(eventLog)));
+
+        var result = validator.Validate(
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "L'oste posa il pane sul bancone.",
+                null,
+                [new AcquireResourceProposal(
+                    _playerId,
+                    new ResourceId("bread"),
+                    1,
+                    "Il giocatore riceve il pane acquistato.")]));
 
         Assert.True(result.IsValid);
     }

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 
 namespace TessitoreGM.AiGm;
@@ -52,16 +53,42 @@ public sealed class OllamaAiGameMaster : IAiGameMaster
         ArgumentNullException.ThrowIfNull(context);
 
         var prompt = _protocol.CreatePrompt(context);
+        var userInstructions = prompt.ContextJson + "\n\n" +
+            prompt.ResponseInstructions;
+        var plan = await RequestPlanAsync(
+            context,
+            prompt.SystemInstructions,
+            userInstructions,
+            cancellationToken);
+
+        var repairFeedback = RepairFeedback(context, plan);
+        if (repairFeedback.Count == 0)
+        {
+            return plan;
+        }
+
+        return await RequestPlanAsync(
+            context,
+            prompt.SystemInstructions,
+            userInstructions + "\n\nCORREZIONE OBBLIGATORIA DEL PRECEDENTE " +
+            "TENTATIVO:\n- " + string.Join("\n- ", repairFeedback) +
+            "\nGenera un nuovo oggetto JSON completo che corregga tutti questi errori.",
+            cancellationToken);
+    }
+
+    private async Task<AiGmTurnPlan> RequestPlanAsync(
+        AiGmTurnContext context,
+        string systemInstructions,
+        string userInstructions,
+        CancellationToken cancellationToken)
+    {
         using var schema = JsonDocument.Parse(
             AiGmJsonProtocol.ResponseSchemaJson);
         var request = new OllamaChatRequest(
             _model,
             [
-                new OllamaMessage("system", prompt.SystemInstructions),
-                new OllamaMessage(
-                    "user",
-                    prompt.ContextJson + "\n\n" +
-                    prompt.ResponseInstructions)
+                new OllamaMessage("system", systemInstructions),
+                new OllamaMessage("user", userInstructions)
             ],
             Stream: false,
             schema.RootElement.Clone());
@@ -126,6 +153,78 @@ public sealed class OllamaAiGameMaster : IAiGameMaster
                 content,
                 context.PlayerActionId);
         }
+    }
+
+    private static IReadOnlyList<string> RepairFeedback(
+        AiGmTurnContext context,
+        AiGmTurnPlan plan)
+    {
+        var feedback = new List<string>();
+        var withoutAgency = AiGmTurnPlanValidator.RemovePlayerAgencySentences(
+            context,
+            plan.Narration);
+        if (!string.Equals(
+                withoutAgency,
+                plan.Narration,
+                StringComparison.Ordinal))
+        {
+            feedback.Add(
+                "La narrazione decide o descrive azioni del personaggio giocante. " +
+                "Descrivi soltanto ambiente e reazioni dei PNG.");
+        }
+
+        var observable = AiGmTurnPlanValidator
+            .RemoveUnobservableMentalStateSentences(withoutAgency);
+        if (!string.Equals(observable, withoutAgency, StringComparison.Ordinal))
+        {
+            feedback.Add(
+                "La narrazione afferma pensieri, speranze o intenzioni interne di un PNG. " +
+                "Riscrivila usando soltanto parole, gesti e comportamenti osservabili.");
+        }
+
+        var relevant = AiGmTurnPlanValidator.EnsureActionRelevance(
+            context,
+            observable);
+        if (!string.Equals(relevant, observable, StringComparison.Ordinal))
+        {
+            var target = context.ActionFrame?.Targets.FirstOrDefault();
+            feedback.Add(target is null
+                ? "La narrazione usa un luogo estraneo alla scena corrente."
+                : target.IsVisible
+                    ? $"La narrazione deve mostrare una reazione pertinente di {target.Name}."
+                    : $"{target.Name} non è presente nella scena e non può reagire direttamente.");
+        }
+
+        if ((plan.Consequences ?? []).Any(proposal =>
+            AiGmTurnPlanValidator.IsUngroundedPlayerEconomicConsequence(
+                context,
+                proposal)))
+        {
+            feedback.Add(
+                "Non proporre modifiche a monete o risorse: l'azione del giocatore " +
+                "non ha un intento economico o materiale.");
+        }
+
+
+        var sentences = Regex.Split(
+                plan.Narration.Trim(),
+                @"(?<=[.!?])\s+")
+            .Where(sentence => !string.IsNullOrWhiteSpace(sentence))
+            .ToArray();
+        var wordCount = Regex.Matches(plan.Narration, @"\b[\p{L}\p{N}']+\b")
+            .Count;
+        var repeats = sentences
+            .Select(sentence => sentence.Trim().ToUpperInvariant())
+            .Distinct()
+            .Count() != sentences.Length;
+        if (sentences.Length > 3 || wordCount > 90 || repeats)
+        {
+            feedback.Add(
+                "La narrazione deve essere concisa, non ripetitiva e composta da " +
+                "non più di 3 frasi e 90 parole.");
+        }
+
+        return feedback;
     }
 
     private static string RequiredModel(string model)

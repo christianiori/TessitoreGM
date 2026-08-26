@@ -52,6 +52,22 @@ public sealed class AiGmTurnCoordinator
         }
 
         var world = Replay(eventLog);
+        plan = plan with
+        {
+            Narration = AiGmTurnPlanValidator.EnsureActionRelevance(
+                context,
+                AiGmTurnPlanValidator.RemoveUnobservableMentalStateSentences(
+                    AiGmTurnPlanValidator.RemovePlayerAgencySentences(
+                        context,
+                        plan.Narration))),
+            Consequences = (plan.Consequences ?? [])
+                .Where(proposal =>
+                    !AiGmTurnPlanValidator
+                        .IsUngroundedPlayerEconomicConsequence(
+                            context,
+                            proposal))
+                .ToArray()
+        };
         var planValidation = new AiGmTurnPlanValidator(
             new AiGmProposalValidator(eventLog, world),
             _rollOptions)

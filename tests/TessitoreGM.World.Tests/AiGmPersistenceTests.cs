@@ -47,7 +47,8 @@ public sealed class AiGmPersistenceTests
     [Fact]
     public void RecordPlan_RollRequestPersistsWithoutApplyingConsequences()
     {
-        var (eventLog, action, context) = CreateTurn();
+        var (eventLog, action, context) = CreateTurn(
+            "Forzo la serratura corrosa.");
         var plan = new AiGmTurnPlan(
             action.Id,
             "La serratura è corrosa e oppone resistenza.",
@@ -79,7 +80,8 @@ public sealed class AiGmPersistenceTests
     [Fact]
     public void RecordPlan_RollRequestCannotApplyEarlyConsequences()
     {
-        var (eventLog, action, context) = CreateTurn();
+        var (eventLog, action, context) = CreateTurn(
+            "Provo ad aprire la porta bloccata.");
         var plan = new AiGmTurnPlan(
             action.Id,
             "La porta resiste mentre l'oste osserva.",
@@ -106,7 +108,8 @@ public sealed class AiGmPersistenceTests
     [Fact]
     public void RecordPlan_ImportantPlayerLossSurvivesSerializationWithoutApplying()
     {
-        var (eventLog, action, context) = CreateTurn();
+        var (eventLog, action, context) = CreateTurn(
+            "Cerco di salvare il pane che sta cadendo nel fuoco.");
         var plan = new AiGmTurnPlan(
             action.Id,
             "Il pane scivola verso il bordo del tavolo.",
@@ -141,9 +144,131 @@ public sealed class AiGmPersistenceTests
     }
 
     [Fact]
+    public void RecordPlan_DiscardsUngroundedPlayerEconomyWithoutBlockingNarration()
+    {
+        var (eventLog, action, context) = CreateTurn(
+            "Cerco di distrarre l'oste.");
+        var coordinator = new AiGmTurnCoordinator();
+
+        var updated = coordinator.RecordPlan(
+            eventLog,
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "L'oste si volta verso il rumore.",
+                null,
+                [new TransferResourceProposal(
+                    _npcId,
+                    _playerId,
+                    _breadId,
+                    5,
+                    "L'oste consegna un premio non richiesto.")]));
+
+        Assert.Equal(
+            PlayerActionStatus.Approved,
+            Assert.Single(updated.PlayerActions!).Status);
+        var turn = Assert.Single(updated.AiGmTurns!);
+        Assert.Equal(AiGmTurnStatus.Completed, turn.Status);
+        Assert.Equal("L'oste si volta verso il rumore.", turn.Narration);
+        Assert.Empty(turn.Consequences);
+        Assert.Equal(1, Replay(updated).GetResourceQuantity(
+            _playerId,
+            _breadId));
+    }
+
+    [Fact]
+    public void RecordPlan_RemovesPlayerAgencySentenceWithoutBlockingNpcReaction()
+    {
+        var (eventLog, action, context) = CreateTurn(
+            "Faccio una battuta all'oste.");
+        var coordinator = new AiGmTurnCoordinator();
+
+        var updated = coordinator.RecordPlan(
+            eventLog,
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "Ada entra nella locanda. L'oste scoppia a ridere e posa lo straccio sul bancone.",
+                null,
+                []));
+
+        Assert.Equal(
+            PlayerActionStatus.Approved,
+            Assert.Single(updated.PlayerActions!).Status);
+        var turn = Assert.Single(updated.AiGmTurns!);
+        Assert.Equal(
+            "L'oste scoppia a ridere e posa lo straccio sul bancone.",
+            turn.Narration);
+        Assert.DoesNotContain("Ada entra", turn.Narration);
+    }
+
+    [Fact]
+    public void RecordPlan_ReplacesEntirelyUnsafeNarrationWithNeutralFallback()
+    {
+        var (eventLog, action, context) = CreateTurn(
+            "Faccio una battuta all'oste.");
+
+        var updated = new AiGmTurnCoordinator().RecordPlan(
+            eventLog,
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "Ada decide di entrare nella locanda.",
+                null,
+                []));
+
+        var narration = Assert.Single(updated.AiGmTurns!).Narration;
+        Assert.Contains("Oste", narration, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("reagisce", narration);
+        Assert.DoesNotContain("Ada decide", narration);
+    }
+
+    [Fact]
+    public void RecordPlan_ReplacesNarrationThatIgnoresNamedVisibleTarget()
+    {
+        var (eventLog, action, context) = CreateTurn(
+            "Faccio una battuta all'oste.");
+
+        var updated = new AiGmTurnCoordinator().RecordPlan(
+            eventLog,
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "Alcuni utensili sono accatastati in un angolo.",
+                null,
+                []));
+
+        var narration = Assert.Single(updated.AiGmTurns!).Narration;
+        Assert.Contains("Oste", narration, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("reagisce", narration);
+        Assert.DoesNotContain("utensili", narration);
+    }
+
+    [Fact]
+    public void RecordPlan_RemovesUnobservableNpcThoughts()
+    {
+        var (eventLog, action, context) = CreateTurn(
+            "Faccio una battuta all'oste.");
+
+        var updated = new AiGmTurnCoordinator().RecordPlan(
+            eventLog,
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "L'oste sorride e posa lo straccio. L'oste spera di farti ridere.",
+                null,
+                []));
+
+        var narration = Assert.Single(updated.AiGmTurns!).Narration;
+        Assert.Equal("L'oste sorride e posa lo straccio.", narration);
+        Assert.DoesNotContain("spera", narration);
+    }
+
+    [Fact]
     public void ResolveConsequence_ApprovalAppliesEventAndCompletesAction()
     {
-        var (eventLog, action, context) = CreateTurn();
+        var (eventLog, action, context) = CreateTurn(
+            "Cerco di salvare il pane che sta cadendo nel fuoco.");
         var coordinator = new AiGmTurnCoordinator();
         var proposed = coordinator.RecordPlan(
             eventLog,
@@ -184,7 +309,8 @@ public sealed class AiGmPersistenceTests
     [Fact]
     public void ResolveConsequence_RejectionPreservesWorldAndRecordsDecision()
     {
-        var (eventLog, action, context) = CreateTurn();
+        var (eventLog, action, context) = CreateTurn(
+            "Cerco di salvare il pane che sta cadendo dal tavolo.");
         var coordinator = new AiGmTurnCoordinator();
         var proposed = coordinator.RecordPlan(
             eventLog,
@@ -217,12 +343,12 @@ public sealed class AiGmPersistenceTests
     }
 
     private (WorldEventLog EventLog, PlayerActionProposal Action,
-        AiGmTurnContext Context) CreateTurn()
+        AiGmTurnContext Context) CreateTurn(string? actionDescription = null)
     {
         var action = new PlayerActionProposal(
             Guid.NewGuid(),
             _playerId,
-            "Chiedo all'oste di accompagnarmi in piazza.",
+            actionDescription ?? "Chiedo all'oste di accompagnarmi in piazza.",
             At(9, 0));
         IWorldEvent[] events =
         [

@@ -82,6 +82,99 @@ public sealed class OllamaAiGameMasterTests
     }
 
     [Fact]
+    public async Task PlanTurnAsync_RetriesOnceWithRelevanceFeedback()
+    {
+        var npcId = new EntityId("innkeeper");
+        var context = CreateContext() with
+        {
+            ActionFrame = new AiGmActionFrame(
+                AiGmActionKind.Social,
+                [new AiGmActionTarget(npcId, "Mira l'ostessa", true)],
+                new LocationId("inn"),
+                "Locanda",
+                false,
+                false)
+        };
+        var requestBodies = new List<string>();
+        using var client = new HttpClient(new StubHandler(async request =>
+        {
+            requestBodies.Add(await request.Content!.ReadAsStringAsync());
+            var narration = requestBodies.Count == 1
+                ? "Alcuni utensili sono accatastati in un angolo."
+                : "Mira l'ostessa ride e risponde con una battuta ancora più secca.";
+            var plan = JsonSerializer.Serialize(new
+            {
+                narration,
+                roll = (object?)null,
+                consequences = Array.Empty<object>()
+            });
+            var response = JsonSerializer.Serialize(new
+            {
+                message = new { role = "assistant", content = plan }
+            });
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    response,
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        }));
+
+        var result = await new OllamaAiGameMaster(
+            client,
+            "qwen2.5:7b").PlanTurnAsync(context);
+
+        Assert.Equal(2, requestBodies.Count);
+        using var retryRequest = JsonDocument.Parse(requestBodies[1]);
+        var retryPrompt = retryRequest.RootElement
+            .GetProperty("messages")[1]
+            .GetProperty("content")
+            .GetString();
+        Assert.Contains("CORREZIONE OBBLIGATORIA", retryPrompt);
+        Assert.Contains("Mira l'ostessa", retryPrompt);
+        Assert.Contains("ride", result.Narration);
+    }
+
+    [Fact]
+    public async Task PlanTurnAsync_RetriesUnobservableNpcIntent()
+    {
+        var calls = 0;
+        using var client = new HttpClient(new StubHandler(_ =>
+        {
+            calls++;
+            var narration = calls == 1
+                ? "L'oste sorride, sperando di convincerti."
+                : "L'oste sorride e appoggia entrambe le mani sul bancone.";
+            var plan = JsonSerializer.Serialize(new
+            {
+                narration,
+                roll = (object?)null,
+                consequences = Array.Empty<object>()
+            });
+            var response = JsonSerializer.Serialize(new
+            {
+                message = new { role = "assistant", content = plan }
+            });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    response,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        }));
+
+        var result = await new OllamaAiGameMaster(
+            client,
+            "qwen2.5:7b").PlanTurnAsync(CreateContext());
+
+        Assert.Equal(2, calls);
+        Assert.DoesNotContain("sperando", result.Narration);
+        Assert.Contains("mani", result.Narration);
+    }
+
+    [Fact]
     public void Constructor_RejectsRemoteEndpoint()
     {
         using var client = new HttpClient();

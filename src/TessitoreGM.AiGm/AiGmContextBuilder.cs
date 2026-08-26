@@ -213,7 +213,12 @@ public sealed class AiGmContextBuilder
             authorizedPerspective,
             AiGmInvariants.Rules,
             catalog,
-            ResolvedRoll(persistedAction));
+            ResolvedRoll(persistedAction),
+            new AiGmActionAnalyzer().Analyze(
+                persistedAction.Description,
+                authorizedPerspective.Scene,
+                catalog,
+                player.EntityId));
     }
 
     private static AiGmResolvedRoll? ResolvedRoll(
