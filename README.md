@@ -95,6 +95,15 @@ dettaglio narrato in una modifica meccanica del mondo. Ogni PG può avere una
 sola azione irrisolta: se Ollama non risponde, il GM può riprovare dal pulsante
 **Affida a Ollama** nella coda oppure risolverla manualmente.
 
+Quando l'esito di un'azione è incerto, Ollama può proporre un tiro d20 entro
+limiti più stretti di quelli disponibili al GM umano: modificatore da -10 a
++10 e difficoltà da 5 a 30. Tessitore valida la richiesta e non applica alcuna
+conseguenza; il giocatore tira dalla propria vista e il dado viene generato una
+sola volta dal server. Totale, difficoltà ed esito vengono salvati nel mondo e
+reinseriti nel nuovo dossier AI. Solo allora Ollama narra il risultato e propone
+eventuali conseguenze. Se la seconda risposta fallisce, il tiro resta intatto e
+il GM può usare **Continua con Ollama** o concludere manualmente.
+
 Il dossier contiene inoltre il catalogo canonico corrente della campagna:
 personaggi registrati con ruolo e posizione, luoghi, risorse, bisogni e fatti
 conosciuti dal motore. Questo permette a Ollama di usare identificatori validi

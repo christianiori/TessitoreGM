@@ -5,6 +5,7 @@ namespace TessitoreGM.AiGm;
 public enum AiGmTurnExecutionStatus
 {
     Completed,
+    RollRequested,
     PendingConfirmation,
     ProviderUnavailable,
     InvalidPlan
@@ -119,6 +120,17 @@ public sealed class AiGmTurnExecutor
                 "Il piano del Game Master AI è stato rifiutato dalle regole di Tessitore. " +
                 $"Dettaglio: {exception.Message} " +
                 "L'azione resta al GM umano.");
+        }
+
+        var updatedAction = (updatedLog.PlayerActions ?? [])
+            .Single(action => action.Id == playerAction.Id);
+        if (updatedAction.Status == PlayerActionStatus.RollRequested)
+        {
+            return new AiGmTurnExecutionResult(
+                AiGmTurnExecutionStatus.RollRequested,
+                updatedLog,
+                "Il Game Master AI ha richiesto un tiro. Tessitore attende il d20 del giocatore.",
+                WorldChanged: true);
         }
 
         var pending = _coordinator.PendingConsequences(updatedLog)

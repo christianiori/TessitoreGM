@@ -217,6 +217,14 @@ Restituisci un solo oggetto JSON, senza markdown o testo esterno:
   ]
 }
 Usa soltanto identificatori presenti nel dossier. Usa null per i campi non necessari.
+Se rollResult è null, richiedi un tiro soltanto quando l'azione ha un esito davvero
+incerto. In tal caso sostituisci roll con un oggetto contenente esattamente modifier,
+difficulty, difficultyVisible, mode e reason; usa modificatore da -10 a 10,
+difficoltà da 5 a 30 e mode Normal, Advantage o Disadvantage. consequences deve
+essere vuoto e narration introduce soltanto la situazione incerta.
+Se rollResult è presente, il tiro è già stato generato e verificato da Tessitore:
+usa succeeded e total per risolvere l'azione, imposta roll a null e non inventare o
+modificare dadi, difficoltà o risultato.
 Scrivi narration dalla prospettiva authorizedPerspective. Non trasformare informazioni
 presenti soltanto nel catalogo, nella cronaca canonica o nelle memorie di altri attori
 in conoscenza del giocatore. Un nuovo fatto canonico comunicato nel turno richiede
@@ -231,7 +239,27 @@ percepire, senza aggiungere movimenti, parole, pensieri, intenzioni o decisioni 
   "type": "object",
   "properties": {
     "narration": { "type": "string" },
-    "roll": { "type": "null" },
+    "roll": {
+      "type": ["object", "null"],
+      "properties": {
+        "modifier": { "type": "integer", "minimum": -10, "maximum": 10 },
+        "difficulty": { "type": "integer", "minimum": 5, "maximum": 30 },
+        "difficultyVisible": { "type": "boolean" },
+        "mode": {
+          "type": "string",
+          "enum": ["Normal", "Advantage", "Disadvantage"]
+        },
+        "reason": { "type": "string" }
+      },
+      "required": [
+        "modifier",
+        "difficulty",
+        "difficultyVisible",
+        "mode",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
     "consequences": {
       "type": "array",
       "maxItems": 20,

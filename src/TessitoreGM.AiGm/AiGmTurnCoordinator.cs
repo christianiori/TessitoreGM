@@ -13,10 +13,14 @@ public sealed class AiGmTurnCoordinator
     private readonly WorldEventProcessor _processor = new();
     private readonly WorldEventLogEditor _editor = new();
     private readonly AiGmConsequencePolicyOptions _policyOptions;
+    private readonly AiGmRollPolicyOptions _rollOptions;
 
-    public AiGmTurnCoordinator(AiGmConsequencePolicyOptions? policyOptions = null)
+    public AiGmTurnCoordinator(
+        AiGmConsequencePolicyOptions? policyOptions = null,
+        AiGmRollPolicyOptions? rollOptions = null)
     {
         _policyOptions = policyOptions ?? new AiGmConsequencePolicyOptions();
+        _rollOptions = rollOptions ?? new AiGmRollPolicyOptions();
     }
 
     public WorldEventLog RecordPlan(
@@ -27,12 +31,6 @@ public sealed class AiGmTurnCoordinator
         ArgumentNullException.ThrowIfNull(eventLog);
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(plan);
-
-        if (plan.Roll is not null)
-        {
-            throw new NotSupportedException(
-                "Persistent AI GM roll requests are not available yet.");
-        }
 
         if ((eventLog.AiGmTurns ?? []).Any(turn =>
             turn.PlayerActionId == context.PlayerActionId))
@@ -55,12 +53,24 @@ public sealed class AiGmTurnCoordinator
 
         var world = Replay(eventLog);
         var planValidation = new AiGmTurnPlanValidator(
-            new AiGmProposalValidator(eventLog, world))
+            new AiGmProposalValidator(eventLog, world),
+            _rollOptions)
             .Validate(context, plan);
         if (!planValidation.IsValid)
         {
             throw new InvalidOperationException(
                 string.Join(" ", planValidation.Errors));
+        }
+
+        if (plan.Roll is { } roll)
+        {
+            if (action.Status != PlayerActionStatus.Pending)
+            {
+                throw new InvalidOperationException(
+                    "Il Game Master AI non può richiedere un secondo tiro per la stessa azione.");
+            }
+
+            return RequestRoll(eventLog, action, plan.Narration, roll, world);
         }
 
         var humanPlayerIds = eventLog.Events
@@ -134,6 +144,32 @@ public sealed class AiGmTurnCoordinator
         return turnStatus == AiGmTurnStatus.Completed
             ? CompletePlayerAction(updatedLog, turn)
             : updatedLog;
+    }
+
+    private static WorldEventLog RequestRoll(
+        WorldEventLog eventLog,
+        PlayerActionProposal action,
+        string narration,
+        AiGmRollRequest request,
+        WorldSnapshot world)
+    {
+        var actions = (eventLog.PlayerActions ?? []).ToArray();
+        var actionIndex = Array.FindIndex(actions, candidate =>
+            candidate.Id == action.Id);
+        actions[actionIndex] = action with
+        {
+            Status = PlayerActionStatus.RollRequested,
+            Roll = new D20Roll(
+                request.Modifier,
+                request.Difficulty,
+                request.DifficultyVisible,
+                request.Mode,
+                world.CurrentTime,
+                Reason: request.Reason.Trim(),
+                PromptNarration: narration.Trim())
+        };
+
+        return eventLog with { PlayerActions = actions };
     }
 
     public WorldEventLog ResolveConsequence(

@@ -1,4 +1,5 @@
 using TessitoreGM.Core;
+using TessitoreGM.Events;
 
 namespace TessitoreGM.AiGm;
 
@@ -11,7 +12,20 @@ public sealed record AiGmTurnContext(
     AiGmMemoryDossier Memory,
     AiGmAuthorizedPerspective AuthorizedPerspective,
     IReadOnlyList<string> Rules,
-    AiGmCampaignCatalog? Catalog = null);
+    AiGmCampaignCatalog? Catalog = null,
+    AiGmResolvedRoll? RollResult = null);
+
+public sealed record AiGmResolvedRoll(
+    int Modifier,
+    int Difficulty,
+    bool DifficultyVisible,
+    D20RollMode Mode,
+    IReadOnlyList<int> Dice,
+    int KeptDie,
+    int Total,
+    bool Succeeded,
+    string Reason,
+    string? PromptNarration);
 
 /// <summary>
 /// Strict narration allowlist reconstructed for the acting player character.

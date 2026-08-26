@@ -44,7 +44,9 @@ public sealed record D20Roll(
     IReadOnlyList<int>? Dice = null,
     int? KeptDie = null,
     int? Total = null,
-    DateTimeOffset? RolledAt = null);
+    DateTimeOffset? RolledAt = null,
+    string? Reason = null,
+    string? PromptNarration = null);
 
 public sealed record WorldInitialState(
     DateTimeOffset CurrentTime,

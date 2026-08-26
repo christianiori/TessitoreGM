@@ -957,7 +957,7 @@ internal static class WorldDashboard
         Save(worldFile, serializer, eventLog with { PlayerActions = actions });
     }
 
-    public static void RollD20(
+    public static PlayerActionProposal RollD20(
         string worldFile,
         string entityValue,
         string actionValue)
@@ -1007,6 +1007,7 @@ internal static class WorldDashboard
             }
         };
         Save(worldFile, serializer, eventLog with { PlayerActions = actions });
+        return actions[index];
     }
 
     private static void Save(
@@ -1831,8 +1832,9 @@ internal static class WorldDashboard
             {
                 content.Append($"<div class=\"roll-summary\">{Encode(RollSummary(action.Roll, includeSecretDifficulty: true))}</div>");
             }
-            var canRetryWithOllama = action.Status ==
-                    PlayerActionStatus.Pending &&
+            var canRetryWithOllama =
+                action.Status is (PlayerActionStatus.Pending or
+                    PlayerActionStatus.Rolled) &&
                 aiGmSettings.Enabled &&
                 aiGmSettings.ProviderConfigured &&
                 aiGmSettings.ProviderId!.Equals(
@@ -1843,7 +1845,10 @@ internal static class WorldDashboard
             if (canRetryWithOllama)
             {
                 content.Append("<form class=\"ai-retry-form\" method=\"post\" action=\"/ai-gm/actions/retry\">");
-                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><button type=\"submit\" class=\"secondary\">Affida a Ollama</button></form>");
+                var aiButton = action.Status == PlayerActionStatus.Rolled
+                    ? "Continua con Ollama"
+                    : "Affida a Ollama";
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><button type=\"submit\" class=\"secondary\">{aiButton}</button></form>");
             }
             content.Append("</div>");
             if (action.Status == PlayerActionStatus.Pending)
@@ -1865,6 +1870,10 @@ internal static class WorldDashboard
     {
         var roll = action.Roll!;
         var content = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(roll.PromptNarration))
+        {
+            content.Append($"<div class=\"action-resolution ai-player-narration\"><strong>Game Master AI</strong><p>{Encode(roll.PromptNarration)}</p></div>");
+        }
         content.Append($"<div class=\"roll-summary\">{Encode(RollSummary(roll, includeSecretDifficulty: false))}</div>");
         if (action.Status == PlayerActionStatus.RollRequested)
         {
@@ -1888,16 +1897,19 @@ internal static class WorldDashboard
             : roll.DifficultyVisible || includeSecretDifficulty
                 ? $", difficoltÃ  {roll.Difficulty}"
                 : ", difficoltÃ  segreta";
+        var reason = string.IsNullOrWhiteSpace(roll.Reason)
+            ? string.Empty
+            : $" Motivo: {roll.Reason}";
         if (roll.Dice is null || roll.Total is null)
         {
-            return $"d20: {mode}, modificatore {roll.Modifier:+#;-#;0}{difficulty}.";
+            return $"d20: {mode}, modificatore {roll.Modifier:+#;-#;0}{difficulty}.{reason}";
         }
         var dice = string.Join(" e ", roll.Dice);
         var natural = roll.KeptDie is 1 or 20
             ? $" · {roll.KeptDie} naturale"
             : string.Empty;
         return $"Dadi: {dice}; risultato {roll.KeptDie} " +
-            $"{roll.Modifier:+#;-#;+0} = {roll.Total}{natural}{difficulty}.";
+            $"{roll.Modifier:+#;-#;+0} = {roll.Total}{natural}{difficulty}.{reason}";
     }
 
     private static string PlayerActionStatusLabel(PlayerActionStatus status) =>

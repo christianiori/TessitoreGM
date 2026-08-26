@@ -36,6 +36,76 @@ public sealed class AiGmTurnExecutorTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_RollRequestWaitsForTessitoreD20()
+    {
+        var (eventLog, action) = CreateTurn();
+        var provider = new StubGameMaster(context => new AiGmTurnPlan(
+            context.PlayerActionId,
+            "La porta chiusa oppone resistenza.",
+            new AiGmRollRequest(
+                1,
+                13,
+                true,
+                D20RollMode.Advantage,
+                "Aprire la porta sotto pressione."),
+            []));
+
+        var result = await new AiGmTurnExecutor(provider)
+            .ExecuteAsync(eventLog, action);
+
+        Assert.Equal(AiGmTurnExecutionStatus.RollRequested, result.Status);
+        Assert.True(result.WorldChanged);
+        Assert.Equal(
+            PlayerActionStatus.RollRequested,
+            Assert.Single(result.EventLog.PlayerActions!).Status);
+        Assert.Null(result.EventLog.AiGmTurns);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ResolvedTessitoreRollCompletesAiTurn()
+    {
+        var (baseLog, action) = CreateTurn();
+        var rolledAction = action with
+        {
+            Status = PlayerActionStatus.Rolled,
+            Roll = new D20Roll(
+                1,
+                13,
+                true,
+                D20RollMode.Normal,
+                At(9, 0),
+                [16],
+                16,
+                17,
+                At(9, 1),
+                "Aprire la porta.",
+                "La porta oppone resistenza.")
+        };
+        var eventLog = baseLog with { PlayerActions = [rolledAction] };
+        var provider = new StubGameMaster(context =>
+        {
+            var rollResult = Assert.IsType<AiGmResolvedRoll>(
+                context.RollResult);
+            Assert.True(rollResult.Succeeded);
+            Assert.Equal(17, rollResult.Total);
+            return new AiGmTurnPlan(
+                context.PlayerActionId,
+                "La serratura scatta e la porta si apre.",
+                null,
+                []);
+        });
+
+        var result = await new AiGmTurnExecutor(provider)
+            .ExecuteAsync(eventLog, rolledAction);
+
+        Assert.Equal(AiGmTurnExecutionStatus.Completed, result.Status);
+        Assert.Equal(
+            PlayerActionStatus.Approved,
+            Assert.Single(result.EventLog.PlayerActions!).Status);
+        Assert.Single(result.EventLog.AiGmTurns!);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UnavailableProviderLeavesActionForHumanGm()
     {
         var (eventLog, action) = CreateTurn();

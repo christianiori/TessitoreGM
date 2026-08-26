@@ -19,11 +19,23 @@ public sealed class AiGmTurnPlanValidator
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
     ];
     private readonly AiGmProposalValidator _proposalValidator;
+    private readonly AiGmRollPolicyOptions _rollOptions;
 
-    public AiGmTurnPlanValidator(AiGmProposalValidator proposalValidator)
+    public AiGmTurnPlanValidator(
+        AiGmProposalValidator proposalValidator,
+        AiGmRollPolicyOptions? rollOptions = null)
     {
         _proposalValidator = proposalValidator ??
             throw new ArgumentNullException(nameof(proposalValidator));
+        _rollOptions = rollOptions ?? new AiGmRollPolicyOptions();
+        if (_rollOptions.MinimumModifier > _rollOptions.MaximumModifier ||
+            _rollOptions.MinimumDifficulty <= 0 ||
+            _rollOptions.MinimumDifficulty > _rollOptions.MaximumDifficulty)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(rollOptions),
+                "AI GM roll bounds are invalid.");
+        }
     }
 
     public AiGmTurnPlanValidation Validate(
@@ -62,9 +74,42 @@ public sealed class AiGmTurnPlanValidator
                 errors.Add("La richiesta di tiro deve avere una motivazione.");
             }
 
-            if (roll.Difficulty is <= 0)
+            if (roll.Reason?.Length > 500)
             {
-                errors.Add("La difficoltà del tiro deve essere positiva.");
+                errors.Add("La motivazione del tiro è troppo lunga.");
+            }
+
+            if (roll.Modifier < _rollOptions.MinimumModifier ||
+                roll.Modifier > _rollOptions.MaximumModifier)
+            {
+                errors.Add(
+                    $"Il modificatore AI deve essere compreso tra " +
+                    $"{_rollOptions.MinimumModifier} e " +
+                    $"{_rollOptions.MaximumModifier}.");
+            }
+
+            if (roll.Difficulty is not { } difficulty ||
+                difficulty < _rollOptions.MinimumDifficulty ||
+                difficulty > _rollOptions.MaximumDifficulty)
+            {
+                errors.Add(
+                    $"La difficoltà AI deve essere compresa tra " +
+                    $"{_rollOptions.MinimumDifficulty} e " +
+                    $"{_rollOptions.MaximumDifficulty}.");
+            }
+
+            if ((!_rollOptions.AllowAdvantage &&
+                    roll.Mode == TessitoreGM.Events.D20RollMode.Advantage) ||
+                (!_rollOptions.AllowDisadvantage &&
+                    roll.Mode == TessitoreGM.Events.D20RollMode.Disadvantage))
+            {
+                errors.Add("La modalità del tiro AI non è consentita.");
+            }
+
+            if ((plan.Consequences ?? []).Count > 0)
+            {
+                errors.Add(
+                    "Un piano che richiede un tiro non può applicare conseguenze prima del risultato.");
             }
         }
 

@@ -45,6 +45,65 @@ public sealed class AiGmPersistenceTests
     }
 
     [Fact]
+    public void RecordPlan_RollRequestPersistsWithoutApplyingConsequences()
+    {
+        var (eventLog, action, context) = CreateTurn();
+        var plan = new AiGmTurnPlan(
+            action.Id,
+            "La serratura è corrosa e oppone resistenza.",
+            new AiGmRollRequest(
+                2,
+                14,
+                true,
+                D20RollMode.Normal,
+                "Forzare la serratura senza spezzare la chiave."),
+            []);
+
+        var updated = new AiGmTurnCoordinator().RecordPlan(
+            eventLog,
+            context,
+            plan);
+        var restored = new WorldEventJsonSerializer().Deserialize(
+            new WorldEventJsonSerializer().Serialize(updated));
+
+        var persistedAction = Assert.Single(restored.PlayerActions!);
+        Assert.Equal(PlayerActionStatus.RollRequested, persistedAction.Status);
+        Assert.Equal(14, persistedAction.Roll?.Difficulty);
+        Assert.Equal(2, persistedAction.Roll?.Modifier);
+        Assert.Contains("serratura", persistedAction.Roll?.Reason);
+        Assert.Contains("corrosa", persistedAction.Roll?.PromptNarration);
+        Assert.Null(restored.AiGmTurns);
+        Assert.Equal(_innId, Replay(restored).GetLocation(_npcId));
+    }
+
+    [Fact]
+    public void RecordPlan_RollRequestCannotApplyEarlyConsequences()
+    {
+        var (eventLog, action, context) = CreateTurn();
+        var plan = new AiGmTurnPlan(
+            action.Id,
+            "La porta resiste mentre l'oste osserva.",
+            new AiGmRollRequest(
+                0,
+                12,
+                false,
+                D20RollMode.Normal,
+                "Aprire la porta bloccata."),
+            [new MoveEntityProposal(
+                _npcId,
+                _squareId,
+                "L'oste esce prima del risultato.")]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new AiGmTurnCoordinator().RecordPlan(
+                eventLog,
+                context,
+                plan));
+
+        Assert.Contains("prima del risultato", exception.Message);
+    }
+
+    [Fact]
     public void RecordPlan_ImportantPlayerLossSurvivesSerializationWithoutApplying()
     {
         var (eventLog, action, context) = CreateTurn();

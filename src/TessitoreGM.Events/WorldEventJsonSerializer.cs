@@ -215,6 +215,8 @@ public sealed class WorldEventJsonSerializer
                 string.IsNullOrWhiteSpace(action.Description) ||
                 action.Roll is { Modifier: < -20 or > 20 } ||
                 action.Roll?.Difficulty is < 1 or > 40 ||
+                action.Roll?.Reason?.Length > 500 ||
+                action.Roll?.PromptNarration?.Length > 4000 ||
                 action.Roll?.Dice?.Any(die => die is < 1 or > 20) == true))
         {
             throw new InvalidDataException(

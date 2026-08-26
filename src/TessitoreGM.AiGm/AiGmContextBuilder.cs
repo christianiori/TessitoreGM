@@ -212,7 +212,34 @@ public sealed class AiGmContextBuilder
                 sceneHistory),
             authorizedPerspective,
             AiGmInvariants.Rules,
-            catalog);
+            catalog,
+            ResolvedRoll(persistedAction));
+    }
+
+    private static AiGmResolvedRoll? ResolvedRoll(
+        PlayerActionProposal action)
+    {
+        var roll = action.Roll;
+        if (action.Status != PlayerActionStatus.Rolled ||
+            roll?.Difficulty is not { } difficulty ||
+            roll.Dice is null ||
+            roll.KeptDie is not { } keptDie ||
+            roll.Total is not { } total)
+        {
+            return null;
+        }
+
+        return new AiGmResolvedRoll(
+            roll.Modifier,
+            difficulty,
+            roll.DifficultyVisible,
+            roll.Mode,
+            roll.Dice,
+            keptDie,
+            total,
+            total >= difficulty,
+            roll.Reason ?? "Tiro richiesto dal Game Master AI.",
+            roll.PromptNarration);
     }
 
     private IReadOnlyList<AiGmRememberedEvent> Remember(

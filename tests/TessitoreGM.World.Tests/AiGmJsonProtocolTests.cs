@@ -1,5 +1,6 @@
 using TessitoreGM.AiGm;
 using TessitoreGM.Core;
+using TessitoreGM.Events;
 
 namespace TessitoreGM.World.Tests;
 
@@ -91,6 +92,33 @@ public sealed class AiGmJsonProtocolTests
             Assert.Single(plan.Consequences));
         Assert.Equal(new EntityId("innkeeper"), movement.EntityId);
         Assert.Equal(new LocationId("square"), movement.DestinationId);
+    }
+
+    [Fact]
+    public void DeserializePlan_MapsTypedD20Request()
+    {
+        const string json = """
+        {
+          "narration": "La serratura è irrigidita dalla ruggine.",
+          "roll": {
+            "modifier": 2,
+            "difficulty": 14,
+            "difficultyVisible": true,
+            "mode": "Advantage",
+            "reason": "Aprire la serratura senza danneggiarla."
+          },
+          "consequences": []
+        }
+        """;
+
+        var plan = new AiGmJsonProtocol().DeserializePlan(
+            json,
+            Guid.NewGuid());
+
+        var roll = Assert.IsType<AiGmRollRequest>(plan.Roll);
+        Assert.Equal(2, roll.Modifier);
+        Assert.Equal(14, roll.Difficulty);
+        Assert.Equal(D20RollMode.Advantage, roll.Mode);
     }
 
     [Fact]

@@ -503,7 +503,11 @@ quella fase.
   - [x] Narrazioni rifiutate escluse dalla continuità successiva
   - [x] Una sola azione irrisolta per ogni PG
   - [x] Retry manuale con Ollama dopo un fallback sicuro
-- [ ] Richiesta di tiri e difficoltà entro limiti configurabili
+- [x] Richiesta di tiri e difficoltà entro limiti configurabili
+  - [x] Nessuna conseguenza applicata prima del risultato
+  - [x] Dadi generati una sola volta dal server di Tessitore
+  - [x] Risultato persistente reinserito nel dossier del turno AI
+  - [x] Continuazione automatica dopo il tiro e retry manuale sicuro
 - [x] Primo collegamento a un fornitore IA scelto dal GM
   - [x] Adattatore locale Ollama senza chiavi API
   - [x] Risposte JSON strutturate secondo il protocollo chiuso di Tessitore
@@ -526,11 +530,10 @@ quella fase.
 
 ## Prossimo passo
 
-Aggiungere richieste di tiro e difficoltà entro limiti configurabili, mantenendo
-il risultato generato e verificato da Tessitore anziché dal modello. Il confine
-deterministico, la conferma delle conseguenze importanti e il divieto assoluto
-di decidere azioni dei giocatori restano invariati. L'adattatore OpenAI rimane
-il secondo fornitore previsto.
+Rifinire l'interfaccia conversazionale di scena con indicatore di elaborazione
+e risposta non bloccante. Il confine deterministico, la conferma delle
+conseguenze importanti e il divieto assoluto di decidere azioni dei giocatori
+restano invariati. L'adattatore OpenAI rimane il secondo fornitore previsto.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

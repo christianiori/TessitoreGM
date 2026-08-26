@@ -713,8 +713,9 @@ app.MapPost("/ai-gm/actions/retry", async (HttpContext context) =>
         var action = (eventLog.PlayerActions ?? [])
             .SingleOrDefault(candidate =>
                 candidate.Id == actionId &&
-                candidate.Status ==
-                    TessitoreGM.Events.PlayerActionStatus.Pending)
+                candidate.Status is
+                    TessitoreGM.Events.PlayerActionStatus.Pending or
+                    TessitoreGM.Events.PlayerActionStatus.Rolled)
             ?? throw new InvalidOperationException(
                 "L'azione non è più disponibile per Ollama.");
 
@@ -836,10 +837,13 @@ app.MapPost("/player/{entityId}/roll", async (
     await worldLock.WaitAsync();
     try
     {
-        WorldDashboard.RollD20(
+        var rolledAction = WorldDashboard.RollD20(
             activeWorldFile,
             entityId,
             form["actionId"].ToString());
+        await RunConfiguredAiGmAsync(
+            rolledAction,
+            context.RequestAborted);
     }
     catch (Exception exception) when (
         exception is ArgumentException or InvalidOperationException)

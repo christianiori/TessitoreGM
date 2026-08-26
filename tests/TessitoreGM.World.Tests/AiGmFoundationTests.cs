@@ -95,6 +95,40 @@ public sealed class AiGmFoundationTests
     }
 
     [Fact]
+    public void Build_ExposesOnlyThePersistedTessitoreRollResult()
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Provo ad aprire la porta bloccata.",
+            At(9, 0),
+            PlayerActionStatus.Rolled,
+            Roll: new D20Roll(
+                2,
+                14,
+                true,
+                D20RollMode.Normal,
+                At(9, 0),
+                [11],
+                11,
+                13,
+                At(9, 1),
+                "Aprire la porta.",
+                "La serratura è corrosa."));
+
+        var context = new AiGmContextBuilder().Build(
+            CreateEventLog(action),
+            action);
+
+        var result = Assert.IsType<AiGmResolvedRoll>(context.RollResult);
+        Assert.Equal(new[] { 11 }, result.Dice);
+        Assert.Equal(13, result.Total);
+        Assert.Equal(14, result.Difficulty);
+        Assert.False(result.Succeeded);
+        Assert.Contains("corrosa", result.PromptNarration);
+    }
+
+    [Fact]
     public void Build_IncludesOnlyActorsInThePlayersCurrentScene()
     {
         var outsideNpcId = new EntityId("smith");
@@ -308,6 +342,37 @@ public sealed class AiGmFoundationTests
                 []));
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void TurnPlanValidator_RejectsRollOutsideConfiguredBounds()
+    {
+        var action = new PlayerActionProposal(
+            Guid.NewGuid(),
+            _playerId,
+            "Forzo la porta.",
+            At(9, 0));
+        var eventLog = CreateEventLog(action);
+        var context = new AiGmContextBuilder().Build(eventLog, action);
+        var validator = new AiGmTurnPlanValidator(
+            new AiGmProposalValidator(eventLog, Replay(eventLog)));
+
+        var result = validator.Validate(
+            context,
+            new AiGmTurnPlan(
+                action.Id,
+                "La porta oppone una forte resistenza.",
+                new AiGmRollRequest(
+                    30,
+                    99,
+                    true,
+                    D20RollMode.Normal,
+                    "Forzare la porta."),
+                []));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Contains("modificatore"));
+        Assert.Contains(result.Errors, error => error.Contains("difficoltà"));
     }
 
     private WorldEventLog CreateEventLog(
