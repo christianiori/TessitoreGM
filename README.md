@@ -80,6 +80,12 @@ Se Ollama è spento, il modello non è installato o la risposta non supera i
 controlli, l'azione rimane nella normale coda del GM umano senza modificare il
 mondo.
 
+Le richieste a Ollama vengono eseguite in background: l'invio dell'azione e il
+tiro non tengono bloccata la pagina. Le viste del giocatore e del GM mostrano
+un indicatore durante l'elaborazione e si aggiornano automaticamente quando il
+risultato è stato salvato. Se Tessitore viene chiuso durante l'attesa, l'azione
+persistita resta disponibile per il retry manuale al riavvio.
+
 Il dossier fornito al modello è ricostruito a ogni turno dai salvataggi. Lo
 spazio di lavoro privato del GM contiene stato canonico, memorie degli attori,
 cronaca recente e catalogo della campagna. Una sezione separata

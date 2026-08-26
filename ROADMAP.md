@@ -521,7 +521,7 @@ quella fase.
 - [ ] Interfaccia di sessione ispirata ai GM virtuali conversazionali
   - [x] Sequenza persistente di azioni umane e risposte narrative AI
   - [ ] Presentazione dedicata della conversazione di scena
-  - [ ] Indicatore di elaborazione e risposta non bloccante
+  - [x] Indicatore di elaborazione e risposta non bloccante
 
 ### 9.5 — Documentazione e release
 
@@ -530,10 +530,10 @@ quella fase.
 
 ## Prossimo passo
 
-Rifinire l'interfaccia conversazionale di scena con indicatore di elaborazione
-e risposta non bloccante. Il confine deterministico, la conferma delle
-conseguenze importanti e il divieto assoluto di decidere azioni dei giocatori
-restano invariati. L'adattatore OpenAI rimane il secondo fornitore previsto.
+Rifinire la presentazione dedicata della conversazione di scena. Il confine
+deterministico, la conferma delle conseguenze importanti e il divieto assoluto
+di decidere azioni dei giocatori restano invariati. L'adattatore OpenAI rimane
+il secondo fornitore previsto.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.

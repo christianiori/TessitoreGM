@@ -79,7 +79,8 @@ internal static class WorldDashboard
         PendingWorldAdvance? pendingAdvance,
         string? focusedScene,
         AiGmCampaignModeSettings aiGmSettings,
-        string? aiGmRuntimeNotice = null)
+        string? aiGmRuntimeNotice = null,
+        IReadOnlySet<Guid>? aiGmActionsInProgress = null)
     {
         try
         {
@@ -91,7 +92,8 @@ internal static class WorldDashboard
                     pendingAdvance,
                     focusedScene,
                     aiGmSettings,
-                    aiGmRuntimeNotice)
+                    aiGmRuntimeNotice,
+                    aiGmActionsInProgress ?? new HashSet<Guid>())
                 : RenderMissingWorld(
                     worldFile,
                     actionToken,
@@ -143,17 +145,17 @@ internal static class WorldDashboard
                 .Count();
             var content = new StringBuilder();
 
-            content.Append("<header class=\"hero chronicle-hero\"><div><p class=\"eyebrow\">Cronaca della campagna</p><h1>CiÃ² che Ã¨ accaduto</h1><p class=\"lede\">Il racconto completo e deterministico ricostruito dal registro del mondo.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/\">Torna al tavolo</a><button type=\"button\" onclick=\"window.print()\">Stampa</button></div></header>");
+            content.Append("<header class=\"hero chronicle-hero\"><div><p class=\"eyebrow\">Cronaca della campagna</p><h1>Ciò che è accaduto</h1><p class=\"lede\">Il racconto completo e deterministico ricostruito dal registro del mondo.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/\">Torna al tavolo</a><button type=\"button\" onclick=\"window.print()\">Stampa</button></div></header>");
             content.Append("<main><section class=\"world-strip chronicle-summary\">");
             content.Append(Metric(
                 "Intervallo",
-                $"{firstTime:dd MMM yyyy Â· HH:mm} â€“ {lastTime:dd MMM yyyy Â· HH:mm}"));
+                $"{firstTime:dd MMM yyyy · HH:mm} – {lastTime:dd MMM yyyy · HH:mm}"));
             content.Append(Metric("Avvenimenti", narration.Count.ToString()));
             content.Append(Metric("Azioni dei giocatori", playerActions.ToString()));
             content.Append("</section><section class=\"chronicle chronicle-full\"><div class=\"section-heading\"><p class=\"eyebrow\">Registro completo</p><h2>Tutti gli avvenimenti</h2></div><ol>");
             foreach (var line in narration)
             {
-                content.Append($"<li><time>{Encode(line.OccurredAt.ToString("dd/MM/yyyy Â· HH:mm"))}</time><p>{Encode(line.Text)}</p></li>");
+                content.Append($"<li><time>{Encode(line.OccurredAt.ToString("dd/MM/yyyy · HH:mm"))}</time><p>{Encode(line.Text)}</p></li>");
             }
             if (narration.Count == 0)
             {
@@ -208,7 +210,8 @@ internal static class WorldDashboard
     public static string RenderPlayer(
         string worldFile,
         string entityValue,
-        string playerInteractionToken)
+        string playerInteractionToken,
+        IReadOnlySet<Guid>? aiGmActionsInProgress = null)
     {
         try
         {
@@ -271,6 +274,10 @@ internal static class WorldDashboard
                 .OrderByDescending(action => action.SubmittedAt)
                 .Take(10)
                 .ToArray();
+            var processingActions = aiGmActionsInProgress ??
+                new HashSet<Guid>();
+            var hasAiProcessing = ownActions.Any(action =>
+                processingActions.Contains(action.Id));
             var aiTurnsByAction = (eventLog.AiGmTurns ??
                     Array.Empty<AiGmTurnRecord>())
                 .GroupBy(turn => turn.PlayerActionId)
@@ -295,7 +302,8 @@ internal static class WorldDashboard
                     locationNames,
                     resourceNames,
                     needNames));
-            var viewVersion = ContentVersion(serializedWorld);
+            var viewVersion = ContentVersion(serializedWorld) +
+                (hasAiProcessing ? ":ai" : ":idle");
             var content = new StringBuilder();
 
             content.Append("<header class=\"player-hero\"><div><p class=\"eyebrow\">Tavolo del giocatore</p>");
@@ -311,7 +319,9 @@ internal static class WorldDashboard
             content.Append("</section><section class=\"player-action-box\"><div class=\"section-heading\"><p class=\"eyebrow\">La tua azione</p><h2>Cosa vuoi fare?</h2></div>");
             if (hasOutstandingAction)
             {
-                content.Append("<p class=\"player-action-wait\">La tua azione precedente è ancora in corso. Potrai dichiararne un'altra dopo la risposta del Game Master.</p>");
+                content.Append(hasAiProcessing
+                    ? "<p class=\"player-action-wait ai-processing\"><i></i>Ollama sta elaborando la risposta. Puoi lasciare aperta questa pagina: si aggiornerà automaticamente.</p>"
+                    : "<p class=\"player-action-wait\">La tua azione precedente è ancora in corso. Potrai dichiararne un'altra dopo la risposta del Game Master.</p>");
             }
             else
             {
@@ -330,6 +340,10 @@ internal static class WorldDashboard
             {
                 content.Append("<article class=\"player-action-item\">");
                 content.Append($"<div><span class=\"action-status\">{Encode(PlayerActionStatusLabel(action.Status))}</span><p>{Encode(action.Description)}</p></div>");
+                if (processingActions.Contains(action.Id))
+                {
+                    content.Append("<div class=\"action-resolution ai-processing\"><i></i><strong>Game Master AI in elaborazione</strong><p>La pagina mostrerà automaticamente la risposta appena sarà pronta.</p></div>");
+                }
                 if (action.Roll is not null)
                 {
                     content.Append(RenderRollForPlayer(
@@ -399,16 +413,22 @@ internal static class WorldDashboard
 
     public static string PlayerViewVersion(
         string worldFile,
-        string entityValue)
+        string entityValue,
+        IReadOnlySet<Guid>? aiGmActionsInProgress = null)
     {
         var serializedWorld = File.ReadAllText(worldFile);
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             serializedWorld);
-        _ = PlayerCharacters(eventLog.Events).FirstOrDefault(character =>
+        var character = PlayerCharacters(eventLog.Events).FirstOrDefault(character =>
             character.EntityId.ToString() == entityValue)
             ?? throw new ArgumentException(
                 "Il personaggio giocante richiesto non esiste.");
-        return ContentVersion(serializedWorld);
+        var processingActions = aiGmActionsInProgress ?? new HashSet<Guid>();
+        var hasAiProcessing = (eventLog.PlayerActions ?? []).Any(action =>
+            action.PlayerCharacterId == character.EntityId &&
+            processingActions.Contains(action.Id));
+        return ContentVersion(serializedWorld) +
+            (hasAiProcessing ? ":ai" : ":idle");
     }
 
     public static PendingWorldAdvance PreviewAdvance(
@@ -578,7 +598,7 @@ internal static class WorldDashboard
         if (amount <= 0)
         {
             throw new ArgumentException(
-                "La quantitÃ  di monete deve essere maggiore di zero.");
+                "La quantità di monete deve essere maggiore di zero.");
         }
         var reason = reasonValue.Trim();
         if (reason.Length is < 1 or > 200)
@@ -630,7 +650,7 @@ internal static class WorldDashboard
         if (quantity <= 0)
         {
             throw new ArgumentException(
-                "La quantitÃ  deve essere maggiore di zero.");
+                "La quantità deve essere maggiore di zero.");
         }
         var reason = reasonValue.Trim();
         if (reason.Length is < 1 or > 200)
@@ -744,7 +764,7 @@ internal static class WorldDashboard
             character.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             throw new ArgumentException(
-                "Esiste giÃ  un personaggio giocante con questo nome.");
+                "Esiste già un personaggio giocante con questo nome.");
         }
 
         var usedIds = (eventLog.Simulation?.Npcs ??
@@ -860,7 +880,7 @@ internal static class WorldDashboard
             PlayerActionStatus.Rolled))
         {
             throw new InvalidOperationException(
-                "L'azione non Ã¨ piÃ¹ in attesa di una decisione.");
+                "L'azione non è più in attesa di una decisione.");
         }
         var world = Replay(eventLog);
         var status = decision == "approve"
@@ -942,7 +962,7 @@ internal static class WorldDashboard
         if (index < 0 || actions[index].Status != PlayerActionStatus.Pending)
         {
             throw new InvalidOperationException(
-                "L'azione non puÃ² ricevere un nuovo tiro.");
+                "L'azione non può ricevere un nuovo tiro.");
         }
         actions[index] = actions[index] with
         {
@@ -978,7 +998,7 @@ internal static class WorldDashboard
             actions[index].Roll is null)
         {
             throw new InvalidOperationException(
-                "Questo tiro non Ã¨ disponibile.");
+                "Questo tiro non è disponibile.");
         }
 
         var roll = actions[index].Roll!;
@@ -1025,7 +1045,8 @@ internal static class WorldDashboard
         PendingWorldAdvance? pendingAdvance,
         string? focusedScene,
         AiGmCampaignModeSettings aiGmSettings,
-        string? aiGmRuntimeNotice)
+        string? aiGmRuntimeNotice,
+        IReadOnlySet<Guid> aiGmActionsInProgress)
     {
         var eventLog = new WorldEventJsonSerializer().Deserialize(
             File.ReadAllText(worldFile));
@@ -1113,12 +1134,13 @@ internal static class WorldDashboard
             eventLog,
             playerCharacters,
             actionToken,
-            aiGmSettings));
+            aiGmSettings,
+            aiGmActionsInProgress));
         var toolboxClass = pendingAdvance is null
             ? "gm-toolbox"
             : "gm-toolbox has-preview";
         content.Append($"<details id=\"gm-toolbox\" class=\"{toolboxClass}\" open><summary><span>Strumenti completi del GM</span><small>Personaggi, tempo e conseguenze avanzate</small></summary><div class=\"gm-toolbox-content\">");
-        content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Compagnia</p><h2>Personaggi giocanti</h2><p>Aggiungi un personaggio controllato dai giocatori. Il motore non prenderÃ  decisioni al suo posto.</p></div><form method=\"post\" action=\"/player-character\">");
+        content.Append("<section class=\"world-action\"><div><p class=\"eyebrow\">Compagnia</p><h2>Personaggi giocanti</h2><p>Aggiungi un personaggio controllato dai giocatori. Il motore non prenderà decisioni al suo posto.</p></div><form method=\"post\" action=\"/player-character\">");
         content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\">");
         content.Append("<label for=\"player-name\">Nome</label><input id=\"player-name\" name=\"name\" maxlength=\"80\" placeholder=\"Arianna\" required><button type=\"submit\">Aggiungi personaggio</button></form></section>");
         content.Append("<section class=\"time-control\"><div><p class=\"eyebrow\">Simulazione</p><h2>Avanza il tempo</h2><p>Calcola ciò che il villaggio farebbe, senza modificare subito il salvataggio.</p></div><form method=\"post\" action=\"/advance\">");
@@ -1338,6 +1360,11 @@ internal static class WorldDashboard
         content.Append("</ol></section></main><nav class=\"gm-mobile-nav\" aria-label=\"Navigazione del Tavolo del GM\"><a href=\"#scene-focus\">Scena</a><a href=\"#gm-actions\">Azioni</a><a href=\"#characters\">Presenti</a><a href=\"#world-log\">Registro</a></nav><footer><span>Salvataggio</span>");
         content.Append($"<code>{Encode(worldFile)}</code></footer>");
         content.Append("<script>(()=>{const box=document.getElementById('gm-toolbox');if(box&&window.matchMedia('(max-width:800px)').matches&&!box.classList.contains('has-preview'))box.open=false;})();</script>");
+        if ((eventLog.PlayerActions ?? []).Any(action =>
+            aiGmActionsInProgress.Contains(action.Id)))
+        {
+            content.Append("<script>window.setTimeout(()=>location.reload(),2500);</script>");
+        }
         return Page("Tavolo del GM", content.ToString());
     }
 
@@ -1794,7 +1821,8 @@ internal static class WorldDashboard
         WorldEventLog eventLog,
         IReadOnlyList<PlayerCharacterRegistered> playerCharacters,
         string actionToken,
-        AiGmCampaignModeSettings aiGmSettings)
+        AiGmCampaignModeSettings aiGmSettings,
+        IReadOnlySet<Guid> aiGmActionsInProgress)
     {
         var aiManagedActions = (eventLog.AiGmTurns ??
                 Array.Empty<AiGmTurnRecord>())
@@ -1823,6 +1851,7 @@ internal static class WorldDashboard
         content.Append("<div class=\"gm-action-list\">");
         foreach (var action in activeActions)
         {
+            var isAiProcessing = aiGmActionsInProgress.Contains(action.Id);
             var playerName = names.GetValueOrDefault(
                 action.PlayerCharacterId,
                 action.PlayerCharacterId.ToString());
@@ -1831,6 +1860,11 @@ internal static class WorldDashboard
             if (action.Roll is not null)
             {
                 content.Append($"<div class=\"roll-summary\">{Encode(RollSummary(action.Roll, includeSecretDifficulty: true))}</div>");
+            }
+            if (isAiProcessing)
+            {
+                content.Append("<div class=\"ai-processing\"><i></i><strong>Ollama sta elaborando</strong><p>Il tavolo si aggiornerà automaticamente.</p></div></div></article>");
+                continue;
             }
             var canRetryWithOllama =
                 action.Status is (PlayerActionStatus.Pending or
@@ -1854,10 +1888,10 @@ internal static class WorldDashboard
             if (action.Status == PlayerActionStatus.Pending)
             {
                 content.Append("<form class=\"roll-request-form\" method=\"post\" action=\"/player-actions/request-roll\">");
-                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><label>ModalitÃ <select name=\"mode\"><option value=\"Normal\">Normale</option><option value=\"Advantage\">Vantaggio</option><option value=\"Disadvantage\">Svantaggio</option></select></label><label>Modificatore<input name=\"modifier\" type=\"number\" min=\"-20\" max=\"20\" value=\"0\" required></label><label>DifficoltÃ <input name=\"difficulty\" type=\"number\" min=\"1\" max=\"40\" placeholder=\"opzionale\"></label><label class=\"checkbox-label\"><input name=\"difficultyVisible\" type=\"checkbox\"> Mostra la difficoltÃ </label><button type=\"submit\" class=\"secondary\">Richiedi d20</button></form>");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><label>Modalità<select name=\"mode\"><option value=\"Normal\">Normale</option><option value=\"Advantage\">Vantaggio</option><option value=\"Disadvantage\">Svantaggio</option></select></label><label>Modificatore<input name=\"modifier\" type=\"number\" min=\"-20\" max=\"20\" value=\"0\" required></label><label>Difficoltà<input name=\"difficulty\" type=\"number\" min=\"1\" max=\"40\" placeholder=\"opzionale\"></label><label class=\"checkbox-label\"><input name=\"difficultyVisible\" type=\"checkbox\"> Mostra la difficoltà</label><button type=\"submit\" class=\"secondary\">Richiedi d20</button></form>");
             }
             content.Append("<form class=\"action-resolution-form\" method=\"post\" action=\"/player-actions/resolve\">");
-            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><label>Esito<textarea name=\"resolution\" maxlength=\"500\" rows=\"3\" placeholder=\"Descrivi ciÃ² che accade.\" required></textarea></label><div class=\"resolution-buttons\"><button name=\"decision\" value=\"approve\" type=\"submit\">Approva</button><button name=\"decision\" value=\"reject\" type=\"submit\" class=\"secondary\">Rifiuta</button></div></form></article>");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><input type=\"hidden\" name=\"actionId\" value=\"{action.Id}\"><label>Esito<textarea name=\"resolution\" maxlength=\"500\" rows=\"3\" placeholder=\"Descrivi ciò che accade.\" required></textarea></label><div class=\"resolution-buttons\"><button name=\"decision\" value=\"approve\" type=\"submit\">Approva</button><button name=\"decision\" value=\"reject\" type=\"submit\" class=\"secondary\">Rifiuta</button></div></form></article>");
         }
         content.Append("</div></section>");
         return content.ToString();
@@ -1895,8 +1929,8 @@ internal static class WorldDashboard
         var difficulty = roll.Difficulty is null
             ? ""
             : roll.DifficultyVisible || includeSecretDifficulty
-                ? $", difficoltÃ  {roll.Difficulty}"
-                : ", difficoltÃ  segreta";
+                ? $", difficoltà {roll.Difficulty}"
+                : ", difficoltà segreta";
         var reason = string.IsNullOrWhiteSpace(roll.Reason)
             ? string.Empty
             : $" Motivo: {roll.Reason}";
