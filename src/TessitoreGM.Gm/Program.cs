@@ -435,6 +435,70 @@ app.MapPost("/editor/resource", async (HttpContext context) =>
 
     return Results.Redirect("/editor");
 });
+app.MapPost("/editor/npc", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.AddEditorNpc(
+            activeWorldFile,
+            form["id"].ToString(),
+            form["name"].ToString(),
+            form["role"].ToString(),
+            form["location"].ToString());
+        pendingAdvance = null;
+        focusedScene = null;
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/editor");
+});
+app.MapPost("/editor/npc-routine", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.AddEditorNpcRoutine(
+            activeWorldFile,
+            form["npc"].ToString(),
+            form["destination"].ToString(),
+            form["time"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/editor");
+});
 app.MapPost("/ai-gm/mode", async (HttpContext context) =>
 {
     var form = await context.Request.ReadFormAsync();

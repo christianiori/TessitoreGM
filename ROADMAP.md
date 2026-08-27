@@ -479,7 +479,8 @@ quella fase.
   - [x] Aggiunta sicura di luoghi e tipi di risorsa
   - [x] Validazione di identificatori, nomi e duplicati
   - [x] Backup automatico prima di ogni modifica
-  - [ ] Creazione guidata di NPC e comportamenti
+  - [x] Creazione guidata degli NPC con nome, ruolo e luogo iniziale
+  - [x] Prima configurazione guidata dei comportamenti: routine giornaliere
 
 ### 9.4 — Modalità AI Game Master
 

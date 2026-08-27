@@ -238,6 +238,11 @@ internal static class WorldDashboard
                 Array.Empty<LocationPresentationDefinition>();
             var resources = simulation?.Resources ??
                 Array.Empty<ResourcePresentationDefinition>();
+            var entityNames = simulation?.Entities?.ToDictionary(
+                entity => entity.EntityId,
+                entity => entity.Name) ?? new Dictionary<EntityId, string>();
+            var npcs = simulation?.Npcs ??
+                Array.Empty<NpcSimulationDefinition>();
             var content = new StringBuilder();
             content.Append("<header class=\"hero chronicle-hero\"><div><p class=\"eyebrow\">Editor del mondo</p><h1>Struttura della campagna</h1><p class=\"lede\">Aggiungi elementi riutilizzabili senza modificare direttamente il salvataggio.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></div></header><main>");
             content.Append("<section class=\"editor-grid\"><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Spazio</p><h2>Luoghi</h2><form method=\"post\" action=\"/editor/location\">");
@@ -252,6 +257,64 @@ internal static class WorldDashboard
                 resources.Select(resource =>
                     (resource.ResourceId.ToString(), resource.Name)),
                 "Nessuna risorsa configurata."));
+            content.Append("</article><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Popolazione</p><h2>Personaggi non giocanti</h2>");
+            if (locations.Count == 0)
+            {
+                content.Append("<p class=\"empty-copy\">Crea almeno un luogo prima di aggiungere un NPC.</p>");
+            }
+            else
+            {
+                content.Append("<form method=\"post\" action=\"/editor/npc\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>Identificatore<input name=\"id\" maxlength=\"64\" placeholder=\"guardia-nord\" required></label><label>Nome<input name=\"name\" maxlength=\"100\" placeholder=\"Alda la guardia\" required></label><label>Ruolo<input name=\"role\" maxlength=\"100\" placeholder=\"guardia\" required></label><label>Luogo iniziale<select name=\"location\" required>");
+                foreach (var location in locations.OrderBy(
+                    location => location.Name,
+                    StringComparer.OrdinalIgnoreCase))
+                {
+                    content.Append($"<option value=\"{Encode(location.LocationId.ToString())}\">{Encode(location.Name)}</option>");
+                }
+                content.Append("</select></label><button type=\"submit\">Aggiungi NPC</button></form>");
+            }
+            content.Append(RenderEditorItems(
+                npcs.Select(npc =>
+                    (npc.EntityId.ToString(), entityNames.GetValueOrDefault(
+                        npc.EntityId,
+                        npc.Role))),
+                "Nessun NPC configurato."));
+            content.Append("</article><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Autonomia</p><h2>Routine giornaliere</h2>");
+            if (npcs.Count == 0 || locations.Count == 0)
+            {
+                content.Append("<p class=\"empty-copy\">Crea almeno un NPC e un luogo prima di configurare una routine.</p>");
+            }
+            else
+            {
+                content.Append("<form method=\"post\" action=\"/editor/npc-routine\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>NPC<select name=\"npc\" required>");
+                foreach (var npc in npcs.OrderBy(npc =>
+                    entityNames.GetValueOrDefault(npc.EntityId, npc.Role),
+                    StringComparer.OrdinalIgnoreCase))
+                {
+                    content.Append($"<option value=\"{Encode(npc.EntityId.ToString())}\">{Encode(entityNames.GetValueOrDefault(npc.EntityId, npc.Role))}</option>");
+                }
+                content.Append("</select></label><label>Destinazione<select name=\"destination\" required>");
+                foreach (var location in locations.OrderBy(
+                    location => location.Name,
+                    StringComparer.OrdinalIgnoreCase))
+                {
+                    content.Append($"<option value=\"{Encode(location.LocationId.ToString())}\">{Encode(location.Name)}</option>");
+                }
+                content.Append("</select></label><label>Orario<input type=\"time\" name=\"time\" required></label><button type=\"submit\">Aggiungi routine</button></form>");
+            }
+            var locationNames = locations.ToDictionary(
+                location => location.LocationId,
+                location => location.Name);
+            var routineItems = npcs.SelectMany(npc =>
+                (npc.DailyLocationRoutines ??
+                    Array.Empty<DailyLocationRoutineDefinition>()).Select(routine =>
+                    ($"{npc.EntityId}:{routine.TimeOfDay:hh\\:mm}",
+                     $"{entityNames.GetValueOrDefault(npc.EntityId, npc.Role)} · {routine.TimeOfDay:hh\\:mm} → {locationNames.GetValueOrDefault(routine.DestinationId, routine.DestinationId.ToString())}")));
+            content.Append(RenderEditorItems(
+                routineItems,
+                "Nessuna routine configurata."));
             content.Append("</article></section><section class=\"player-panel editor-note\"><h2>Modifiche sicure</h2><p>Ogni aggiunta crea prima una copia di sicurezza. In questa prima versione gli elementi non possono essere eliminati, perché potrebbero essere già usati da eventi o regole della simulazione.</p></section></main>");
             return Page("Editor del mondo", content.ToString());
         }
@@ -284,6 +347,45 @@ internal static class WorldDashboard
                 eventLog,
                 id,
                 name));
+
+    public static void AddEditorNpc(
+        string worldFile,
+        string id,
+        string name,
+        string role,
+        string initialLocationId) => EditWorldDefinition(
+            worldFile,
+            eventLog => new WorldDefinitionEditor().AddNpc(
+                eventLog,
+                id,
+                name,
+                role,
+                initialLocationId,
+                Replay(eventLog).CurrentTime));
+
+    public static void AddEditorNpcRoutine(
+        string worldFile,
+        string npcId,
+        string destinationId,
+        string timeValue)
+    {
+        if (!TimeSpan.TryParseExact(
+            timeValue,
+            "hh\\:mm",
+            CultureInfo.InvariantCulture,
+            out var timeOfDay))
+        {
+            throw new ArgumentException("L'orario della routine non è valido.");
+        }
+
+        EditWorldDefinition(
+            worldFile,
+            eventLog => new WorldDefinitionEditor().AddNpcDailyRoutine(
+                eventLog,
+                npcId,
+                destinationId,
+                timeOfDay));
+    }
 
     private static void EditWorldDefinition(
         string worldFile,
