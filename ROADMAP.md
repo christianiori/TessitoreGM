@@ -463,9 +463,23 @@ quella fase.
 
 ### 9.3 — Framework estensibile
 
-- [ ] API pubbliche e stabili
-- [ ] Plugin
+- [x] Primo nucleo di API pubbliche e stabili
+  - [x] Contratto pubblico per regole deterministiche esterne
+  - [x] Registro ordinato con identificatori univoci
+  - [x] Validazione degli eventi esterni tramite il processore ufficiale
+  - [x] Test di compatibilità con una regola definita fuori dal motore
+- [x] Primo sistema di plugin locali
+  - [x] Contratto pubblico con identità e versione
+  - [x] Manifesto disattivato per impostazione predefinita
+  - [x] Caricamento limitato alla cartella Plugins
+  - [x] Registrazione transazionale delle regole
+  - [x] Errori isolati e visibili in Diagnostica
 - [ ] Editor del mondo
+  - [x] Prima pagina separata dal Tavolo del GM
+  - [x] Aggiunta sicura di luoghi e tipi di risorsa
+  - [x] Validazione di identificatori, nomi e duplicati
+  - [x] Backup automatico prima di ogni modifica
+  - [ ] Creazione guidata di NPC e comportamenti
 
 ### 9.4 — Modalità AI Game Master
 

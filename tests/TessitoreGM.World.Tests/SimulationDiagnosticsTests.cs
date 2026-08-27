@@ -77,6 +77,37 @@ public sealed class SimulationDiagnosticsTests
             new SimulationDiagnostics().Analyze(log, world, TimeSpan.Zero));
     }
 
+    [Fact]
+    public void Analyze_ExternalRule_IsIncludedInActiveRuleCount()
+    {
+        var now = At(3, 8);
+        var log = new WorldEventLog(
+            new WorldInitialState(now, Array.Empty<EntityBalance>()),
+            Array.Empty<IWorldEvent>(),
+            new WorldSimulationDefinition(
+                Array.Empty<NpcSimulationDefinition>()));
+        var world = WorldSnapshot.Create(now, new Dictionary<EntityId, int>());
+        var externalRules = new[]
+        {
+            new WorldRuleRegistration("tests:external", new IdleRule())
+        };
+
+        var report = new SimulationDiagnostics().Analyze(
+            log,
+            world,
+            TimeSpan.FromHours(24),
+            externalRules);
+
+        Assert.Equal(1, report.RuleCount);
+    }
+
+    private sealed class IdleRule : IWorldRule
+    {
+        public IWorldEvent? ProposeNext(
+            WorldSnapshot world,
+            DateTimeOffset until) => null;
+    }
+
     private static DateTimeOffset At(int day, int hour) =>
         new(2026, 8, day, hour, 0, 0, TimeSpan.Zero);
 }

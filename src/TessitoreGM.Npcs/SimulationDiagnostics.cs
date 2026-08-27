@@ -8,7 +8,8 @@ public sealed class SimulationDiagnostics
     public SimulationDiagnosticReport Analyze(
         WorldEventLog eventLog,
         WorldSnapshot world,
-        TimeSpan horizon)
+        TimeSpan horizon,
+        IEnumerable<WorldRuleRegistration>? externalRules = null)
     {
         ArgumentNullException.ThrowIfNull(eventLog);
         ArgumentNullException.ThrowIfNull(world);
@@ -20,15 +21,20 @@ public sealed class SimulationDiagnostics
         var simulation = eventLog.Simulation
             ?? throw new InvalidDataException(
                 "Il salvataggio non contiene una configurazione della simulazione.");
+        var registeredExternalRules = externalRules?.ToArray() ??
+            Array.Empty<WorldRuleRegistration>();
         var result = new ConfiguredWorldSimulator().Advance(
             eventLog,
             world,
-            world.CurrentTime.Add(horizon));
+            world.CurrentTime.Add(horizon),
+            registeredExternalRules);
 
         return new SimulationDiagnosticReport(
             world.CurrentTime,
             result.World.CurrentTime,
-            simulation.Npcs.Count + (simulation.WeatherCycle is null ? 0 : 1),
+            simulation.Npcs.Count +
+                (simulation.WeatherCycle is null ? 0 : 1) +
+                registeredExternalRules.Length,
             simulation.Npcs.Sum(BehaviorCount),
             result.ProducedEvents);
     }

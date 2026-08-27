@@ -10,7 +10,8 @@ public sealed class ConfiguredWorldSimulator
     public SimulationResult Advance(
         WorldEventLog eventLog,
         WorldSnapshot world,
-        DateTimeOffset until)
+        DateTimeOffset until,
+        IEnumerable<WorldRuleRegistration>? externalRules = null)
     {
         ArgumentNullException.ThrowIfNull(eventLog);
         ArgumentNullException.ThrowIfNull(world);
@@ -28,15 +29,15 @@ public sealed class ConfiguredWorldSimulator
                 Array.Empty<EntityResourceStock>(),
             eventLog.InitialWorld.Weather);
         var memoryEngine = new MemoryEngine();
-        var rules = new List<IWorldRule>();
+        var rules = new WorldRuleRegistry();
         if (simulation.WeatherCycle is { } weatherCycle)
         {
-            rules.Add(new DailyWeatherCycleRule(
+            rules.Register("world:weather-cycle", new DailyWeatherCycleRule(
                 weatherCycle.TimeOfDay,
                 weatherCycle.Conditions));
         }
 
-        rules.AddRange(simulation.Npcs.Select(npc =>
+        foreach (var npc in simulation.Npcs)
         {
             var memory = memoryEngine.Replay(
                 npc.EntityId,
@@ -48,14 +49,20 @@ public sealed class ConfiguredWorldSimulator
                 memory = memory.LearnFact(factId);
             }
 
-            return (IWorldRule)new NpcAgent(
+            rules.Register($"npc:{npc.EntityId}", new NpcAgent(
                 npc.EntityId,
                 npc.Role,
                 memory,
-                CreateBehaviors(npc));
-        }));
+                CreateBehaviors(npc)));
+        }
 
-        return new WorldSimulator(rules).Advance(world, until);
+        foreach (var registration in externalRules ??
+            Array.Empty<WorldRuleRegistration>())
+        {
+            rules.Register(registration.Id, registration.Rule);
+        }
+
+        return rules.CreateSimulator().Advance(world, until);
     }
 
     private static IReadOnlyList<INpcBehavior> CreateBehaviors(

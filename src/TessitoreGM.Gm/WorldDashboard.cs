@@ -175,7 +175,9 @@ internal static class WorldDashboard
         }
     }
 
-    public static string RenderDiagnostics(string worldFile)
+    public static string RenderDiagnostics(
+        string worldFile,
+        WorldPluginLoadResult? plugins = null)
     {
         var content = new StringBuilder();
         content.Append("<header class=\"hero chronicle-hero\"><div><p class=\"eyebrow\">Diagnostica</p><h1>Stato di TessitoreGM</h1><p class=\"lede\">Controlli leggibili del salvataggio attivo e delle copie di sicurezza.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></div></header><main>");
@@ -205,7 +207,12 @@ internal static class WorldDashboard
             {
                 content.Append("<section class=\"player-panel\"><h2>Aggiornamento del salvataggio</h2><p>Questo mondo è compatibile. Al prossimo salvataggio verrà convertito automaticamente nel formato corrente e la versione precedente resterà disponibile nella cartella dei backup.</p></section>");
             }
-            content.Append(RenderSimulationDiagnostics(eventLog, world));
+            var pluginReport = plugins ?? WorldPluginLoadResult.Empty;
+            content.Append(RenderPluginDiagnostics(pluginReport));
+            content.Append(RenderSimulationDiagnostics(
+                eventLog,
+                world,
+                pluginReport.Rules));
         }
         catch (Exception exception) when (
             exception is IOException or InvalidDataException or
@@ -219,9 +226,98 @@ internal static class WorldDashboard
         return Page("Diagnostica", content.ToString());
     }
 
+    public static string RenderWorldEditor(
+        string worldFile,
+        string actionToken)
+    {
+        try
+        {
+            var eventLog = new WorldEventFileStore().Load(worldFile);
+            var simulation = eventLog.Simulation;
+            var locations = simulation?.Locations ??
+                Array.Empty<LocationPresentationDefinition>();
+            var resources = simulation?.Resources ??
+                Array.Empty<ResourcePresentationDefinition>();
+            var content = new StringBuilder();
+            content.Append("<header class=\"hero chronicle-hero\"><div><p class=\"eyebrow\">Editor del mondo</p><h1>Struttura della campagna</h1><p class=\"lede\">Aggiungi elementi riutilizzabili senza modificare direttamente il salvataggio.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></div></header><main>");
+            content.Append("<section class=\"editor-grid\"><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Spazio</p><h2>Luoghi</h2><form method=\"post\" action=\"/editor/location\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>Identificatore<input name=\"id\" maxlength=\"64\" placeholder=\"torre-nord\" required></label><label>Nome<input name=\"name\" maxlength=\"100\" placeholder=\"Torre Nord\" required></label><button type=\"submit\">Aggiungi luogo</button></form>");
+            content.Append(RenderEditorItems(
+                locations.Select(location =>
+                    (location.LocationId.ToString(), location.Name)),
+                "Nessun luogo configurato."));
+            content.Append("</article><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Economia</p><h2>Risorse</h2><form method=\"post\" action=\"/editor/resource\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>Identificatore<input name=\"id\" maxlength=\"64\" placeholder=\"legname\" required></label><label>Nome<input name=\"name\" maxlength=\"100\" placeholder=\"Legname\" required></label><button type=\"submit\">Aggiungi risorsa</button></form>");
+            content.Append(RenderEditorItems(
+                resources.Select(resource =>
+                    (resource.ResourceId.ToString(), resource.Name)),
+                "Nessuna risorsa configurata."));
+            content.Append("</article></section><section class=\"player-panel editor-note\"><h2>Modifiche sicure</h2><p>Ogni aggiunta crea prima una copia di sicurezza. In questa prima versione gli elementi non possono essere eliminati, perché potrebbero essere già usati da eventi o regole della simulazione.</p></section></main>");
+            return Page("Editor del mondo", content.ToString());
+        }
+        catch (Exception exception) when (
+            exception is IOException or InvalidDataException or
+            InvalidOperationException or ArgumentException)
+        {
+            return Page(
+                "Editor non disponibile",
+                $"<main class=\"empty-state\"><p class=\"eyebrow\">Editor del mondo</p><h1>Non riesco ad aprire l'editor.</h1><p>{Encode(UserFacingErrors.Describe(exception))}</p><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></main>");
+        }
+    }
+
+    public static void AddEditorLocation(
+        string worldFile,
+        string id,
+        string name) => EditWorldDefinition(
+            worldFile,
+            eventLog => new WorldDefinitionEditor().AddLocation(
+                eventLog,
+                id,
+                name));
+
+    public static void AddEditorResource(
+        string worldFile,
+        string id,
+        string name) => EditWorldDefinition(
+            worldFile,
+            eventLog => new WorldDefinitionEditor().AddResource(
+                eventLog,
+                id,
+                name));
+
+    private static void EditWorldDefinition(
+        string worldFile,
+        Func<WorldEventLog, WorldEventLog> edit)
+    {
+        var store = new WorldEventFileStore();
+        var eventLog = store.Load(worldFile);
+        store.Save(worldFile, edit(eventLog));
+    }
+
+    private static string RenderEditorItems(
+        IEnumerable<(string Id, string Name)> items,
+        string emptyMessage)
+    {
+        var values = items.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (values.Length == 0)
+        {
+            return $"<p class=\"empty-copy\">{Encode(emptyMessage)}</p>";
+        }
+
+        var content = new StringBuilder("<ul class=\"editor-list\">");
+        foreach (var item in values)
+        {
+            content.Append($"<li><strong>{Encode(item.Name)}</strong><code>{Encode(item.Id)}</code></li>");
+        }
+        content.Append("</ul>");
+        return content.ToString();
+    }
+
     private static string RenderSimulationDiagnostics(
         WorldEventLog eventLog,
-        WorldSnapshot world)
+        WorldSnapshot world,
+        IReadOnlyList<WorldRuleRegistration> externalRules)
     {
         var content = new StringBuilder();
         content.Append("<section class=\"player-panel diagnostic-detail\"><p class=\"eyebrow\">Prova non distruttiva</p><h2>Simulazione delle prossime 24 ore</h2>");
@@ -230,7 +326,8 @@ internal static class WorldDashboard
             var report = new SimulationDiagnostics().Analyze(
                 eventLog,
                 world,
-                TimeSpan.FromHours(24));
+                TimeSpan.FromHours(24),
+                externalRules);
             var meaningfulEvents = report.ProposedEvents
                 .Where(worldEvent => worldEvent is not WorldTimeAdvanced)
                 .ToArray();
@@ -262,6 +359,49 @@ internal static class WorldDashboard
             ArgumentException)
         {
             content.Append($"<div class=\"recovery-panel\"><h3>La prova si è fermata</h3><p>{Encode(UserFacingErrors.Describe(exception))}</p><p>Il salvataggio non è stato modificato.</p></div>");
+        }
+
+        content.Append("</section>");
+        return content.ToString();
+    }
+
+    private static string RenderPluginDiagnostics(WorldPluginLoadResult report)
+    {
+        var content = new StringBuilder();
+        content.Append("<section class=\"player-panel diagnostic-detail\"><p class=\"eyebrow\">Estensioni locali</p><h2>Plugin</h2><div class=\"world-strip diagnostic-summary\">");
+        content.Append(Metric("Plugin attivi", report.Plugins.Count.ToString()));
+        content.Append(Metric("Regole esterne", report.Rules.Count.ToString()));
+        content.Append(Metric("Disattivati", report.DisabledCount.ToString()));
+        content.Append(Metric(
+            "Problemi",
+            report.Issues.Count == 0 ? "Nessuno" : report.Issues.Count.ToString()));
+        content.Append("</div>");
+
+        if (report.Plugins.Count == 0 && report.Issues.Count == 0)
+        {
+            content.Append("<p>Nessun plugin locale è attivo. TessitoreGM sta usando soltanto le regole integrate.</p>");
+        }
+        else
+        {
+            if (report.Plugins.Count > 0)
+            {
+                content.Append("<h3>Attivi</h3><ul>");
+                foreach (var plugin in report.Plugins)
+                {
+                    content.Append($"<li><strong>{Encode(plugin.Id)}</strong> · v{Encode(plugin.Version)} · {plugin.RuleCount} regole</li>");
+                }
+                content.Append("</ul>");
+            }
+
+            if (report.Issues.Count > 0)
+            {
+                content.Append("<div class=\"recovery-panel\"><h3>Plugin non caricati</h3><ul>");
+                foreach (var issue in report.Issues)
+                {
+                    content.Append($"<li><strong>{Encode(issue.ManifestFile)}</strong>: {Encode(issue.Message)}</li>");
+                }
+                content.Append("</ul><p>Gli altri plugin e la campagna restano disponibili.</p></div>");
+            }
         }
 
         content.Append("</section>");
@@ -510,7 +650,8 @@ internal static class WorldDashboard
 
     public static PendingWorldAdvance PreviewAdvance(
         string worldFile,
-        TimeSpan duration)
+        TimeSpan duration,
+        IEnumerable<WorldRuleRegistration>? externalRules = null)
     {
         if (duration <= TimeSpan.Zero)
         {
@@ -523,7 +664,8 @@ internal static class WorldDashboard
         var result = new ConfiguredWorldSimulator().Advance(
             eventLog,
             world,
-            world.CurrentTime.Add(duration));
+            world.CurrentTime.Add(duration),
+            externalRules);
         return new PendingWorldAdvance(
             Path.GetFullPath(worldFile),
             eventLog.Events.Count,
@@ -1171,7 +1313,7 @@ internal static class WorldDashboard
             new NarrationContext(entityNames, locationNames, resourceNames, needNames));
         var content = new StringBuilder();
 
-        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/chronicle\">Cronaca completa</a><a class=\"button secondary\" href=\"/diagnostics\">Diagnostica</a><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></div></header>");
+        content.Append("<header class=\"hero\"><div><p class=\"eyebrow\">Tavolo del GM</p><h1>Il mondo, adesso</h1><p class=\"lede\">Una vista leggibile dello stato persistente della campagna.</p></div><div class=\"hero-actions\"><a class=\"button secondary\" href=\"/editor\">Editor</a><a class=\"button secondary\" href=\"/chronicle\">Cronaca completa</a><a class=\"button secondary\" href=\"/diagnostics\">Diagnostica</a><button type=\"button\" class=\"secondary\" onclick=\"location.reload()\">Aggiorna</button></div></header>");
         content.Append(CampaignControls(
             worldFile,
             actionToken,

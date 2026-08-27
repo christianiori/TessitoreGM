@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using TessitoreGM.AiGm;
 using TessitoreGM.Gm;
+using TessitoreGM.World;
 
 var launchDirectory = Directory.GetCurrentDirectory();
 var explicitWorldFile = args.Any(argument =>
@@ -28,6 +29,8 @@ var activeWorldFile = explicitWorldFile
         AppContext.BaseDirectory);
 var campaignCatalog = new CampaignCatalog(
     Path.GetDirectoryName(activeWorldFile) ?? launchDirectory);
+var pluginDirectory = Path.Combine(AppContext.BaseDirectory, "Plugins");
+var loadedPlugins = new WorldPluginLoader().Load(pluginDirectory);
 var aiGmSettingsStore = new AiGmModeSettingsStore(
     StandaloneWorkspace.ResolveAiGmSettingsFile(activeWorldFile));
 var ollamaHttpClient = new HttpClient
@@ -255,7 +258,10 @@ app.MapGet("/chronicle", () => Results.Content(
     WorldDashboard.RenderChronicle(activeWorldFile),
     "text/html; charset=utf-8"));
 app.MapGet("/diagnostics", () => Results.Content(
-    WorldDashboard.RenderDiagnostics(activeWorldFile),
+    WorldDashboard.RenderDiagnostics(activeWorldFile, loadedPlugins),
+    "text/html; charset=utf-8"));
+app.MapGet("/editor", () => Results.Content(
+    WorldDashboard.RenderWorldEditor(activeWorldFile, actionToken),
     "text/html; charset=utf-8"));
 app.MapGet("/player/{entityId}", (string entityId) => Results.Content(
     WorldDashboard.RenderPlayer(
@@ -368,6 +374,67 @@ app.MapPost("/campaign/restore-backup", async (HttpContext context) =>
 
     return Results.Redirect("/");
 });
+app.MapPost("/editor/location", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.AddEditorLocation(
+            activeWorldFile,
+            form["id"].ToString(),
+            form["name"].ToString());
+        pendingAdvance = null;
+        focusedScene = null;
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/editor");
+});
+app.MapPost("/editor/resource", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken)
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.AddEditorResource(
+            activeWorldFile,
+            form["id"].ToString(),
+            form["name"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (
+        exception is IOException or InvalidDataException or
+        InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally
+    {
+        worldLock.Release();
+    }
+
+    return Results.Redirect("/editor");
+});
 app.MapPost("/ai-gm/mode", async (HttpContext context) =>
 {
     var form = await context.Request.ReadFormAsync();
@@ -469,7 +536,8 @@ app.MapPost("/advance", async (HttpContext context) =>
     {
         pendingAdvance = WorldDashboard.PreviewAdvance(
             activeWorldFile,
-            TimeSpan.FromHours(hours));
+            TimeSpan.FromHours(hours),
+            loadedPlugins.Rules);
     }
     finally
     {

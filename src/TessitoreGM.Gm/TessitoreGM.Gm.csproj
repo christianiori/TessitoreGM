@@ -24,5 +24,9 @@
     <Content Include="..\..\packaging\windows\Avvia TessitoreGM in rete locale.cmd" Link="Avvia TessitoreGM in rete locale.cmd">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
+    <Content Include="..\..\packaging\windows\Plugins\README.txt" Link="Plugins\README.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 </Project>
