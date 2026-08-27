@@ -435,6 +435,23 @@ app.MapPost("/editor/resource", async (HttpContext context) =>
 
     return Results.Redirect("/editor");
 });
+app.MapPost("/editor/need", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken) return Results.BadRequest("Richiesta non valida.");
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.AddEditorNeed(activeWorldFile, form["id"].ToString(), form["name"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally { worldLock.Release(); }
+    return Results.Redirect("/editor");
+});
 app.MapPost("/editor/npc", async (HttpContext context) =>
 {
     var form = await context.Request.ReadFormAsync();
@@ -497,6 +514,80 @@ app.MapPost("/editor/npc-routine", async (HttpContext context) =>
         worldLock.Release();
     }
 
+    return Results.Redirect("/editor");
+});
+app.MapPost("/editor/npc-profile", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken) return Results.BadRequest("Richiesta non valida.");
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.UpdateEditorNpcProfile(activeWorldFile, form["npc"].ToString(), form["name"].ToString(), form["role"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally { worldLock.Release(); }
+    return Results.Redirect("/editor");
+});
+app.MapPost("/editor/npc-routine-update", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken) return Results.BadRequest("Richiesta non valida.");
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.UpdateEditorNpcRoutine(activeWorldFile, form["routine"].ToString(), form["destination"].ToString(), form["time"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally { worldLock.Release(); }
+    return Results.Redirect("/editor");
+});
+app.MapPost("/editor/npc-state", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken ||
+        !int.TryParse(form["coins"], out var coins) ||
+        !int.TryParse(form["quantity"], out var quantity) ||
+        !int.TryParse(form["level"], out var level))
+    {
+        return Results.BadRequest("Richiesta non valida.");
+    }
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.ConfigureEditorNpcState(activeWorldFile, form["npc"].ToString(), coins, form["resource"].ToString(), quantity, form["need"].ToString(), level);
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally { worldLock.Release(); }
+    return Results.Redirect("/editor");
+});
+app.MapPost("/editor/npc-knowledge", async (HttpContext context) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    if (form["token"] != actionToken) return Results.BadRequest("Richiesta non valida.");
+    await worldLock.WaitAsync();
+    try
+    {
+        WorldDashboard.AddEditorNpcKnowledge(activeWorldFile, form["npc"].ToString(), form["fact"].ToString());
+        pendingAdvance = null;
+    }
+    catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
+    }
+    finally { worldLock.Release(); }
     return Results.Redirect("/editor");
 });
 app.MapPost("/ai-gm/mode", async (HttpContext context) =>

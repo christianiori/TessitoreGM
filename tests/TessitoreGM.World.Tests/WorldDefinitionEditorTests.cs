@@ -245,6 +245,112 @@ public sealed class WorldDefinitionEditorTests
         Assert.Contains("questo orario", exception.Message);
     }
 
+    [Fact]
+    public void AddNeed_AddsUniquePresentation()
+    {
+        var updated = new WorldDefinitionEditor().AddNeed(
+            CreateLog(), "hunger", "Fame");
+
+        var need = Assert.Single(updated.Simulation!.Needs!);
+        Assert.Equal(new NeedId("hunger"), need.NeedId);
+        Assert.Equal("Fame", need.Name);
+        Assert.Throws<InvalidOperationException>(() =>
+            new WorldDefinitionEditor().AddNeed(updated, "HUNGER", "Altro"));
+    }
+
+    [Fact]
+    public void ConfigureNpcInitialState_SetsCoinsStockAndNeedWithoutRewritingHistory()
+    {
+        var now = new DateTimeOffset(2026, 8, 3, 8, 0, 0, TimeSpan.Zero);
+        var npcId = new EntityId("alda");
+        var existingEvent = new EntityEnteredLocation(
+            npcId, new LocationId("tower"), now);
+        var log = new WorldEventLog(
+            new WorldInitialState(now, Array.Empty<EntityBalance>()),
+            new IWorldEvent[] { existingEvent },
+            new WorldSimulationDefinition(
+                new[] { new NpcSimulationDefinition(npcId, "guardia", Array.Empty<ScheduledArrivalDefinition>(), Array.Empty<OrderProductionDefinition>()) },
+                Resources: new[] { new ResourcePresentationDefinition(new ResourceId("bread"), "Pane") },
+                Needs: new[] { new NeedPresentationDefinition(new NeedId("hunger"), "Fame") }));
+
+        var updated = new WorldDefinitionEditor().ConfigureNpcInitialState(
+            log, "alda", 12, "bread", 3, "hunger", 25, now);
+
+        Assert.Equal(12, Assert.Single(updated.InitialWorld.Balances).Amount);
+        Assert.Equal(3, Assert.Single(updated.InitialWorld.ResourceStocks!).Quantity);
+        Assert.Same(existingEvent, updated.Events[0]);
+        var need = Assert.IsType<NeedIncreased>(updated.Events[1]);
+        Assert.Equal(25, need.Amount);
+    }
+
+    [Fact]
+    public void ConfigureNpcInitialState_AfterEconomicHistory_IsRejected()
+    {
+        var now = new DateTimeOffset(2026, 8, 3, 8, 0, 0, TimeSpan.Zero);
+        var npcId = new EntityId("alda");
+        var log = new WorldEventLog(
+            new WorldInitialState(now, Array.Empty<EntityBalance>()),
+            new IWorldEvent[]
+            {
+                new ResourceAcquired(
+                    npcId, new ResourceId("bread"), 1, "acquisto", now)
+            },
+            new WorldSimulationDefinition(
+                new[] { new NpcSimulationDefinition(npcId, "guardia", Array.Empty<ScheduledArrivalDefinition>(), Array.Empty<OrderProductionDefinition>()) },
+                Resources: new[] { new ResourcePresentationDefinition(new ResourceId("bread"), "Pane") }));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new WorldDefinitionEditor().ConfigureNpcInitialState(
+                log, "alda", 10, "bread", 2, null, 0, now));
+
+        Assert.Contains("cronologia", exception.Message);
+    }
+
+    [Fact]
+    public void AddKnowledgeAndUpdateProfile_PreserveNpcIdentity()
+    {
+        var npcId = new EntityId("alda");
+        var log = CreateLog(new WorldSimulationDefinition(
+            new[] { new NpcSimulationDefinition(npcId, "guardia", Array.Empty<ScheduledArrivalDefinition>(), Array.Empty<OrderProductionDefinition>()) },
+            Entities: new[] { new EntityPresentationDefinition(npcId, "Alda") }));
+        var editor = new WorldDefinitionEditor();
+
+        var learned = editor.AddNpcInitialKnowledge(log, "alda", "gate-open");
+        var updated = editor.UpdateNpcProfile(
+            learned, "alda", "Alda la sentinella", "sentinella");
+
+        Assert.Equal(npcId, Assert.Single(updated.Simulation!.Npcs).EntityId);
+        Assert.Equal("sentinella", Assert.Single(updated.Simulation.Npcs).Role);
+        Assert.Contains(new FactId("gate-open"), Assert.Single(updated.Simulation.Npcs).InitialKnownFacts!);
+        Assert.Equal("Alda la sentinella", Assert.Single(updated.Simulation.Entities!).Name);
+    }
+
+    [Fact]
+    public void UpdateNpcDailyRoutine_ReplacesSelectedRoutineAndSorts()
+    {
+        var npcId = new EntityId("alda");
+        var log = CreateLog(new WorldSimulationDefinition(
+            new[]
+            {
+                new NpcSimulationDefinition(
+                    npcId, "guardia", Array.Empty<ScheduledArrivalDefinition>(),
+                    Array.Empty<OrderProductionDefinition>(),
+                    new[] { new DailyLocationRoutineDefinition(new LocationId("home"), TimeSpan.FromHours(18)) })
+            },
+            Locations: new[]
+            {
+                new LocationPresentationDefinition(new LocationId("home"), "Casa"),
+                new LocationPresentationDefinition(new LocationId("gate"), "Porta")
+            }));
+
+        var updated = new WorldDefinitionEditor().UpdateNpcDailyRoutine(
+            log, "alda", TimeSpan.FromHours(18), "gate", TimeSpan.FromHours(7));
+
+        var routine = Assert.Single(Assert.Single(updated.Simulation!.Npcs).DailyLocationRoutines!);
+        Assert.Equal(new LocationId("gate"), routine.DestinationId);
+        Assert.Equal(TimeSpan.FromHours(7), routine.TimeOfDay);
+    }
+
     private static WorldEventLog CreateLog(
         WorldSimulationDefinition? simulation = null) => new(
             new WorldInitialState(

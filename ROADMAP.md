@@ -479,16 +479,16 @@ quella fase.
   - [x] Caricamento limitato alla cartella Plugins
   - [x] Registrazione transazionale delle regole
   - [x] Errori isolati e visibili in Diagnostica
-- [ ] Editor del mondo
+- [x] Editor del mondo
   - [x] Prima pagina separata dal Tavolo del GM
   - [x] Aggiunta sicura di luoghi e tipi di risorsa
   - [x] Validazione di identificatori, nomi e duplicati
   - [x] Backup automatico prima di ogni modifica
   - [x] Creazione guidata degli NPC con nome, ruolo e luogo iniziale
   - [x] Prima configurazione guidata dei comportamenti: routine giornaliere
-  - [ ] Configurazione dello stato iniziale degli NPC: monete, risorse e bisogni
-  - [ ] Configurazione guidata delle conoscenze iniziali
-  - [ ] Modifica sicura delle definizioni create, senza corrompere la cronologia
+  - [x] Configurazione dello stato iniziale degli NPC: monete, risorse e bisogni
+  - [x] Configurazione guidata delle conoscenze iniziali
+  - [x] Modifica sicura delle definizioni create, senza corrompere la cronologia
 
 Definition of Done iniziale: il GM può creare dall'interfaccia una campagna
 minima giocabile, con luoghi, risorse, NPC, stato iniziale e routine, senza
@@ -582,10 +582,9 @@ usati nella cronologia non è richiesta per la 1.0.
 
 ## Prossimo passo
 
-Completare l'Editor del mondo fino a permettere la creazione di una campagna
-minima giocabile senza modificare JSON: stato iniziale degli NPC, conoscenze e
-modifica sicura delle definizioni. Subito dopo, automatizzare il percorso
-end-to-end principale e provarlo anche nel pacchetto Windows su un computer
+Automatizzare il percorso end-to-end principale: creazione e modifica di una
+campagna, simulazione, azione del giocatore, decisione del GM, salvataggio e
+riapertura. Eseguire poi la stessa prova nel pacchetto Windows su un computer
 privo di SDK e Git.
 
 Concluso questo cancello di stabilità, costruire una batteria ripetibile di

@@ -238,6 +238,8 @@ internal static class WorldDashboard
                 Array.Empty<LocationPresentationDefinition>();
             var resources = simulation?.Resources ??
                 Array.Empty<ResourcePresentationDefinition>();
+            var needs = simulation?.Needs ??
+                Array.Empty<NeedPresentationDefinition>();
             var entityNames = simulation?.Entities?.ToDictionary(
                 entity => entity.EntityId,
                 entity => entity.Name) ?? new Dictionary<EntityId, string>();
@@ -257,6 +259,11 @@ internal static class WorldDashboard
                 resources.Select(resource =>
                     (resource.ResourceId.ToString(), resource.Name)),
                 "Nessuna risorsa configurata."));
+            content.Append("</article><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Persona</p><h2>Bisogni</h2><form method=\"post\" action=\"/editor/need\">");
+            content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>Identificatore<input name=\"id\" maxlength=\"64\" placeholder=\"fame\" required></label><label>Nome<input name=\"name\" maxlength=\"100\" placeholder=\"Fame\" required></label><button type=\"submit\">Aggiungi bisogno</button></form>");
+            content.Append(RenderEditorItems(
+                needs.Select(need => (need.NeedId.ToString(), need.Name)),
+                "Nessun bisogno configurato."));
             content.Append("</article><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Popolazione</p><h2>Personaggi non giocanti</h2>");
             if (locations.Count == 0)
             {
@@ -280,6 +287,13 @@ internal static class WorldDashboard
                         npc.EntityId,
                         npc.Role))),
                 "Nessun NPC configurato."));
+            if (npcs.Count > 0)
+            {
+                content.Append("<h3>Modifica nome e ruolo</h3><form method=\"post\" action=\"/editor/npc-profile\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>NPC<select name=\"npc\" required>");
+                AppendNpcOptions(content, npcs, entityNames);
+                content.Append("</select></label><label>Nuovo nome<input name=\"name\" maxlength=\"100\" required></label><label>Nuovo ruolo<input name=\"role\" maxlength=\"100\" required></label><button type=\"submit\">Salva profilo</button></form>");
+            }
             content.Append("</article><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Autonomia</p><h2>Routine giornaliere</h2>");
             if (npcs.Count == 0 || locations.Count == 0)
             {
@@ -315,7 +329,53 @@ internal static class WorldDashboard
             content.Append(RenderEditorItems(
                 routineItems,
                 "Nessuna routine configurata."));
-            content.Append("</article></section><section class=\"player-panel editor-note\"><h2>Modifiche sicure</h2><p>Ogni aggiunta crea prima una copia di sicurezza. In questa prima versione gli elementi non possono essere eliminati, perché potrebbero essere già usati da eventi o regole della simulazione.</p></section></main>");
+            if (routineItems.Any())
+            {
+                content.Append("<h3>Modifica routine</h3><form method=\"post\" action=\"/editor/npc-routine-update\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>Routine<select name=\"routine\" required>");
+                foreach (var npc in npcs)
+                {
+                    foreach (var routine in npc.DailyLocationRoutines ?? Array.Empty<DailyLocationRoutineDefinition>())
+                    {
+                        var key = $"{npc.EntityId}|{routine.TimeOfDay:hh\\:mm}";
+                        content.Append($"<option value=\"{Encode(key)}\">{Encode(entityNames.GetValueOrDefault(npc.EntityId, npc.Role))} · {routine.TimeOfDay:hh\\:mm}</option>");
+                    }
+                }
+                content.Append("</select></label><label>Nuova destinazione<select name=\"destination\" required>");
+                foreach (var location in locations.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    content.Append($"<option value=\"{Encode(location.LocationId.ToString())}\">{Encode(location.Name)}</option>");
+                }
+                content.Append("</select></label><label>Nuovo orario<input type=\"time\" name=\"time\" required></label><button type=\"submit\">Salva routine</button></form>");
+            }
+
+            content.Append("</article><article class=\"player-panel editor-panel\"><p class=\"eyebrow\">Stato iniziale</p><h2>Dotazione NPC</h2>");
+            if (npcs.Count == 0)
+            {
+                content.Append("<p class=\"empty-copy\">Crea almeno un NPC.</p>");
+            }
+            else
+            {
+                content.Append("<form method=\"post\" action=\"/editor/npc-state\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>NPC<select name=\"npc\" required>");
+                AppendNpcOptions(content, npcs, entityNames);
+                content.Append("</select></label><label>Monete<input type=\"number\" name=\"coins\" min=\"0\" value=\"0\" required></label><label>Risorsa facoltativa<select name=\"resource\"><option value=\"\">Nessuna</option>");
+                foreach (var resource in resources.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    content.Append($"<option value=\"{Encode(resource.ResourceId.ToString())}\">{Encode(resource.Name)}</option>");
+                }
+                content.Append("</select></label><label>Quantità<input type=\"number\" name=\"quantity\" min=\"0\" value=\"0\" required></label><label>Bisogno facoltativo<select name=\"need\"><option value=\"\">Nessuno</option>");
+                foreach (var need in needs.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    content.Append($"<option value=\"{Encode(need.NeedId.ToString())}\">{Encode(need.Name)}</option>");
+                }
+                content.Append("</select></label><label>Livello iniziale<input type=\"number\" name=\"level\" min=\"0\" max=\"100\" value=\"0\" required></label><button type=\"submit\">Salva dotazione</button></form>");
+                content.Append("<h3>Conoscenza iniziale</h3><form method=\"post\" action=\"/editor/npc-knowledge\">");
+                content.Append($"<input type=\"hidden\" name=\"token\" value=\"{Encode(actionToken)}\"><label>NPC<select name=\"npc\" required>");
+                AppendNpcOptions(content, npcs, entityNames);
+                content.Append("</select></label><label>Identificatore del fatto<input name=\"fact\" maxlength=\"64\" placeholder=\"mercato-aperto\" required></label><button type=\"submit\">Aggiungi conoscenza</button></form>");
+            }
+            content.Append("</article></section><section class=\"player-panel editor-note\"><h2>Modifiche sicure</h2><p>Ogni modifica crea prima una copia di sicurezza. Identificatori e cronologia non vengono riscritti; gli elementi già usati non possono essere eliminati.</p></section></main>");
             return Page("Editor del mondo", content.ToString());
         }
         catch (Exception exception) when (
@@ -347,6 +407,13 @@ internal static class WorldDashboard
                 eventLog,
                 id,
                 name));
+
+    public static void AddEditorNeed(
+        string worldFile,
+        string id,
+        string name) => EditWorldDefinition(
+            worldFile,
+            eventLog => new WorldDefinitionEditor().AddNeed(eventLog, id, name));
 
     public static void AddEditorNpc(
         string worldFile,
@@ -385,6 +452,56 @@ internal static class WorldDashboard
                 npcId,
                 destinationId,
                 timeOfDay));
+    }
+
+    public static void ConfigureEditorNpcState(
+        string worldFile, string npcId, int coins, string? resourceId,
+        int quantity, string? needId, int level) => EditWorldDefinition(
+            worldFile,
+            eventLog => new WorldDefinitionEditor().ConfigureNpcInitialState(
+                eventLog, npcId, coins, resourceId, quantity, needId, level,
+                Replay(eventLog).CurrentTime));
+
+    public static void AddEditorNpcKnowledge(
+        string worldFile, string npcId, string factId) => EditWorldDefinition(
+            worldFile,
+            eventLog => new WorldDefinitionEditor().AddNpcInitialKnowledge(
+                eventLog, npcId, factId));
+
+    public static void UpdateEditorNpcProfile(
+        string worldFile, string npcId, string name, string role) =>
+        EditWorldDefinition(worldFile, eventLog =>
+            new WorldDefinitionEditor().UpdateNpcProfile(
+                eventLog, npcId, name, role));
+
+    public static void UpdateEditorNpcRoutine(
+        string worldFile, string routineValue, string destinationId,
+        string timeValue)
+    {
+        var parts = routineValue.Split('|', 2);
+        if (parts.Length != 2 ||
+            !TimeSpan.TryParseExact(parts[1], "hh\\:mm", CultureInfo.InvariantCulture, out var previous) ||
+            !TimeSpan.TryParseExact(timeValue, "hh\\:mm", CultureInfo.InvariantCulture, out var next))
+        {
+            throw new ArgumentException("La routine selezionata non è valida.");
+        }
+
+        EditWorldDefinition(worldFile, eventLog =>
+            new WorldDefinitionEditor().UpdateNpcDailyRoutine(
+                eventLog, parts[0], previous, destinationId, next));
+    }
+
+    private static void AppendNpcOptions(
+        StringBuilder content,
+        IReadOnlyList<NpcSimulationDefinition> npcs,
+        IReadOnlyDictionary<EntityId, string> entityNames)
+    {
+        foreach (var npc in npcs.OrderBy(item =>
+            entityNames.GetValueOrDefault(item.EntityId, item.Role),
+            StringComparer.OrdinalIgnoreCase))
+        {
+            content.Append($"<option value=\"{Encode(npc.EntityId.ToString())}\">{Encode(entityNames.GetValueOrDefault(npc.EntityId, npc.Role))}</option>");
+        }
     }
 
     private static void EditWorldDefinition(
