@@ -222,7 +222,7 @@ Obiettivo: applicare il runtime autonomo a una giornata di villaggio.
 - [x] Salvataggio e continuazione della giornata
 - [x] Cronaca dell'intera giornata
 
-Risultato atteso: il villaggio continua a vivere senza che il Game Master
+Risultato raggiunto: il villaggio continua a vivere senza che il Game Master
 debba comandare ogni singola azione.
 
 ## Milestone 5 — Consequences and Relationships
@@ -432,7 +432,7 @@ quella fase.
   - [x] Script ripetibile di pubblicazione self-contained `win-x64`
   - [x] Collaudo automatico del pacchetto estratto su Windows
   - [ ] Collaudo manuale su un computer privo di SDK e Git
-- [ ] Avviare il Tavolo del GM senza comandi PowerShell
+- [x] Avviare il Tavolo del GM senza comandi PowerShell
   - [x] Avvio locale e LAN tramite collegamenti a doppio clic
   - [x] Apertura automatica del browser
   - [x] Collaudo dell'avvio a doppio clic
@@ -460,6 +460,11 @@ quella fase.
 - [x] Messaggi di errore utilizzabili senza conoscenze tecniche
   - [x] Pagina di recupero per campagne non leggibili
   - [x] Revisione sistematica degli altri errori operativi
+- [ ] Collaudo end-to-end dei percorsi critici dell'applicazione
+  - [ ] Creazione, modifica, simulazione, salvataggio e riapertura di una campagna
+  - [ ] Azione giocatore, decisione del GM e aggiornamento dello stato osservabile
+  - [ ] Recupero da backup verificato attraverso l'interfaccia
+  - [ ] Esecuzione della stessa prova sul pacchetto Windows distribuito
 
 ### 9.3 — Framework estensibile
 
@@ -481,6 +486,14 @@ quella fase.
   - [x] Backup automatico prima di ogni modifica
   - [x] Creazione guidata degli NPC con nome, ruolo e luogo iniziale
   - [x] Prima configurazione guidata dei comportamenti: routine giornaliere
+  - [ ] Configurazione dello stato iniziale degli NPC: monete, risorse e bisogni
+  - [ ] Configurazione guidata delle conoscenze iniziali
+  - [ ] Modifica sicura delle definizioni create, senza corrompere la cronologia
+
+Definition of Done iniziale: il GM può creare dall'interfaccia una campagna
+minima giocabile, con luoghi, risorse, NPC, stato iniziale e routine, senza
+modificare manualmente il file JSON. La rimozione distruttiva di elementi già
+usati nella cronologia non è richiesta per la 1.0.
 
 ### 9.4 — Modalità AI Game Master
 
@@ -549,6 +562,7 @@ quella fase.
   - [ ] Batteria di scenari rappresentativi invece di correzioni linguistiche isolate
   - [ ] Misurazione di pertinenza, continuità, prospettiva e uso dei tiri
   - [ ] Revisione generale della comprensione delle domande e degli intenti
+  - [ ] Confronto ripetibile dei risultati tra versioni del modello e del prompt
 - [ ] Interfaccia di sessione ispirata ai GM virtuali conversazionali
   - [x] Sequenza persistente di azioni umane e risposte narrative AI
   - [ ] Presentazione dedicata della conversazione di scena
@@ -557,16 +571,27 @@ quella fase.
 ### 9.5 — Documentazione e release
 
 - [ ] Documentazione per utenti e sviluppatori
+  - [x] README operativo per sviluppo, pacchetto Windows, GM, giocatori e Ollama
+  - [x] Specifica del nucleo e guida iniziale all'estensibilità
+  - [ ] Guida utente completa basata sui flussi dell'interfaccia
+  - [ ] Guida per sviluppatori a struttura, test, eventi, regole e plugin
+- [ ] Preparazione della release
+  - [ ] Versione applicativa e note di rilascio
+  - [ ] Pacchetto finale verificato con istruzioni e checksum
 - [ ] Prima release stabile
 
 ## Prossimo passo
 
-Completare il collaudo della distribuzione Windows autonoma: verificare il
-pacchetto estratto, l'avvio a doppio clic e la campagna dimostrativa senza SDK o
-Git. Subito dopo vengono migrazione dei salvataggi e diagnostica. La qualità
-della modalità AI verrà raffinata tramite una batteria di scenari, non con
-correzioni linguistiche isolate. La presentazione dedicata della conversazione
-di scena e l'adattatore OpenAI restano passi successivi.
+Completare l'Editor del mondo fino a permettere la creazione di una campagna
+minima giocabile senza modificare JSON: stato iniziale degli NPC, conoscenze e
+modifica sicura delle definizioni. Subito dopo, automatizzare il percorso
+end-to-end principale e provarlo anche nel pacchetto Windows su un computer
+privo di SDK e Git.
+
+Concluso questo cancello di stabilità, costruire una batteria ripetibile di
+scenari per valutare la modalità AI. La presentazione dedicata della
+conversazione di scena e l'adattatore OpenAI restano passi successivi; non
+precedono il collaudo della versione locale autonoma.
 
 Reputazione, promesse, conflitti, prezzi dinamici e bisogni più complessi
 restano intenzionalmente fuori dalla fase completata.
