@@ -81,6 +81,33 @@ public sealed class WorldEventFileStoreTests
     }
 
     [Fact]
+    public void Save_VersionTwoWorld_CreatesOldFormatBackupAndWritesVersionThree()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var path = Path.Combine(directory, "campaign.json");
+            var serializer = new WorldEventJsonSerializer();
+            var versionTwo = serializer.Serialize(LogAt(At(3, 8)))
+                .Replace("\"version\": 3", "\"version\": 2");
+            File.WriteAllText(path, versionTwo);
+            var store = new WorldEventFileStore(serializer);
+
+            store.Save(path, store.Load(path));
+
+            Assert.Equal(3, serializer.InspectFormat(File.ReadAllText(path)).Version);
+            var backup = Assert.Single(store.ListBackups(path));
+            Assert.Equal(
+                2,
+                serializer.InspectFormat(File.ReadAllText(backup.FullPath)).Version);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void RestoreBackup_ReplacesCorruptedWorldAndPreservesIt()
     {
         var directory = CreateTemporaryDirectory();

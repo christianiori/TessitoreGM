@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\src\TessitoreGM.AiGm\TessitoreGM.AiGm.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.Core\TessitoreGM.Core.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.Events\TessitoreGM.Events.csproj" />
+    <ProjectReference Include="..\..\src\TessitoreGM.Gm\TessitoreGM.Gm.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.Memory\TessitoreGM.Memory.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.Narration\TessitoreGM.Narration.csproj" />
     <ProjectReference Include="..\..\src\TessitoreGM.Npcs\TessitoreGM.Npcs.csproj" />

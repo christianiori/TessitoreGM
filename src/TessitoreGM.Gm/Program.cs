@@ -105,7 +105,7 @@ async Task RunConfiguredAiGmAsync(
     {
         SetNotice(
             "Ollama non ha potuto completare il turno: " +
-            exception.Message +
+            UserFacingErrors.Describe(exception) +
             " L'azione resta al GM umano.");
     }
 }
@@ -153,7 +153,7 @@ bool QueueConfiguredAiGm(
             {
                 aiGmRuntimeNotice =
                     "Ollama non ha potuto avviare il turno: " +
-                    exception.Message +
+                    UserFacingErrors.Describe(exception) +
                     " L'azione resta al GM umano.";
             }
         }
@@ -292,7 +292,7 @@ app.MapPost("/campaign/select", async (HttpContext context) =>
     }
     catch (ArgumentException exception)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -328,7 +328,7 @@ app.MapPost("/campaign/create", async (HttpContext context) =>
     }
     catch (ArgumentException exception)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -359,7 +359,7 @@ app.MapPost("/campaign/restore-backup", async (HttpContext context) =>
     catch (Exception exception) when (
         exception is IOException or InvalidDataException or ArgumentException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -389,7 +389,7 @@ app.MapPost("/ai-gm/mode", async (HttpContext context) =>
         exception is IOException or InvalidDataException or
         InvalidOperationException or ArgumentException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -424,7 +424,7 @@ app.MapPost("/ai-gm/ollama", async (HttpContext context) =>
         exception is IOException or InvalidDataException or
         InvalidOperationException or ArgumentException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -495,7 +495,7 @@ app.MapPost("/advance/approve", async (HttpContext context) =>
     catch (InvalidOperationException exception)
     {
         pendingAdvance = null;
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -543,7 +543,7 @@ app.MapPost("/move", async (HttpContext context) =>
     }
     catch (ArgumentException exception)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -572,7 +572,7 @@ app.MapPost("/reveal", async (HttpContext context) =>
     }
     catch (ArgumentException exception)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -600,7 +600,7 @@ app.MapPost("/player-action", async (HttpContext context) =>
     }
     catch (ArgumentException exception)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -627,7 +627,7 @@ app.MapPost("/player-character", async (HttpContext context) =>
     }
     catch (ArgumentException exception)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -660,7 +660,7 @@ app.MapPost("/player-access", async (HttpContext context) =>
     }
     catch (ArgumentException exception)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -690,7 +690,7 @@ app.MapPost("/coins/transfer", async (HttpContext context) =>
     catch (Exception exception) when (
         exception is ArgumentException or InvalidOperationException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -724,7 +724,7 @@ app.MapPost("/resources/change", async (HttpContext context) =>
     catch (Exception exception) when (
         exception is ArgumentException or InvalidOperationException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -755,7 +755,7 @@ app.MapPost("/player/{entityId}/actions", async (
     catch (Exception exception) when (
         exception is ArgumentException or InvalidOperationException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -800,7 +800,7 @@ app.MapPost("/ai-gm/actions/retry", async (HttpContext context) =>
         exception is IOException or InvalidDataException or
         InvalidOperationException or ArgumentException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -834,7 +834,7 @@ app.MapPost("/player-actions/resolve", async (HttpContext context) =>
     catch (Exception exception) when (
         exception is ArgumentException or InvalidOperationException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -862,7 +862,7 @@ app.MapPost("/ai-gm/consequences/resolve", async (HttpContext context) =>
         exception is ArgumentException or InvalidOperationException or
         InvalidDataException or IOException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -896,7 +896,7 @@ app.MapPost("/player-actions/request-roll", async (
     catch (Exception exception) when (
         exception is ArgumentException or InvalidOperationException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {
@@ -926,7 +926,7 @@ app.MapPost("/player/{entityId}/roll", async (
     catch (Exception exception) when (
         exception is ArgumentException or InvalidOperationException)
     {
-        return Results.BadRequest(exception.Message);
+        return Results.BadRequest(UserFacingErrors.Describe(exception));
     }
     finally
     {

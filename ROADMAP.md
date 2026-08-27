@@ -442,7 +442,11 @@ quella fase.
 
 ### 9.2 — Stabilità dei dati e diagnostica
 
-- [ ] Compatibilità e migrazione dei salvataggi
+- [x] Compatibilità e migrazione sicura dei salvataggi
+  - [x] Lettura trasparente del formato 2 e aggiornamento al formato 3 al salvataggio
+  - [x] Backup automatico del formato precedente prima della conversione
+  - [x] Diagnostica leggibile della versione del formato
+  - [x] Errori guidati per formati incompleti o creati da versioni più recenti
 - [x] Backup automatici prima di ogni modifica persistente
   - [x] Copia valida precedente conservata per ogni salvataggio
   - [x] Scrittura temporanea verificata prima della sostituzione
@@ -450,12 +454,12 @@ quella fase.
 - [x] Recupero guidato dopo un salvataggio non leggibile
   - [x] Selezione del backup dal Tavolo del GM
   - [x] Conservazione del file problematico prima del ripristino
-- [ ] Strumenti di diagnostica della simulazione
+- [x] Strumenti di diagnostica della simulazione
   - [x] Prima pagina diagnostica per salvataggio, eventi, backup e percorsi
-  - [ ] Analisi delle regole e degli eventi proposti
-- [ ] Messaggi di errore utilizzabili senza conoscenze tecniche
+  - [x] Analisi non distruttiva delle regole e degli eventi proposti nelle prossime 24 ore
+- [x] Messaggi di errore utilizzabili senza conoscenze tecniche
   - [x] Pagina di recupero per campagne non leggibili
-  - [ ] Revisione sistematica degli altri errori operativi
+  - [x] Revisione sistematica degli altri errori operativi
 
 ### 9.3 — Framework estensibile
 

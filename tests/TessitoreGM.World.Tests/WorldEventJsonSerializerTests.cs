@@ -63,16 +63,47 @@ public sealed class WorldEventJsonSerializerTests
     }
 
     [Fact]
-    public void Deserialize_OldVersion_Throws()
+    public void Deserialize_VersionTwo_MigratesInMemory()
     {
         var serializer = new WorldEventJsonSerializer();
         var json = serializer.Serialize(CreateEventLog())
-            .Replace("\"version\": 2", "\"version\": 1");
+            .Replace("\"version\": 3", "\"version\": 2");
+
+        var format = serializer.InspectFormat(json);
+        var restored = serializer.Deserialize(json);
+
+        Assert.True(format.RequiresMigration);
+        Assert.Equal(2, format.Version);
+        Assert.Equal(CreateEventLog().Events.Count, restored.Events.Count);
+        Assert.Contains("\"version\": 3", serializer.Serialize(restored));
+    }
+
+    [Fact]
+    public void Deserialize_VersionOne_ExplainsWhyItCannotBeMigrated()
+    {
+        var serializer = new WorldEventJsonSerializer();
+        var json = serializer.Serialize(CreateEventLog())
+            .Replace("\"version\": 3", "\"version\": 1");
 
         var exception = Assert.Throws<InvalidDataException>(
             () => serializer.Deserialize(json));
 
-        Assert.Contains("version '1'", exception.Message);
+        Assert.Contains("non contiene lo stato iniziale", exception.Message);
+        Assert.Contains("non può essere migrato automaticamente", exception.Message);
+    }
+
+    [Fact]
+    public void Deserialize_FutureVersion_RequestsApplicationUpdate()
+    {
+        var serializer = new WorldEventJsonSerializer();
+        var json = serializer.Serialize(CreateEventLog())
+            .Replace("\"version\": 3", "\"version\": 99");
+
+        var exception = Assert.Throws<InvalidDataException>(
+            () => serializer.Deserialize(json));
+
+        Assert.Contains("più recente", exception.Message);
+        Assert.Contains("Aggiorna TessitoreGM", exception.Message);
     }
 
     [Fact]

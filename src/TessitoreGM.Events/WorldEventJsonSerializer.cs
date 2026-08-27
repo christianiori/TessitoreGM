@@ -5,7 +5,8 @@ namespace TessitoreGM.Events;
 
 public sealed class WorldEventJsonSerializer
 {
-    private const int CurrentVersion = 2;
+    public const int CurrentFormatVersion = 3;
+    public const int OldestCompatibleFormatVersion = 2;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -41,7 +42,7 @@ public sealed class WorldEventJsonSerializer
 
         return JsonSerializer.Serialize(
             new EventLogDocument(
-                CurrentVersion,
+                CurrentFormatVersion,
                 eventLog.InitialWorld,
                 persistedEvents,
                 eventLog.Simulation,
@@ -57,6 +58,7 @@ public sealed class WorldEventJsonSerializer
             throw new ArgumentException("An event log cannot be empty.", nameof(json));
         }
 
+        var format = InspectFormat(json);
         EventLogDocument document;
 
         try
@@ -69,10 +71,10 @@ public sealed class WorldEventJsonSerializer
             throw new InvalidDataException("The event log contains invalid JSON.", exception);
         }
 
-        if (document.Version != CurrentVersion)
+        if (document.Version != format.Version)
         {
             throw new InvalidDataException(
-                $"Event log version '{document.Version}' is not supported.");
+                "La versione dichiarata dal salvataggio non è coerente.");
         }
 
         if (document.InitialWorld is null || document.InitialWorld.Balances is null)
@@ -98,6 +100,54 @@ public sealed class WorldEventJsonSerializer
             document.Simulation,
             document.PlayerActions,
             document.AiGmTurns);
+    }
+
+    public WorldEventFormatInfo InspectFormat(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            throw new ArgumentException("An event log cannot be empty.", nameof(json));
+        }
+
+        int version;
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty("version", out var property) ||
+                !property.TryGetInt32(out version))
+            {
+                throw new InvalidDataException(
+                    "Il salvataggio non dichiara una versione valida.");
+            }
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException(
+                "The event log contains invalid JSON.", exception);
+        }
+
+        if (version == 1)
+        {
+            throw new InvalidDataException(
+                "Il salvataggio usa il formato 1, che non contiene lo stato iniziale del mondo e non può essere migrato automaticamente. Aprilo con una versione precedente di TessitoreGM ed esportalo di nuovo.");
+        }
+
+        if (version < OldestCompatibleFormatVersion)
+        {
+            throw new InvalidDataException(
+                $"Il formato del salvataggio ({version}) non è supportato.");
+        }
+
+        if (version > CurrentFormatVersion)
+        {
+            throw new InvalidDataException(
+                $"Il salvataggio usa il formato {version}, più recente del formato {CurrentFormatVersion} supportato. Aggiorna TessitoreGM prima di aprirlo.");
+        }
+
+        return new WorldEventFormatInfo(
+            version,
+            CurrentFormatVersion,
+            version < CurrentFormatVersion);
     }
 
     private static void ValidateAiGmTurns(
@@ -468,3 +518,8 @@ public sealed class WorldEventJsonSerializer
         string Type,
         JsonElement Data);
 }
+
+public sealed record WorldEventFormatInfo(
+    int Version,
+    int CurrentVersion,
+    bool RequiresMigration);

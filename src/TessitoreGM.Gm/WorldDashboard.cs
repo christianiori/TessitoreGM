@@ -171,7 +171,7 @@ internal static class WorldDashboard
         {
             return Page(
                 "Cronaca non disponibile",
-                $"<main class=\"empty-state\"><p class=\"eyebrow\">Cronaca</p><h1>Non riesco a generarla.</h1><p>{Encode(exception.Message)}</p><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></main>");
+                $"<main class=\"empty-state\"><p class=\"eyebrow\">Cronaca</p><h1>Non riesco a generarla.</h1><p>{Encode(UserFacingErrors.Describe(exception))}</p><a class=\"button secondary\" href=\"/\">Torna al tavolo</a></main>");
         }
     }
 
@@ -182,6 +182,8 @@ internal static class WorldDashboard
         try
         {
             var store = new WorldEventFileStore();
+            var format = new WorldEventJsonSerializer().InspectFormat(
+                File.ReadAllText(worldFile));
             var eventLog = store.Load(worldFile);
             var world = Replay(eventLog);
             var backups = store.ListBackups(worldFile);
@@ -190,22 +192,97 @@ internal static class WorldDashboard
             content.Append(Metric("Ora del mondo", world.CurrentTime.ToString("dd MMM yyyy · HH:mm")));
             content.Append(Metric("Eventi", eventLog.Events.Count.ToString()));
             content.Append(Metric("Backup", backups.Count.ToString()));
+            content.Append(Metric(
+                "Formato dati",
+                format.RequiresMigration
+                    ? $"v{format.Version} · aggiornamento pronto"
+                    : $"v{format.Version} · aggiornato"));
             content.Append("</section><section class=\"player-panel diagnostic-detail\"><h2>Percorsi</h2>");
             content.Append($"<p><strong>Campagna attiva</strong><code>{Encode(Path.GetFullPath(worldFile))}</code></p>");
             content.Append($"<p><strong>Cartella backup</strong><code>{Encode(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(worldFile))!, "Backups"))}</code></p>");
             content.Append($"<p><strong>Versione applicazione</strong><code>{Encode(typeof(WorldDashboard).Assembly.GetName().Version?.ToString() ?? "non disponibile")}</code></p></section>");
+            if (format.RequiresMigration)
+            {
+                content.Append("<section class=\"player-panel\"><h2>Aggiornamento del salvataggio</h2><p>Questo mondo è compatibile. Al prossimo salvataggio verrà convertito automaticamente nel formato corrente e la versione precedente resterà disponibile nella cartella dei backup.</p></section>");
+            }
+            content.Append(RenderSimulationDiagnostics(eventLog, world));
         }
         catch (Exception exception) when (
             exception is IOException or InvalidDataException or
             InvalidOperationException or ArgumentException)
         {
             content.Append("<section class=\"recovery-panel\"><p class=\"eyebrow\">Problema rilevato</p><h2>Il salvataggio non è leggibile</h2>");
-            content.Append($"<p>{Encode(exception.Message)}</p><code>{Encode(Path.GetFullPath(worldFile))}</code><p>Torna al Tavolo per scegliere un backup disponibile.</p></section>");
+            content.Append($"<p>{Encode(UserFacingErrors.Describe(exception))}</p><code>{Encode(Path.GetFullPath(worldFile))}</code><p>Torna al Tavolo per scegliere un backup disponibile.</p></section>");
         }
 
         content.Append("</main>");
         return Page("Diagnostica", content.ToString());
     }
+
+    private static string RenderSimulationDiagnostics(
+        WorldEventLog eventLog,
+        WorldSnapshot world)
+    {
+        var content = new StringBuilder();
+        content.Append("<section class=\"player-panel diagnostic-detail\"><p class=\"eyebrow\">Prova non distruttiva</p><h2>Simulazione delle prossime 24 ore</h2>");
+        try
+        {
+            var report = new SimulationDiagnostics().Analyze(
+                eventLog,
+                world,
+                TimeSpan.FromHours(24));
+            var meaningfulEvents = report.ProposedEvents
+                .Where(worldEvent => worldEvent is not WorldTimeAdvanced)
+                .ToArray();
+            content.Append("<div class=\"world-strip diagnostic-summary\">");
+            content.Append(Metric("Regole attive", report.RuleCount.ToString()));
+            content.Append(Metric("Comportamenti", report.BehaviorCount.ToString()));
+            content.Append(Metric("Eventi proposti", meaningfulEvents.Length.ToString()));
+            content.Append(Metric("Esito", "Regolare"));
+            content.Append("</div>");
+
+            if (meaningfulEvents.Length == 0)
+            {
+                content.Append("<p>Nessuna regola propone cambiamenti nelle prossime 24 ore. Può essere corretto, ma conviene controllare gli orari e le condizioni configurate.</p>");
+            }
+            else
+            {
+                content.Append("<h3>Tipi di cambiamento previsti</h3><ul>");
+                foreach (var group in meaningfulEvents
+                    .GroupBy(worldEvent => DiagnosticEventName(worldEvent))
+                    .OrderBy(group => group.Key, StringComparer.Ordinal))
+                {
+                    content.Append($"<li>{Encode(group.Key)}: <strong>{group.Count()}</strong></li>");
+                }
+                content.Append("</ul><p>Questa è soltanto un'anteprima: nessun evento è stato registrato.</p>");
+            }
+        }
+        catch (Exception exception) when (
+            exception is InvalidDataException or InvalidOperationException or
+            ArgumentException)
+        {
+            content.Append($"<div class=\"recovery-panel\"><h3>La prova si è fermata</h3><p>{Encode(UserFacingErrors.Describe(exception))}</p><p>Il salvataggio non è stato modificato.</p></div>");
+        }
+
+        content.Append("</section>");
+        return content.ToString();
+    }
+
+    private static string DiagnosticEventName(IWorldEvent worldEvent) =>
+        worldEvent switch
+        {
+            EntityEnteredLocation or EntityLeftLocation => "Spostamenti",
+            NeedIncreased or ResourceConsumed => "Bisogni e consumi",
+            ResourceProduced or ResourceAcquired or ResourceLost or
+                ResourceTransferred => "Risorse",
+            FactShared or FactRevealed => "Informazioni",
+            TrustChanged => "Relazioni",
+            TradeCompleted or CoinsTransferred or PaymentTransferred => "Economia",
+            WeatherChanged => "Clima",
+            OrderRequested or OrderAccepted or OrderWorkStarted or
+                OrderCompleted or OrderDelivered => "Ordini",
+            _ => "Altri eventi"
+        };
 
     public static string RenderPlayer(
         string worldFile,
@@ -407,7 +484,7 @@ internal static class WorldDashboard
         {
             return Page(
                 "Personaggio non disponibile",
-                $"<main class=\"empty-state\"><p class=\"eyebrow\">Tavolo del giocatore</p><h1>Non riesco ad aprire questo personaggio.</h1><p>{Encode(exception.Message)}</p></main>");
+                $"<main class=\"empty-state\"><p class=\"eyebrow\">Tavolo del giocatore</p><h1>Non riesco ad aprire questo personaggio.</h1><p>{Encode(UserFacingErrors.Describe(exception))}</p></main>");
         }
     }
 
@@ -2153,7 +2230,7 @@ internal static class WorldDashboard
     {
         var content = new StringBuilder();
         content.Append("<main class=\"empty-state recovery-state\"><p class=\"eyebrow\">TessitoreGM</p><h1>Questa campagna non si apre.</h1>");
-        content.Append($"<p>{Encode(exception.Message)}</p><code>{Encode(worldFile)}</code>");
+        content.Append($"<p>{Encode(UserFacingErrors.Describe(exception))}</p><code>{Encode(worldFile)}</code>");
         IReadOnlyList<WorldEventBackup> backups;
         try
         {
